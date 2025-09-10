@@ -9,12 +9,10 @@ class HomeController
 {
     private RequestObject $request;
     private HomeModel $model;
-    private Connector $connector;
 
     public function __construct()
     {
         $connector = new Connector();
-        $this->connector = $connector;
         $this->model = new HomeModel($connector->getConnection());
     }
     public function index(RequestObject $request): string
