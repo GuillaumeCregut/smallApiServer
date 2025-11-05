@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Services;
+
+use App\Interfaces\ResponseInterface;
 use App\Services\RequestObject;
 
 class RouterObject
@@ -18,12 +20,12 @@ class RouterObject
         $this->request = $request;
     }
 
-    public function route(): string
+    public function route(): ResponseInterface
     {
         // If required route is not is $routes, return a 404 Page not found error
         if (!key_exists($this->routeCall, $this->routes)) {
-            header("HTTP/1.0 404 Not Found");
-           return '404 - Page not found';
+            $response = new NotFoundResponse();
+            return $response;
             exit();
         }
         $matchingRoute = $this->routes[$this->routeCall];

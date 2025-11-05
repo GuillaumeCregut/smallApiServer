@@ -2,9 +2,14 @@
 
 namespace App\Controllers;
 
-use App\Services\RequestObject;
 use App\Models\HomeModel;
 use App\Services\Connector;
+use App\Services\JsonResponse;
+use App\Services\ErrorResponse;
+use App\Services\RequestObject;
+use App\Interfaces\ResponseInterface;
+use App\Services\ClientErrorResponse;
+
 class HomeController
 {
     private RequestObject $request;
@@ -15,7 +20,7 @@ class HomeController
         $connector = new Connector();
         $this->model = new HomeModel($connector->getConnection());
     }
-    public function index(RequestObject $request): string
+    public function index(RequestObject $request): ResponseInterface
     {
         $this->request = $request;
         //Ici, on vérifie la méthode utilisée 
@@ -31,11 +36,11 @@ class HomeController
             case 'DELETE':
                 return $this->deleteData();
             default:
-                return 'Méthode non supportée';
+                return new ErrorResponse();
         }
     }
 
-    private function getDatas(): string
+    private function getDatas(): ResponseInterface
     {
         //Ici, c'est presque le plus compliqué, car si on demande une seule donnée, il ne faut pas retourner un tableau, mais juste l'entité
         $datas = []; //Le container de données de la BDD
@@ -45,71 +50,67 @@ class HomeController
             $datas = $this->model->getOne($id); // On récupère la donnée en BDD
             if (empty($datas)) {
                 //si la donnée n'existe pas
-                header("HTTP/1.0 404 Not Found");
-                return '';
+                $response = new ClientErrorResponse(404);
+                return $response;
             }
         } else {
             //on récupère toutes les données
             $datas = $this->model->getAll();
         }
-        return json_encode($datas);
+        $response = new JsonResponse();
+        $response->setBody(json_encode($datas));
+        return $response;
     }
 
-    private function addData(): string
+    private function addData():ResponseInterface
     {
         //On verifie que toutes les données nécessaires sont présentes et on ajoute
         $error = false;
         $datas = $this->request->getAllDatas();
         //Si il manque des données 
         if ($error) {
-            header("HTTP/1.0 422 Unprocessable Entity");
-            return '';
+            return new ClientErrorResponse(404);
         } else {
             //On ajoute la donnée
             $this->model->add($datas);
             if (!$this->model) {
-                header("HTTP/1.0 500 Internal Server Error");
-                return '';
+               return new ErrorResponse();
             }
-            header("HTTP/1.0 201 Created");
-            return '';
+            return new JsonResponse(201);
         }
     }
 
-    private function changeData(): string
+    private function changeData(): ResponseInterface
     {
         //On verifie que toutes les données nécessaires sont présentes et on modifie
         $error = false;
         $datas = $this->request->getAllDatas();
         //Si il manque des données 
         if ($error) {
-            header("HTTP/1.0 422 Unprocessable Entity");
-            return '';
+            return new ClientErrorResponse(422);
         } else {
             //On modifie la donnée
             $this->model->update((int)$datas['id'], $datas);
             if (!$this->model) {
-                header("HTTP/1.0 500 Internal Server Error");
-                return '';
+                return new ErrorResponse();
             }
-            header("HTTP/1.0 200 OK");
-            return '';
+            $response = new JsonResponse();
+            return $response;
         }
     }
-    private function deleteData(): string
+    private function deleteData(): ResponseInterface
     {
         if (key_exists('id', $this->request->getAllDatas())) {
             //on supprime une donnée en particulier
             $id = (int) $this->request->getAllDatas()['id'];
             $this->model->delete($id);
             if (!$this->model) {
-                header("HTTP/1.0 500 Internal Server Error");
-                return '';
+               return new ErrorResponse();
             }
-            header("HTTP/1.0 200 OK");
         } else {
-            header("HTTP/1.0 404 Not Found");
+            return new ClientErrorResponse(404);
         }
-        return '';
+        $response = new JsonResponse();
+        return $response;
     }
 }
