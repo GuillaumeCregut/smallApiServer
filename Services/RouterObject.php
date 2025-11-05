@@ -24,7 +24,7 @@ class RouterObject
     {
         // If required route is not is $routes, return a 404 Page not found error
         if (!key_exists($this->routeCall, $this->routes)) {
-            $response = new NotFoundResponse();
+            $response = new ClientErrorResponse(404);
             return $response;
             exit();
         }
@@ -38,8 +38,8 @@ class RouterObject
             return $page;
         } catch (\Exception $e) {
             // if an exception is thrown during controller execution
-            header("HTTP/1.0 500 Internal Server Error");
-            echo '500 - Internal Server Error';
+           $response = new ErrorResponse(500);
+           return $response;
             exit();
         }
     }
