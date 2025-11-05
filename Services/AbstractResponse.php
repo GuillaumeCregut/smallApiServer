@@ -8,6 +8,9 @@ abstract class AbstractResponse implements ResponseInterface
     protected int $statusCode = 200;
     protected array $headers = [];
     protected string $body = '';
+    
+    abstract public function setBody(mixed $content): void;
+    abstract public function sendReponse(): void; 
 
     public function setStatusCode(int $code): void
     {
@@ -24,10 +27,6 @@ abstract class AbstractResponse implements ResponseInterface
         $this->headers[$name] = $value;
     }
 
-    abstract public function setBody(mixed $content): void;
-    
-
-    abstract public function sendReponse(): void; 
     public function send(): void
     {
         // Send status code
