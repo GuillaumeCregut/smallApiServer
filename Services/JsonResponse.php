@@ -13,7 +13,16 @@ class JsonResponse extends AbstractResponse
     public function __construct(int $statusCode = 200)
     {
         $this->setStatusCode($statusCode);
-        header($this->statusMessages[$statusCode] ?? 'HTTP/1.0 200 OK');
+    }
+
+    public function setBody(mixed $content): void
+    {
+        $this->body = json_encode($content);
+    }
+
+    public function sendReponse(): void
+    {
         $this->setHeader('Content-Type', 'application/json');
+        header($this->statusMessages[$this->statusCode] ?? 'HTTP/1.0 200 OK');
     }
 }

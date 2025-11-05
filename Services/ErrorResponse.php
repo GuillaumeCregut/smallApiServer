@@ -12,7 +12,15 @@ class ErrorResponse extends AbstractResponse implements ResponseInterface
     public function __construct(int $statusCode = 500)
     {
         $this->setStatusCode(500);
-        header($this->statusMessages[500][0]);
         $this->setBody($this->statusMessages[500][1]);
+    }
+
+    public function setBody(mixed $content): void
+    {
+        $this->body = $content;
+    }
+    public function sendReponse(): void
+    {
+        header($this->statusMessages[500][0]);
     }
 }

@@ -16,24 +16,27 @@ abstract class AbstractResponse implements ResponseInterface
 
     public function setHeader(string $name, string $value): void
     {
+        /*
+        HTTP headers are built like this :
+        Header-Name: Header Value
+
+        */
         $this->headers[$name] = $value;
     }
 
-    public function setBody(string $content): void
-    {
-        $this->body = $content;
-    }
+    abstract public function setBody(mixed $content): void;
+    
 
+    abstract public function sendReponse(): void; 
     public function send(): void
     {
         // Send status code
+        $this->sendReponse();
         http_response_code($this->statusCode);
-
         // Send headers
         foreach ($this->headers as $name => $value) {
             header("$name: $value");
         }
-
         // Send body
         echo $this->body;
     }

@@ -16,8 +16,17 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
     ];
     public function __construct(int $statusCode = 404)
     {
-        $this->setStatusCode(404);
-        header($this->statusMessages[$statusCode][0] ?? 'HTTP/1.0 400 Bad Request');
+        $this->setStatusCode($statusCode);
         $this->setBody($this->statusMessages[$statusCode][1] ?? '400 - Bad Request');
+    }
+
+    public function setBody(mixed $content): void
+    {
+        $this->body = $content;
+    }
+
+    public function sendReponse(): void
+    {
+        header($this->statusMessages[$this->statusCode][0] ?? 'HTTP/1.0 400 Bad Request');
     }
 }
