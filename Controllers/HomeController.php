@@ -58,7 +58,7 @@ class HomeController
             $datas = $this->model->getAll();
         }
         $response = new JsonResponse();
-        $response->setBody(json_encode($datas));
+        $response->setBody($datas);
         return $response;
     }
 
