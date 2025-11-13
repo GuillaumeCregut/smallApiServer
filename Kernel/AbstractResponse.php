@@ -1,7 +1,7 @@
 <?php
 
-namespace App\Services;
-use App\Interfaces\ResponseInterface;
+namespace App\Kernel;
+use App\Kernel\Interfaces\ResponseInterface;
 
 abstract class AbstractResponse implements ResponseInterface
 {

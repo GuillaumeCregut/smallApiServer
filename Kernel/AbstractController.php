@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Controllers;
+namespace App\Kernel;
 
-use App\Services\RequestObject;
-use App\Interfaces\ResponseInterface;
-use App\Services\ClientErrorResponse;
+use App\Kernel\RequestObject;
+use App\Kernel\Interfaces\ResponseInterface;
+use App\Services\Responses\ClientErrorResponse;
 use App\Interfaces\ConnectorInterface;
 use App\Middleware\AuthBearerMiddleware;
 use App\Interfaces\AuthenticationInterface;

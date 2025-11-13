@@ -1,7 +1,7 @@
 <?php 
 
-namespace App\Services;
-use App\Services\GetEnvDatas;
+namespace App\Services\Security;
+use App\Kernel\GetEnvDatas;
 
 class CreateJwtAuth
 {

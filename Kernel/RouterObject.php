@@ -1,10 +1,12 @@
 <?php
 
-namespace App\Services;
+namespace App\Kernel;
 
-use App\Interfaces\ResponseInterface;
+use App\Services\Responses\ErrorResponse;
+use App\Kernel\RequestObject;
+use App\Kernel\Interfaces\ResponseInterface;
+use App\Services\Responses\ClientErrorResponse;
 use App\Middleware\AuthBearerMiddleware;
-use App\Services\RequestObject;
 
 class RouterObject
 {

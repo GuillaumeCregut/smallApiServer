@@ -4,8 +4,8 @@ namespace App\Middleware;
 
 use DateTime;
 use App\Security\User;
-use App\Services\JwtToken;
-use App\Services\GetEnvDatas;
+use App\Services\Security\JwtToken;
+use App\Kernel\GetEnvDatas;
 use App\Interfaces\AuthenticationInterface;
 
 

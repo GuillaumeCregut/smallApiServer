@@ -4,11 +4,12 @@ namespace App\Controllers;
 
 use App\Models\HomeModel;
 use App\Services\Connector;
-use App\Services\JsonResponse;
-use App\Services\ErrorResponse;
-use App\Services\RequestObject;
-use App\Interfaces\ResponseInterface;
-use App\Services\ClientErrorResponse;
+use App\Services\Responses\JsonResponse;
+use App\Services\Responses\ErrorResponse;
+use App\Kernel\RequestObject;
+use App\Kernel\AbstractController;
+use App\Kernel\Interfaces\ResponseInterface;
+use App\Services\Responses\ClientErrorResponse;
 use App\Interfaces\AuthenticationInterface;
 
 class HomeController extends AbstractController
