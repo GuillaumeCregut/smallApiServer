@@ -19,8 +19,9 @@ class RouterObject
     ];
     public function __construct(RequestObject $request)
     {
-        $this->routeCall = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
         $this->request = $request;
+        $route = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
+        $this->routeCall = $this->makeRoute($route);
     }
 
     public function route(): ResponseInterface
@@ -46,5 +47,18 @@ class RouterObject
            return $response;
             exit();
         }
+    }
+
+    private function makeRoute(string $route): string
+    {
+        $route = filter_var($route, FILTER_SANITIZE_URL);
+        $routes = explode('/', $route);
+        $id = end($routes);
+        if (is_numeric($id)) {
+            $this->request->setData('id', (int)$id);
+            array_pop($routes);
+        }
+        return implode('/', $routes);
+        // Remove any unwanted characters from the route
     }
 }
