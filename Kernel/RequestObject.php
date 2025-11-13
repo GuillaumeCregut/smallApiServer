@@ -1,16 +1,17 @@
 <?php
 
-namespace App\Services;
+namespace App\Kernel;
 
 class RequestObject
 {
     private string $method;
     private array $datas;
-
+    private array $headers;
     public function __construct()
     {
         $this->method = $_SERVER['REQUEST_METHOD'];
         $this->datas = $this->getDatas();
+        $this->headers = getallheaders();
     }
 
     private function decodeJSON(string $json): array
@@ -68,5 +69,17 @@ class RequestObject
     {
         //Todo : make authentication
         return false;
+    }
+
+    /* Returns the Authorization header content as an array [type, credentials] or null if not present */
+    public function getAuthUser(): ?array
+    {
+         
+        $autorisation = $this->headers['Authorization'] ?? null;
+        if ($autorisation === null) {
+            return null;
+        } 
+        $auth= explode(' ', $autorisation,2);
+        return $auth;
     }
 }

@@ -4,27 +4,27 @@ namespace App\Controllers;
 
 use App\Models\HomeModel;
 use App\Services\Connector;
-use App\Services\JsonResponse;
-use App\Services\ErrorResponse;
-use App\Services\RequestObject;
-use App\Interfaces\ResponseInterface;
-use App\Services\ClientErrorResponse;
+use App\Services\Responses\JsonResponse;
+use App\Services\Responses\ErrorResponse;
+use App\Kernel\RequestObject;
+use App\Kernel\AbstractController;
+use App\Kernel\Interfaces\ResponseInterface;
+use App\Services\Responses\ClientErrorResponse;
+use App\Interfaces\AuthenticationInterface;
 
-class HomeController
+class HomeController extends AbstractController
 {
-    private RequestObject $request;
-    private HomeModel $model;
 
-    public function __construct()
+    public function __construct( RequestObject $request,  AuthenticationInterface $authMiddleware)
     {
-        $connector = new Connector();
-        $this->model = new HomeModel($connector->getConnection());
+        parent::__construct($request, $authMiddleware);
+        $this->connector = new Connector();
     }
-    public function index(RequestObject $request): ResponseInterface
+    public function index(): ResponseInterface
     {
-        $this->request = $request;
+        
         //Ici, on vérifie la méthode utilisée 
-        switch ($request->getMethod()) {
+        switch ($this->request->getMethod()) {
             case 'GET':
                 return $this->getDatas();
             case 'POST':
@@ -36,18 +36,24 @@ class HomeController
             case 'DELETE':
                 return $this->deleteData();
             default:
-                return new ErrorResponse();
+                return $this->returnError(405);
         }
     }
 
     private function getDatas(): ResponseInterface
     {
+        //example of authentication check
+        // if (!$this->isUserAuth()) {
+        //     return $this->returnError(401);
+        // }
+        $model = new HomeModel($this->connector->getConnection());
         //Ici, c'est presque le plus compliqué, car si on demande une seule donnée, il ne faut pas retourner un tableau, mais juste l'entité
         $datas = []; //Le container de données de la BDD
         if (key_exists('id', $this->request->getAllDatas())) {
             //on récupère une donnée en particulier
             $id = (int) $this->request->getAllDatas()['id'];
-            $datas = $this->model->getOne($id); // On récupère la donnée en BDD
+            
+            $datas = $model->getOne($id); // On récupère la donnée en BDD
             if (empty($datas)) {
                 //si la donnée n'existe pas
                 $response = new ClientErrorResponse(404);
@@ -55,14 +61,14 @@ class HomeController
             }
         } else {
             //on récupère toutes les données
-            $datas = $this->model->getAll();
+            $datas = $model->getAll();
         }
         $response = new JsonResponse();
         $response->setBody($datas);
         return $response;
     }
 
-    private function addData():ResponseInterface
+    private function addData(): ResponseInterface
     {
         //On verifie que toutes les données nécessaires sont présentes et on ajoute
         $error = false;
@@ -72,8 +78,9 @@ class HomeController
             return new ClientErrorResponse(404);
         } else {
             //On ajoute la donnée
-            $this->model->add($datas);
-            if (!$this->model) {
+            $model = new HomeModel($this->connector->getConnection());
+            $model->add($datas);
+            if (!$model) {
                return new ErrorResponse();
             }
             return new JsonResponse(201);
@@ -90,8 +97,9 @@ class HomeController
             return new ClientErrorResponse(422);
         } else {
             //On modifie la donnée
-            $this->model->update((int)$datas['id'], $datas);
-            if (!$this->model) {
+            $model = new HomeModel($this->connector->getConnection());
+            $model->update((int)$datas['id'], $datas);
+            if (!$model) {
                 return new ErrorResponse();
             }
             $response = new JsonResponse();
@@ -103,8 +111,9 @@ class HomeController
         if (key_exists('id', $this->request->getAllDatas())) {
             //on supprime une donnée en particulier
             $id = (int) $this->request->getAllDatas()['id'];
-            $this->model->delete($id);
-            if (!$this->model) {
+            $model = new HomeModel($this->connector->getConnection());
+            $model->delete($id);
+            if (!$model) {
                return new ErrorResponse();
             }
         } else {

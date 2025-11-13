@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Responses;
 
-use App\Interfaces\ResponseInterface;
+use App\Kernel\AbstractResponse;
+
 
 class JsonResponse extends AbstractResponse
 {

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
-class Connector
+use App\Interfaces\ConnectorInterface;
+
+class Connector implements ConnectorInterface
 {
     private \PDO $pdo;
 

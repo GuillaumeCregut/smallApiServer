@@ -1,9 +1,12 @@
 <?php
 
-namespace App\Services;
+namespace App\Kernel;
 
-use App\Interfaces\ResponseInterface;
-use App\Services\RequestObject;
+use App\Services\Responses\ErrorResponse;
+use App\Kernel\RequestObject;
+use App\Kernel\Interfaces\ResponseInterface;
+use App\Services\Responses\ClientErrorResponse;
+use App\Middleware\AuthBearerMiddleware;
 
 class RouterObject
 {
@@ -34,7 +37,8 @@ class RouterObject
 
         try {
             // execute the controller
-            $page = (new $controller())->$method($this->request);
+            $authMiddleware = new AuthBearerMiddleware();
+            $page = (new $controller($this->request,$authMiddleware))->$method();
             return $page;
         } catch (\Exception $e) {
             // if an exception is thrown during controller execution
