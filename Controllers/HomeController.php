@@ -41,6 +41,7 @@ class HomeController extends AbstractController
 
     private function getDatas(): ResponseInterface
     {
+        //example of authentication check
         // if (!$this->isUserAuth()) {
         //     return $this->returnError(401);
         // }
