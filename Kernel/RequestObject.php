@@ -82,4 +82,9 @@ class RequestObject
         $auth= explode(' ', $autorisation,2);
         return $auth;
     }
+
+    public function setData(string $key, mixed $value): void
+    {
+        $this->datas[$key] = $value;
+    }
 }
