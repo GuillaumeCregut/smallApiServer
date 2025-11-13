@@ -57,6 +57,20 @@ class JwtToken
         return $this->payload;
     }
 
+    public function extractPayload(string $token): array
+    {
+        if (!$this->checkFormat($token)) {
+            throw new \InvalidArgumentException('Invalid token format');
+        }
+        //Extract Datas from token
+        $tokenParts = explode('.', $token);
+        if (count($tokenParts) !== 3) {
+            throw new \InvalidArgumentException('Invalid token format');
+        }
+        $payload = $this->decodeData($tokenParts[1]);
+        $this->payload = $payload;
+        return $payload;
+    }
     public function checkToken(string $token, string $secret): bool
     {
         if (!$this->checkFormat($token)) {
@@ -130,6 +144,7 @@ class JwtToken
             throw new \InvalidArgumentException('Invalid serialization');
         }
         $baseEncode = base64_encode($serialize);
+        //Todo : change replacement values
         $baseEncode = str_replace(['+', '/', '='], ['-', '_', ''], $baseEncode);
         return $baseEncode;
     }
@@ -143,7 +158,8 @@ class JwtToken
     {
         try {
             $data = base64_decode($data);
-            $data = str_replace(['-', '_', ''], ['+', '/', '='], $data);
+            //Todo : change replacement values
+            //$data = str_replace(['-', '_', ''], ['+', '/', '='], $data);
             $data = json_decode($data, true);
             return $data;
         } catch (\Throwable $th) {
