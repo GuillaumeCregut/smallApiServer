@@ -15,9 +15,9 @@ use App\Interfaces\AuthenticationInterface;
 class HomeController extends AbstractController
 {
 
-    public function __construct( RequestObject $request,  AuthenticationInterface $authMiddleware)
+    public function __construct(AuthenticationInterface $authMiddleware)
     {
-        parent::__construct($request, $authMiddleware);
+        parent::__construct($authMiddleware);
         $this->connector = new Connector();
     }
     public function index(): ResponseInterface

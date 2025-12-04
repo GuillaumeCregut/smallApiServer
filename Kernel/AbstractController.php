@@ -12,10 +12,10 @@ use App\Interfaces\AuthenticationInterface;
 abstract class AbstractController
 {
     protected ConnectorInterface $connector;
-   
-    public function __construct(protected RequestObject $request, protected AuthenticationInterface $authMiddleware)
+    protected RequestObject $request;
+    public function __construct(protected AuthenticationInterface $authMiddleware)
     {
-        
+        $this->request = RequestObject::getRequestInstance();
     }
 
     protected function returnError(int $error): ResponseInterface
