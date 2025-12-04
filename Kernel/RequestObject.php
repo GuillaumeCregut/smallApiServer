@@ -2,16 +2,27 @@
 
 namespace App\Kernel;
 
+use App\Kernel\Files\FileFormator;
+use App\Kernel\Files\FileUpload;
+
 class RequestObject
 {
+    private static ?RequestObject $instance = null;
     private string $method;
     private array $datas;
     private array $headers;
+    private array $files;
+    private array $server;
+    private array $sessions;
+
     public function __construct()
     {
         $this->method = $_SERVER['REQUEST_METHOD'];
         $this->datas = $this->getDatas();
         $this->headers = getallheaders();
+        $this->server = $_SERVER;
+        $this->sessions = $_SESSION;
+        $this->files = $this->convertFiles();
     }
 
     private function decodeJSON(string $json): array
@@ -21,6 +32,17 @@ class RequestObject
             return [];
         }
         return $data;
+    }
+//TODO : tester la méthode, je ne suis pas sur, surtout du tableau renvoyé
+    private function convertFiles(): array
+    {
+        $files = FileFormator::convert($_FILES);
+        $fileContainer = [];
+        foreach ($files as $file) {
+            $file = new FileUpload($file, ['image/jpeg', 'image/png', 'application/pdf']);
+            $fileContainer[$file['name']] = $file;
+        }
+        return $fileContainer;
     }
 
     private function getDatas(): array
@@ -86,5 +108,39 @@ class RequestObject
     public function setData(string $key, mixed $value): void
     {
         $this->datas[$key] = $value;
+    }
+
+    public function getFiles(): array
+    {
+        return $this->files;
+    }
+
+    public function getFile(string $key): ?array
+    {
+        return $this->files[$key] ?? null;
+    }
+
+    public static function getRequestInstance(): RequestObject
+    {
+        if (is_null(self::$instance)) {
+            self::$instance = new RequestObject();
+        }
+        return self::$instance;
+    } 
+
+    public function getURI(): string
+    {
+        return trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
+    }
+
+    public function getSessionValue(string $name): mixed
+    {
+        return $this->sessions[$name] ?? null;
+    }
+
+    public function setSessionValue(string $name, mixed $value): void
+    {
+        $this->sessions[$name] = $value;
+        $_SESSION[$name] = $value;
     }
 }
