@@ -33,14 +33,17 @@ class RequestObject
         }
         return $data;
     }
-//TODO : tester la méthode, je ne suis pas sur, surtout du tableau renvoyé
+    
     private function convertFiles(): array
     {
         $files = FileFormator::convert($_FILES);
         $fileContainer = [];
-        foreach ($files as $file) {
-            $file = new FileUpload($file, ['image/jpeg', 'image/png', 'application/pdf']);
-            $fileContainer[$file['name']] = $file;
+        foreach ($files as $key=>$fileFields) {
+          
+            foreach ($fileFields as $file) {
+            $file = new FileUpload($file); //, ['image/jpeg', 'image/png', 'application/pdf']
+            $fileContainer[$key][] = $file;
+            }
         }
         return $fileContainer;
     }
