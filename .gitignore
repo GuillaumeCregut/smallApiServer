@@ -3,3 +3,4 @@ others/*
 .htaccess
 .qodo
 tools/.phpunit.cache
+notes.txt
