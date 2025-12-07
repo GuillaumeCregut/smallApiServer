@@ -19,7 +19,7 @@ class AuthBearerMiddleware implements AuthenticationInterface
     public function __construct()
     {
         $this->user = new User();
-        $envs = new GetEnvDatas();
+        $envs = GetEnvDatas::getEnvInstance();
         $this->secret = $envs->get('secret');
         $this->jwtToken = new JwtToken();
     }

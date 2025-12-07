@@ -6,8 +6,7 @@ use App\Kernel\RequestObject;
 use App\Kernel\RouterObject;
 
 App\Vendor\Autoload::register();
-$request = new RequestObject(); //Ici, l'objet request contient la méthode et les données envoyées par le front
-$router= new RouterObject($request);
+$router= new RouterObject();
 $response =  $router->route();
 $response->send();
 

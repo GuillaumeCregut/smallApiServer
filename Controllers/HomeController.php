@@ -6,7 +6,6 @@ use App\Models\HomeModel;
 use App\Services\Connector;
 use App\Services\Responses\JsonResponse;
 use App\Services\Responses\ErrorResponse;
-use App\Kernel\RequestObject;
 use App\Kernel\AbstractController;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Services\Responses\ClientErrorResponse;
@@ -15,9 +14,9 @@ use App\Interfaces\AuthenticationInterface;
 class HomeController extends AbstractController
 {
 
-    public function __construct( RequestObject $request,  AuthenticationInterface $authMiddleware)
+    public function __construct(AuthenticationInterface $authMiddleware)
     {
-        parent::__construct($request, $authMiddleware);
+        parent::__construct($authMiddleware);
         $this->connector = new Connector();
     }
     public function index(): ResponseInterface

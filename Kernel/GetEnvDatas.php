@@ -5,6 +5,8 @@ namespace App\Kernel;
 class GetEnvDatas
 {
     private array $envVar = [];
+    private static ?GetEnvDatas $instance = null;
+
     public function __construct()
     {
         $iniFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
@@ -15,6 +17,8 @@ class GetEnvDatas
             $this->envVar['user'] = $envs['user'] ?? 'root';
             $this->envVar['pass'] = $envs['pass'] ?? '';
             $this->envVar['secret'] = $envs['secret'] ?? '';
+            $this->envVar['maxsize'] = $envs['secret'] ?? '';
+
         } else {
             // You can choose to throw an exception or handle the error as needed
             throw new \Exception("Configuration file not found: " . $iniFile);
@@ -27,5 +31,13 @@ class GetEnvDatas
         } else {
             return  $default;
         }
+    }
+
+    public static function getEnvInstance(): GetEnvDatas
+    {
+        if (is_null(self::$instance)) {
+            self::$instance = new GetEnvDatas();
+        }
+        return self::$instance;
     }
 }

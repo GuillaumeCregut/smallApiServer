@@ -17,10 +17,10 @@ class RouterObject
         'items' => ['\App\Controllers\ItemController', 'index',],
         'categories' => ['\App\Controllers\CategoryController', 'index',],
     ];
-    public function __construct(RequestObject $request)
+    public function __construct()
     {
-        $this->request = $request;
-        $route = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
+        $this->request = RequestObject::getRequestInstance();
+        $route = $this->request->getURI();
         $this->routeCall = $this->makeRoute($route);
     }
 
@@ -39,7 +39,7 @@ class RouterObject
         try {
             // execute the controller
             $authMiddleware = new AuthBearerMiddleware();
-            $page = (new $controller($this->request,$authMiddleware))->$method();
+            $page = (new $controller($authMiddleware))->$method();
             return $page;
         } catch (\Exception $e) {
             // if an exception is thrown during controller execution
