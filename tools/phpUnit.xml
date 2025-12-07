@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.0/phpunit.xsd"
+         bootstrap="../tests/bootstrap.php"
+         cacheDirectory="../tools/.phpunit.cache"
+         executionOrder="depends,defects"
+         requireCoverageMetadata="false"
+         beStrictAboutCoverageMetadata="false"
+         beStrictAboutOutputDuringTests="true"
+         failOnRisky="true"
+         failOnWarning="true"
+         colors="true">
+
+    <!-- Test Suites -->
+    <testsuites>
+        <testsuite name="Unit Tests">
+            <directory>../tests</directory>
+        </testsuite>
+    </testsuites>
+
+   
+   
+    <!-- PHP Settings -->
+    <php>
+        <ini name="display_errors" value="1"/>
+        <ini name="error_reporting" value="-1"/>
+        <ini name="memory_limit" value="512M"/>
+        
+        <!-- Environment Variables -->
+        <env name="APP_ENV" value="testing"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+        
+        <!-- Custom Constants -->
+        <const name="PHPUNIT_RUNNING" value="true"/>
+    </php>
+
+    <!-- Extensions -->
+    <extensions>
+        <!-- Example: <bootstrap class="MyExtension"/> -->
+    </extensions>
+
+</phpunit>

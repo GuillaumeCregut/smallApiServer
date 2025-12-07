@@ -1,0 +1,1 @@
+php ./tools/phpUnit.phar -c ./tools/phpUnit.xml --bootstrap ./tests/bootstrap.php

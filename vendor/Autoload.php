@@ -18,7 +18,7 @@ class Autoload
             $relativeClass = substr($class, $len);
             $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
             if (file_exists($file)) {
-                require $file;
+                require_once $file;
             }
         });
     }
