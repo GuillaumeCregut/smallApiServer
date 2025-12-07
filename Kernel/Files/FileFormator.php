@@ -12,13 +12,13 @@ class FileFormator
             if(is_array($fileElement['name'])) {
                 $filesArray[$key] = self::formatMultipleFiles($fileElement);
             } else {
-                $filesArray[$key] = [
+                $filesArray[$key] = [array(
                     'name'  => $fileElement['name'],
                     'type'  => $fileElement['type'],
                     'tmp_name' => $fileElement['tmp_name'],
                     'size'  => $fileElement['size'],
                     'error' => $fileElement['error'],
-                    'full_path' => $fileElement['full_path'],
+                    'full_path' => $fileElement['full_path'])
                 ];
             }
         }
@@ -36,6 +36,7 @@ class FileFormator
                 'tmp_name' => $fileElement['tmp_name'][$i],
                 'error' => $fileElement['error'][$i],
                 'size' => $fileElement['size'][$i],
+                'full_path' => $fileElement['full_path'][$i],
             ];
         }
         return $files;
