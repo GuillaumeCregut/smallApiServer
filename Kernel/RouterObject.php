@@ -44,7 +44,6 @@ class RouterObject
             // if an exception is thrown during controller execution
            $response = new ErrorResponse(500);
            return $response;
-            exit();
         }
     }
 
