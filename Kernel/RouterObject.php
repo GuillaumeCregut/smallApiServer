@@ -20,8 +20,8 @@ class RouterObject
     public function __construct()
     {
         $this->request = RequestObject::getRequestInstance();
-        $route = $this->request->getURI();
-        $this->routeCall = $this->makeRoute($route);
+       // $route = $this->request->getURI();
+        $this->routeCall = $this->request->getURI();
     }
 
     public function route(): ResponseInterface
