@@ -80,6 +80,21 @@ class RequestObject
         return $datas;
     }
 
+     private function makeRoute(string $route): string
+    {
+        $route = filter_var($route, FILTER_SANITIZE_URL);
+        $routes = explode('/', $route);
+        $id = end($routes);
+        if (is_numeric($id)) {
+            if(!key_exists('id', $this->datas)) {
+                $this->setData('id', (int)$id);
+            } 
+            array_pop($routes);
+        }
+        return implode('/', $routes);
+        // Remove any unwanted characters from the route
+    }
+
     public function getMethod(): string
     {
         return $this->method;
@@ -133,7 +148,8 @@ class RequestObject
 
     public function getURI(): string
     {
-        return trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
+        $route = $this->makeRoute( trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/'));
+        return $route;
     }
 
     public function getSessionValue(string $name): mixed
