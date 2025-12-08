@@ -30,7 +30,6 @@ class RouterObject
         if (!key_exists($this->routeCall, $this->routes)) {
             $response = new ClientErrorResponse(404);
             return $response;
-            exit();
         }
         $matchingRoute = $this->routes[$this->routeCall];
         $controller = $matchingRoute[0];
