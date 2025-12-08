@@ -66,6 +66,7 @@ class FileUpload extends SplFileInfo
                 'tmp_name' => $targetFullPath,
                 'size' => $this->size,
                 'error' => UPLOAD_ERR_OK,
+                'full_path' => $targetFullPath,
             ]);
         try {
                 $moved = move_uploaded_file($this->getPathname(), $target);
