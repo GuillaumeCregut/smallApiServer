@@ -46,17 +46,4 @@ class RouterObject
            return $response;
         }
     }
-
-    private function makeRoute(string $route): string
-    {
-        $route = filter_var($route, FILTER_SANITIZE_URL);
-        $routes = explode('/', $route);
-        $id = end($routes);
-        if (is_numeric($id)) {
-            $this->request->setData('id', (int)$id);
-            array_pop($routes);
-        }
-        return implode('/', $routes);
-        // Remove any unwanted characters from the route
-    }
 }
