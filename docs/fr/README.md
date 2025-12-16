@@ -6,7 +6,7 @@ Bienvenue dans la documentation du framework SmallMVC. Ce répertoire contient d
 
 ### Composants du noyau
 
-#### [Documentation de RouterObject](../RouterObject.md)
+#### [Documentation de RouterObject](./RouterObject.md)
 Dispatcheur central qui gère le routage des requêtes HTTP et l’appel des contrôleurs.
 
 **Sujets clés :**
@@ -20,7 +20,7 @@ Dispatcheur central qui gère le routage des requêtes HTTP et l’appel des con
 
 ---
 
-#### [Documentation de RequestObject](../RequestObject.md)
+#### [Documentation de RequestObject](./RequestObject.md)
 Classe singleton qui encapsule toutes les données de requête HTTP et fournit un accès unifié aux informations de la requête.
 
 **Sujets clés :**
@@ -34,7 +34,7 @@ Classe singleton qui encapsule toutes les données de requête HTTP et fournit u
 
 ---
 
-#### [Documentation d’AbstractController](../AbstractController.md)
+#### [Documentation d’AbstractController](./AbstractController.md)
 Classe de base abstraite fournissant les fondations de tous les contrôleurs avec gestion intégrée des requêtes et de l’authentification.
 
 **Sujets clés :**
@@ -48,7 +48,7 @@ Classe de base abstraite fournissant les fondations de tous les contrôleurs ave
 
 ---
 
-#### [Documentation d’AbstractResponse](../AbstractResponse.md)
+#### [Documentation d’AbstractResponse](./AbstractResponse.md)
 Classe de base abstraite pour les objets réponse HTTP, avec gestion du code statut, des en-têtes et du corps de réponse.
 
 **Sujets clés :**
@@ -62,7 +62,7 @@ Classe de base abstraite pour les objets réponse HTTP, avec gestion du code sta
 
 ---
 
-#### [Documentation de FileUpload](../FileUpload.md)
+#### [Documentation de FileUpload](./FileUpload.md)
 Classe pour gérer les uploads de fichiers avec validation, contrôles de sécurité et déplacement sécurisé des fichiers.
 
 **Sujets clés :**
@@ -103,11 +103,11 @@ Réponse HTTP
 ### Par type de composant
 
 **Composants Kernel :**
-- [RouterObject](../RouterObject.md) - Routage des requêtes
-- [RequestObject](../RequestObject.md) - Gestion des données HTTP
-- [AbstractController](../AbstractController.md) - Classe de base contrôleur
-- [AbstractResponse](../AbstractResponse.md) - Classe de base réponse
-- [FileUpload](../FileUpload.md) - Gestion des uploads
+- [RouterObject](./RouterObject.md) - Routage des requêtes
+- [RequestObject](./RequestObject.md) - Gestion des données HTTP
+- [AbstractController](./AbstractController.md) - Classe de base contrôleur
+- [AbstractResponse](./AbstractResponse.md) - Classe de base réponse
+- [FileUpload](./FileUpload.md) - Gestion des uploads
 
 **Controllers :**
 - Voir le répertoire `Controllers/` du projet
@@ -126,48 +126,48 @@ Réponse HTTP
 **Je veux…**
 
 - **Ajouter un nouvel endpoint API**
-  1. Lire [RouterObject](../RouterObject.md) - section Configuration
+  1. Lire [RouterObject](./RouterObject.md) - section Configuration
   2. Créer un nouveau Controller
   3. Ajouter la route dans RouterObject
 
 - **Accéder aux données dans mon contrôleur**
-  1. Lire [RequestObject](../RequestObject.md) - section Exemples d’usage
+  1. Lire [RequestObject](./RequestObject.md) - section Exemples d’usage
   2. Utiliser `RequestObject::getRequestInstance()`
   3. Appeler les getters appropriés
 
 - **Gérer des uploads**
-  1. Lire [RequestObject](../RequestObject.md) - section Fichiers
+  1. Lire [RequestObject](./RequestObject.md) - section Fichiers
   2. Utiliser `$request->getFile()` ou `$request->getFiles()`
 
 - **Implémenter l’authentification**
-  1. Lire [RequestObject](../RequestObject.md) - section Authentification
+  1. Lire [RequestObject](./RequestObject.md) - section Authentification
   2. Utiliser `$request->getAuthUser()` pour extraire le Bearer token
   3. Valider le jeton dans le middleware
 
 - **Déboguer le routage**
-  1. Lire [RouterObject](../RouterObject.md) - section Gestion des erreurs
+  1. Lire [RouterObject](./RouterObject.md) - section Gestion des erreurs
   2. Vérifier la configuration des routes
   3. Vérifier l’existence du contrôleur et de la méthode
 
 - **Gérer la session**
-  1. Lire [RequestObject](../RequestObject.md) - section Session
+  1. Lire [RequestObject](./RequestObject.md) - section Session
   2. Utiliser `$request->getSessionValue()` et `$request->setSessionValue()`
 
 - **Créer un nouveau contrôleur**
-  1. Lire [AbstractController](../AbstractController.md) - section Créer un contrôleur concret
+  1. Lire [AbstractController](./AbstractController.md) - section Créer un contrôleur concret
   2. Étendre AbstractController
   3. Implémenter `index()`
   4. Ajouter la route dans RouterObject
 
 - **Gérer des réponses HTTP**
-  1. Lire [AbstractResponse](../AbstractResponse.md) - section Exemples
+  1. Lire [AbstractResponse](./AbstractResponse.md) - section Exemples
   2. Créer un objet réponse (JsonResponse, ErrorResponse, etc.)
   3. Définir code statut et en-têtes
   4. Définir le corps
   5. Retourner depuis le contrôleur
 
 - **Traiter des uploads**
-  1. Lire [FileUpload](../FileUpload.md) - section Exemples
+  1. Lire [FileUpload](./FileUpload.md) - section Exemples
   2. `$request->getFile('field_name')`
   3. Valider : `$file->isValid($maxSize, $allowedTypes)`
   4. Déplacer : `$file->move($directory, $name)`
@@ -217,7 +217,7 @@ Le framework utilise des codes HTTP standardisés :
 3. Créer le contrôleur correspondant dans `Controllers/`
 4. Implémenter `index()` retournant `ResponseInterface`
 
-Voir [RouterObject](../RouterObject.md#adding-new-routes) pour les détails.
+Voir [RouterObject](./RouterObject.md#adding-new-routes) pour les détails.
 
 ### Accéder aux données de requête
 
@@ -234,7 +234,7 @@ $data = $request->getAllDatas();
 $id = $data['id'] ?? null;
 ```
 
-Voir [RequestObject](../RequestObject.md#usage-examples) pour plus d’exemples.
+Voir [RequestObject](./RequestObject.md#usage-examples) pour plus d’exemples.
 
 ### Gérer des uploads de fichiers
 
@@ -249,7 +249,7 @@ if ($files) {
 }
 ```
 
-Voir [RequestObject](../RequestObject.md#working-with-files).
+Voir [RequestObject](./RequestObject.md#working-with-files).
 
 ### Extraire un jeton d’authentification
 
@@ -263,7 +263,7 @@ if ($auth && $auth[0] === 'Bearer') {
 }
 ```
 
-Voir [RequestObject](../RequestObject.md#authentication).
+Voir [RequestObject](./RequestObject.md#authentication).
 
 ## Bonnes pratiques
 
