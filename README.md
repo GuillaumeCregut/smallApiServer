@@ -2,6 +2,8 @@
 
 A lightweight, object-oriented PHP REST API framework with built-in authentication, routing, file handling, and database connectivity.
 [Documentation](./docs/README.md)
+
+[Documentation (FR)](./docs/fr/README.md)
 ## Features
 
 - **RESTful Routing**: Clean routing system supporting GET, POST, PUT, PATCH, and DELETE methods
