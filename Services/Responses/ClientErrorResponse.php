@@ -30,4 +30,9 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
     {
         header($this->statusMessages[$this->statusCode][0] ?? 'HTTP/1.0 400 Bad Request');
     }
+
+    protected function displayDump(): void
+    {
+        
+    }
 }

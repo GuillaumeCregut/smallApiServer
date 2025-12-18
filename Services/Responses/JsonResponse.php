@@ -3,7 +3,7 @@
 namespace App\Services\Responses;
 
 use App\Kernel\AbstractResponse;
-
+use App\Kernel\utils\Dumper;
 
 class JsonResponse extends AbstractResponse
 {
@@ -25,5 +25,10 @@ class JsonResponse extends AbstractResponse
     {
         $this->setHeader('Content-Type', 'application/json');
         header($this->statusMessages[$this->statusCode] ?? 'HTTP/1.0 200 OK');
+    }
+
+    protected function displayDump(): void
+    {
+        Dumper::displayJSON();
     }
 }

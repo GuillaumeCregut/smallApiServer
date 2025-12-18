@@ -2,6 +2,7 @@
 
 namespace App\Services\Responses;
 
+use App\Kernel\utils\Dumper;
 use App\Kernel\AbstractResponse;
 use App\Kernel\Interfaces\ResponseInterface;
 
@@ -23,5 +24,11 @@ class ErrorResponse extends AbstractResponse implements ResponseInterface
     public function sendReponse(): void
     {
         header($this->statusMessages[500][0]);
+    }
+
+    protected function displayDump(): void
+    {
+        
+        Dumper::displayHTML();
     }
 }
