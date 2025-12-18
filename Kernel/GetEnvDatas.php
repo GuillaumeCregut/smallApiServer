@@ -12,12 +12,7 @@ class GetEnvDatas
         $iniFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
         if (file_exists($iniFile)) {
             $envs = parse_ini_file($iniFile, false);
-            $this->envVar['host'] = $envs['host'] ?? 'localhost';
-            $this->envVar['db'] = $envs['db'] ?? 'attaquant';
-            $this->envVar['user'] = $envs['user'] ?? 'root';
-            $this->envVar['pass'] = $envs['pass'] ?? '';
-            $this->envVar['secret'] = $envs['secret'] ?? '';
-            $this->envVar['maxsize'] = $envs['secret'] ?? '';
+            $this->envVar = $envs;
 
         } else {
             // You can choose to throw an exception or handle the error as needed
