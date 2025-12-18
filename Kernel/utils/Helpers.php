@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-define('APP_DIR',dirname(__DIR__,2) . DIRECTORY_SEPARATOR);
+use App\Kernel\utils\Dumper;
+use App\Kernel\utils\DumpLine;
+
+define('APP_DIR', dirname(__DIR__, 2) . DIRECTORY_SEPARATOR);
 /*
 const
 APP_DIR : the root directory of the application
@@ -22,13 +25,18 @@ if (!function_exists('dump')) {
      */
     function dump(...$vars): void
     {
-        echo '<pre style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; margin: 10px 0; font-family: Consolas, monospace; font-size: 14px; line-height: 1.5; overflow-x: auto;">';
-        
-        foreach ($vars as $var) {
-            var_dump($var);
+        if (!class_exists(Dumper::class)) {
+            return;
         }
-        
-        echo '</pre>';
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
+        $caller = $backtrace[0] ?? null;
+        $file = $caller['file'] ?? 'unknown';
+        $line = $caller['line'] ?? 0;
+        $name =  getVarName($file, $line);
+        foreach ($vars as $var) {
+            $lineDump = new DumpLine(basename($file) . ":" . $line, $var, gettype($var),$name);
+            Dumper::addLine($lineDump);
+        }
     }
 }
 
@@ -41,27 +49,28 @@ if (!function_exists('dd')) {
      */
     function dd(...$vars): never
     {
-        dump(...$vars);
-        
-        // Affiche la trace d'appel
         echo '<pre style="background: #2d2d2d; color: #888; padding: 10px; border-radius: 5px; margin: 10px 0; font-family: Consolas, monospace; font-size: 12px;">';
         echo '<strong>Called from:</strong>' . "\n";
-        
         $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
         if (isset($trace[0])) {
             echo $trace[0]['file'] ?? 'unknown';
             echo ':' . ($trace[0]['line'] ?? '?');
         }
-        
+
         echo '</pre>';
+         echo '<pre style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; margin: 10px 0; font-family: Consolas, monospace; font-size: 14px; line-height: 1.5; overflow-x: auto;">';
         
+        foreach ($vars as $var) {
+            var_dump($var);
+        }
+        echo '</pre>';
         exit(1);
     }
 }
 
 if (!function_exists('ddjson')) {
-      function ddjson(...$vars): void
-    {   
+    function ddjson(...$vars): void
+    {
         headers_sent() || header('Content-Type: application/json; charset=utf-8');
         foreach ($vars as $var) {
             // Convertir les objets en tableau pour le JSON
@@ -88,17 +97,17 @@ if (!function_exists('convert_to_serializable')) {
         if ($depth > 10) {
             return '[Max depth reached]';
         }
-        
+
         // Valeurs scalaires : retourner tel quel
         if (is_scalar($value) || is_null($value)) {
             return $value;
         }
-        
+
         // Ressources
         if (is_resource($value)) {
             return '[Resource: ' . get_resource_type($value) . ']';
         }
-        
+
         // Tableaux
         if (is_array($value)) {
             $result = [];
@@ -107,7 +116,7 @@ if (!function_exists('convert_to_serializable')) {
             }
             return $result;
         }
-        
+
         // Objets
         if (is_object($value)) {
             // Vérifier les références circulaires
@@ -116,22 +125,22 @@ if (!function_exists('convert_to_serializable')) {
                 return '[Circular Reference: ' . get_class($value) . ']';
             }
             $visited[$hash] = true;
-            
+
             // Si l'objet implémente JsonSerializable
             if ($value instanceof JsonSerializable) {
                 return $value->jsonSerialize();
             }
-            
+
             $result = [
                 '__class' => get_class($value)
             ];
-            
+
             // Utiliser la réflexion pour accéder aux propriétés (même privées/protégées)
             $reflection = new ReflectionClass($value);
-            
+
             foreach ($reflection->getProperties() as $property) {
                 $propName = $property->getName();
-                
+
                 try {
                     $propValue = $property->getValue($value);
                     $result[$propName] = convert_to_serializable($propValue, $depth + 1, $visited);
@@ -139,11 +148,24 @@ if (!function_exists('convert_to_serializable')) {
                     $result[$propName] = '[Uninitialized]';
                 }
             }
-            
+
             unset($visited[$hash]);
             return $result;
         }
-        
+
         return '[Unknown type]';
+    }
+}
+
+if (!function_exists('getVarName')) {
+    function getVarName(string $file, int $line): string
+    {
+        $theFile = file($file);
+        $lineFile = $theFile[$line-1];
+        preg_match('/\\$(\w+)/', $lineFile, $matches);
+        if(count($matches) < 1) {
+            return "null";
+        }
+        return $matches[0];
     }
 }
