@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Kernel;
+use App\Kernel\utils\Dumper;
 use App\Kernel\Interfaces\ResponseInterface;
 
 abstract class AbstractResponse implements ResponseInterface
@@ -11,6 +12,7 @@ abstract class AbstractResponse implements ResponseInterface
     
     abstract public function setBody(mixed $content): void;
     abstract public function sendReponse(): void; 
+    abstract protected function displayDump(): void;
 
     public function setStatusCode(int $code): void
     {
@@ -36,7 +38,16 @@ abstract class AbstractResponse implements ResponseInterface
         foreach ($this->headers as $name => $value) {
             header("$name: $value");
         }
+        $this->DisplayDebugMode();
         // Send body
         echo $this->body;
+    }
+
+    private function DisplayDebugMode(): void
+    {
+        $isDebug = GetEnvDatas::getEnvInstance()->get('debug_mode', false);
+        if($isDebug && class_exists(Dumper::class)){
+            $this->displayDump();
+        }
     }
 }
