@@ -14,6 +14,7 @@ class RequestObject
     private array $files;
     private array $server;
     private array $sessions;
+    private bool $isRefererValid;
 
     public function __construct()
     {
@@ -23,6 +24,7 @@ class RequestObject
         $this->server = $_SERVER;
         $this->sessions = $_SESSION;
         $this->files = $this->convertFiles();
+        $this->isRefererValid = $this->getRefererValid();
     }
 
     private function decodeJSON(string $json): array
@@ -95,6 +97,15 @@ class RequestObject
         // Remove any unwanted characters from the route
     }
 
+    private function getRefererValid(): bool
+    {
+       if (!isset($this->server['HTTP_REFERER'])) {
+           return false;
+       }
+       $referer = parse_url($this->server['HTTP_REFERER'], PHP_URL_HOST);
+       $host = $this->server['HTTP_HOST'] ?? '';
+       return (($referer['host'] ?? '') === $host);
+    }
     public function getMethod(): string
     {
         return $this->method;
@@ -161,5 +172,13 @@ class RequestObject
     {
         $this->sessions[$name] = $value;
         $_SESSION[$name] = $value;
+    }
+
+    /**
+     * Get the value of isRefererValid
+     */
+    public function isRefererValid(): bool
+    {
+        return $this->isRefererValid;
     }
 }
