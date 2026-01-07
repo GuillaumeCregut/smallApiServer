@@ -2,11 +2,12 @@
 
 namespace App\Kernel;
 
-use App\Services\Responses\ErrorResponse;
+use App\Services\Connector;
 use App\Kernel\RequestObject;
+use App\Middleware\AuthManagerMiddleware;
+use App\Services\Responses\ErrorResponse;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Services\Responses\ClientErrorResponse;
-use App\Middleware\AuthBearerMiddleware;
 
 class RouterObject
 {
@@ -17,6 +18,7 @@ class RouterObject
         'items' => ['\App\Controllers\ItemController', 'index',],
         'categories' => ['\App\Controllers\CategoryController', 'index',],
     ];
+
     public function __construct()
     {
         $this->request = RequestObject::getRequestInstance();
@@ -35,8 +37,12 @@ class RouterObject
         $method = $matchingRoute[1];
 
         try {
+            //Add auth middleware to request
+            $connector = new Connector();
+            $manager = new AuthManagerMiddleware($connector);
+            $authMiddleware = $manager->getAuthMiddleware();
+            $this->request->setAuth($authMiddleware);
             // execute the controller
-            $authMiddleware = new AuthBearerMiddleware();
             $page = (new $controller($authMiddleware))->$method();
             return $page;
         } catch (\Exception $e) {
