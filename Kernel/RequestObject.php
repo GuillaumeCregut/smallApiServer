@@ -2,8 +2,10 @@
 
 namespace App\Kernel;
 
+use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Files\FileFormator;
 use App\Kernel\Files\FileUpload;
+use App\Security\User;
 
 class RequestObject
 {
@@ -14,6 +16,7 @@ class RequestObject
     private array $files;
     private array $server;
     private array $sessions;
+    private ?AuthenticationInterface $auth = null;
 
     public function __construct()
     {
@@ -108,19 +111,10 @@ class RequestObject
     public function isAuth(): bool
     {
         //Todo : make authentication
-        return false;
-    }
-
-    /* Returns the Authorization header content as an array [type, credentials] or null if not present */
-    public function getAuthUser(): ?array
-    {
-         
-        $autorisation = $this->headers['Authorization'] ?? null;
-        if ($autorisation === null) {
-            return null;
-        } 
-        $auth= explode(' ', $autorisation,2);
-        return $auth;
+        if($this->auth === null){
+            return false;
+        }
+        return $this->auth->isAuth();
     }
 
     public function setData(string $key, mixed $value): void
@@ -161,5 +155,37 @@ class RequestObject
     {
         $this->sessions[$name] = $value;
         $_SESSION[$name] = $value;
+    }
+
+    /**
+     * Get the value of server
+     */
+    public function getServer(string $name): string|null
+    {
+        return $this->server[$name] ?? null;
+    }
+
+    /**
+     * Get the value of headers
+     */
+    public function getHeaders(string $name): ?string
+    {
+        return $this->headers[$name] ?? null;
+    }
+
+    /**
+     * Set the value of auth
+     */
+    public function setAuth(?AuthenticationInterface $auth): void
+    {
+        $this->auth = $auth;
+    }
+
+    public function getUser():?User
+    {
+        if($this->auth === null){
+            return null;
+        }
+        return $this->auth->getUser();
     }
 }
