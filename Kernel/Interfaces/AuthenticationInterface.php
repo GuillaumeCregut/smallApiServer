@@ -6,6 +6,6 @@ use App\Security\User;
 
 interface AuthenticationInterface
 {
-    public function isAuth(string $token): bool;
+    public function isAuth(): bool;
     public function getUser(): ?User;
 }
