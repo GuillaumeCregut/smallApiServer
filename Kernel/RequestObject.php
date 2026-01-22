@@ -10,24 +10,46 @@ use App\Security\User;
 class RequestObject
 {
     private static ?RequestObject $instance = null;
-    private string $method;
-    private array $datas;
-    private array $headers;
-    private array $files;
-    private array $server;
-    private array $sessions;
+    private string $method = '';
+    private array $datas = [];
+    private array $headers = [];
+    private array $files = [];
+    private array $server = [];
+    private array $sessions = [];
+    private bool $isInit = false;
     private ?AuthenticationInterface $auth = null;
 
     public function __construct()
     {
-        $this->method = $_SERVER['REQUEST_METHOD'];
-        $this->datas = $this->getDatas();
-        $this->headers = getallheaders();
-        $this->server = $_SERVER;
-        $this->sessions = $_SESSION;
-        $this->files = $this->convertFiles();
+        /* $this->method =
+        $datas = $this->getDatas($_GET, $_POST, []); //Remove in next version
+       $this->method = $_SERVER['REQUEST_METHOD']; //Remove in next version
+        $this->headers = getallheaders(); //Remove in next version
+        $this->server = $_SERVER; //Remove in next version
+        $this->sessions = $_SESSION; //Remove in next version
+        $this->files = $this->convertFiles($_FILES); //Remove in next version
+        if (!$this->isInit) {
+            self::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
+            $this->isInit = true;
+        }*/
     }
 
+    public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): RequestObject
+    {
+        if (is_null(self::$instance)) {
+            self::$instance = new RequestObject();
+        }
+        $request = self::$instance;
+        $request->method = $server['REQUEST_METHOD'] ?? '';
+        $request->datas = $request->getDatas($get, $post, $datas);
+        $request->headers = $headers;
+        $request->server = $server;
+        $request->sessions = $session;
+        $request->files = $request->convertFiles($files);
+        $request->isInit = true;
+        self::$instance = $request;
+        return self::$instance;
+    }
     private function decodeJSON(string $json): array
     {
         $data = json_decode($json, true);
@@ -36,45 +58,53 @@ class RequestObject
         }
         return $data;
     }
-    
-    private function convertFiles(): array
+
+    private function convertFiles(?array $filesFromInit = null): array
     {
-        $files = FileFormator::convert($_FILES);
+        if (null === $filesFromInit) {
+            $filesFromInit = $_FILES;
+        }
+        $files = FileFormator::convert($filesFromInit);
         $fileContainer = [];
-        foreach ($files as $key=>$fileFields) {
-          
+        foreach ($files as $key => $fileFields) {
+
             foreach ($fileFields as $file) {
-            $file = new FileUpload($file); //, ['image/jpeg', 'image/png', 'application/pdf']
-            $fileContainer[$key][] = $file;
+                $file = new FileUpload($file); //, ['image/jpeg', 'image/png', 'application/pdf']
+                $fileContainer[$key][] = $file;
             }
         }
         return $fileContainer;
     }
 
-    private function getDatas(): array
+    private function getDatas(array $get, array $post, array $datas): array
     {
         $method = $this->method;
         $datas = [];
+        if (empty($get)) {
+            $get = $_GET;
+        }
+        if (empty($post)) {
+            $post = $_POST;
+        }
+        if (empty($datas)) {
+            $datas = [];
+        }
+        $json = file_get_contents("php://input");
 
         switch ($method) {
             case 'GET':
-                 $json =  file_get_contents("php://input");
                 $datas = array_merge($this->decodeJSON($json), $_GET);
                 break;
             case 'POST':
-                $json =  file_get_contents("php://input");
-                $datas = array_merge($_POST,$this->decodeJSON($json), $_GET);
+                $datas = array_merge($_POST, $this->decodeJSON($json), $_GET);
                 break;
             case 'PUT':
-                $json =  file_get_contents("php://input");
                 $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
                 break;
             case 'PATCH':
-                $json =  file_get_contents("php://input");
                 $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
                 break;
             case 'DELETE':
-                $json =  file_get_contents("php://input");
                 $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
                 break;
             default:
@@ -83,15 +113,15 @@ class RequestObject
         return $datas;
     }
 
-     private function makeRoute(string $route): string
+    private function makeRoute(string $route): string
     {
         $route = filter_var($route, FILTER_SANITIZE_URL);
         $routes = explode('/', $route);
         $id = end($routes);
         if (is_numeric($id)) {
-            if(!key_exists('id', $this->datas)) {
+            if (!key_exists('id', $this->datas)) {
                 $this->setData('id', (int)$id);
-            } 
+            }
             array_pop($routes);
         }
         return implode('/', $routes);
@@ -111,7 +141,7 @@ class RequestObject
     public function isAuth(): bool
     {
         //Todo : make authentication
-        if($this->auth === null){
+        if ($this->auth === null) {
             return false;
         }
         return $this->auth->isAuth();
@@ -136,13 +166,14 @@ class RequestObject
     {
         if (is_null(self::$instance)) {
             self::$instance = new RequestObject();
+            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
         }
         return self::$instance;
-    } 
+    }
 
     public function getURI(): string
     {
-        $route = $this->makeRoute( trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/'));
+        $route = $this->makeRoute(trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/'));
         return $route;
     }
 
@@ -181,9 +212,9 @@ class RequestObject
         $this->auth = $auth;
     }
 
-    public function getUser():?User
+    public function getUser(): ?User
     {
-        if($this->auth === null){
+        if ($this->auth === null) {
             return null;
         }
         return $this->auth->getUser();
