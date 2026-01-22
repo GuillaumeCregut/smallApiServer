@@ -2,12 +2,21 @@
 
 namespace App\Kernel;
 
+use Exception;
+
 class GetClientParams
 {
     public static function getInputs(): array
     {
-        $json = self::decodeJSON(file_get_contents("php://input"));
-        return $json;
+        try{
+            $json = self::decodeJSON(file_get_contents("php://input"));
+            if(!is_array($json)){
+                $json = [];
+            }
+            return $json;
+        } catch (Exception $e) {
+            return [];
+        }
     }
 
     private static function decodeJSON(string $json): array
