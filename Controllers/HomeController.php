@@ -9,19 +9,17 @@ use App\Services\Responses\ErrorResponse;
 use App\Kernel\AbstractController;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Services\Responses\ClientErrorResponse;
-use App\Interfaces\AuthenticationInterface;
 
 class HomeController extends AbstractController
 {
 
-    public function __construct(AuthenticationInterface $authMiddleware)
+    public function __construct()
     {
-        parent::__construct($authMiddleware);
+        parent::__construct();
         $this->connector = new Connector();
     }
     public function index(): ResponseInterface
     {
-        
         //Ici, on vérifie la méthode utilisée 
         switch ($this->request->getMethod()) {
             case 'GET':
