@@ -22,10 +22,10 @@ class Mailer implements MailerInterface
 
     public function __construct(
        MailConfig $config,
-        bool $useTLS = true
+        ?bool $useTLS=true
     ) {
         $this->smtpHost = $config->smtpHost;
-        $this->smtpPort = $config->smtpPort;
+        $this->smtpPort = (int)$config->smtpPort;
         $this->smtpUser = $config->smtpUser;
         $this->smtpPass = $config->smtpPass;
         $this->fromEmail = $config->fromEmail;
