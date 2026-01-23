@@ -23,7 +23,6 @@ class RouterObject
     {
         $datas = GetClientParams::getInputs();
         $headers = GetClientParams::getheaders();
-        //$this->request = RequestObject::getRequestInstance();
         $this->request = RequestObject::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
         $this->routeCall = $this->request->getURI();
     }
