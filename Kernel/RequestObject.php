@@ -22,17 +22,7 @@ class RequestObject
 
     public function __construct()
     {
-        /* $this->method =
-        $datas = $this->getDatas($_GET, $_POST, []); //Remove in next version
-       $this->method = $_SERVER['REQUEST_METHOD']; //Remove in next version
-        $this->headers = getallheaders(); //Remove in next version
-        $this->server = $_SERVER; //Remove in next version
-        $this->sessions = $_SESSION; //Remove in next version
-        $this->files = $this->convertFiles($_FILES); //Remove in next version
-        if (!$this->isInit) {
-            self::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
-            $this->isInit = true;
-        }*/
+    
     }
 
     public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): RequestObject
@@ -79,7 +69,7 @@ class RequestObject
         foreach ($files as $key => $fileFields) {
 
             foreach ($fileFields as $file) {
-                $file = new FileUpload($file); //, ['image/jpeg', 'image/png', 'application/pdf']
+                $file = new FileUpload($file); 
                 $fileContainer[$key][] = $file;
             }
         }
@@ -138,15 +128,6 @@ class RequestObject
         // Remove any unwanted characters from the route
     }
 
-    private function getRefererValid(): bool
-    {
-        if (!isset($this->server['HTTP_REFERER'])) {
-            return false;
-        }
-        $referer = parse_url($this->server['HTTP_REFERER'], PHP_URL_HOST);
-        $host = $this->server['HTTP_HOST'] ?? '';
-        return (($referer['host'] ?? '') === $host);
-    }
     public function getMethod(): string
     {
         return $this->method;
