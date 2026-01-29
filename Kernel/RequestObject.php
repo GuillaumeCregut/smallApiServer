@@ -20,17 +20,11 @@ class RequestObject
     private bool $refererValid = false;
     private ?AuthenticationInterface $auth = null;
 
-    public function __construct()
-    {
-    
-    }
-
     public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): RequestObject
     {
         if (is_null(self::$instance)) {
             self::$instance = new RequestObject();
         }
-        //Ici j'ai des doutes..... les accès sont privés
         $request = self::$instance;
         $request->method = $server['REQUEST_METHOD'] ?? '';
         $request->datas = $request->getDatas($get, $post, $datas);
@@ -50,84 +44,14 @@ class RequestObject
         self::$instance = $request;
         return self::$instance;
     }
-    private function decodeJSON(string $json): array
+    public static function getRequestInstance(): RequestObject
     {
-        $data = json_decode($json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
+        if (is_null(self::$instance)) {
+            self::$instance = new RequestObject();
+            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
         }
-        return $data;
+        return self::$instance;
     }
-
-    private function convertFiles(?array $filesFromInit = null): array
-    {
-        if (null === $filesFromInit) {
-            $filesFromInit = $_FILES;
-        }
-        $files = FileFormator::convert($filesFromInit);
-        $fileContainer = [];
-        foreach ($files as $key => $fileFields) {
-
-            foreach ($fileFields as $file) {
-                $file = new FileUpload($file); 
-                $fileContainer[$key][] = $file;
-            }
-        }
-        return $fileContainer;
-    }
-
-    private function getDatas(array $get, array $post, array $datas): array
-    {
-        $method = $this->method;
-        $datas = [];
-        if (empty($get)) {
-            $get = $_GET;
-        }
-        if (empty($post)) {
-            $post = $_POST;
-        }
-        if (empty($datas)) {
-            $datas = [];
-        }
-        $json = file_get_contents("php://input");
-
-        switch ($method) {
-            case 'GET':
-                $datas = array_merge($this->decodeJSON($json), $_GET);
-                break;
-            case 'POST':
-                $datas = array_merge($_POST, $this->decodeJSON($json), $_GET);
-                break;
-            case 'PUT':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            case 'PATCH':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            case 'DELETE':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            default:
-                break;
-        }
-        return $datas;
-    }
-
-    private function makeRoute(string $route): string
-    {
-        $route = filter_var($route, FILTER_SANITIZE_URL);
-        $routes = explode('/', $route);
-        $id = end($routes);
-        if (is_numeric($id)) {
-            if (!key_exists('id', $this->datas)) {
-                $this->setData('id', (int)$id);
-            }
-            array_pop($routes);
-        }
-        return implode('/', $routes);
-        // Remove any unwanted characters from the route
-    }
-
     public function getMethod(): string
     {
         return $this->method;
@@ -136,6 +60,11 @@ class RequestObject
     public function getAllDatas(): array
     {
         return $this->datas;
+    }
+
+    public function setData(string $key, mixed $value): void
+    {
+        $this->datas[$key] = $value;
     }
 
     public function isAuth(): bool
@@ -147,11 +76,6 @@ class RequestObject
         return $this->auth->isAuth();
     }
 
-    public function setData(string $key, mixed $value): void
-    {
-        $this->datas[$key] = $value;
-    }
-
     public function getFiles(): array
     {
         return $this->files;
@@ -160,15 +84,6 @@ class RequestObject
     public function getFile(string $key): ?array
     {
         return $this->files[$key] ?? null;
-    }
-
-    public static function getRequestInstance(): RequestObject
-    {
-        if (is_null(self::$instance)) {
-            self::$instance = new RequestObject();
-            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
-        }
-        return self::$instance;
     }
 
     public function getURI(): string
@@ -225,5 +140,83 @@ class RequestObject
             return null;
         }
         return $this->auth->getUser();
+    }
+
+    private function decodeJSON(string $json): array
+    {
+        $data = json_decode($json, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return [];
+        }
+        return $data;
+    }
+
+    private function convertFiles(?array $filesFromInit = null): array
+    {
+        if (null === $filesFromInit) {
+            $filesFromInit = $_FILES;
+        }
+        $files = FileFormator::convert($filesFromInit);
+        $fileContainer = [];
+        foreach ($files as $key => $fileFields) {
+
+            foreach ($fileFields as $file) {
+                $file = new FileUpload($file);
+                $fileContainer[$key][] = $file;
+            }
+        }
+        return $fileContainer;
+    }
+
+    private function getDatas(array $get, array $post, array $datas): array
+    {
+        $method = $this->method;
+        $datas = [];
+        if (empty($get)) {
+            $get = $_GET;
+        }
+        if (empty($post)) {
+            $post = $_POST;
+        }
+        if (empty($datas)) {
+            $datas = [];
+        }
+        $json = file_get_contents("php://input");
+
+        switch ($method) {
+            case 'GET':
+                $datas = array_merge($this->decodeJSON($json), $_GET);
+                break;
+            case 'POST':
+                $datas = array_merge($_POST, $this->decodeJSON($json), $_GET);
+                break;
+            case 'PUT':
+                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
+                break;
+            case 'PATCH':
+                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
+                break;
+            case 'DELETE':
+                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
+                break;
+            default:
+                break;
+        }
+        return $datas;
+    }
+
+    private function makeRoute(string $route): string
+    {
+        $route = filter_var($route, FILTER_SANITIZE_URL);
+        $routes = explode('/', $route);
+        $id = end($routes);
+        if (is_numeric($id)) {
+            if (!key_exists('id', $this->datas)) {
+                $this->setData('id', (int)$id);
+            }
+            array_pop($routes);
+        }
+        return implode('/', $routes);
+        // Remove any unwanted characters from the route
     }
 }
