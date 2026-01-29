@@ -5,3 +5,5 @@ others/*
 logs/
 tools/.phpunit.cache
 notes.txt
+generate-stubs.php
+vendor-stubs/
