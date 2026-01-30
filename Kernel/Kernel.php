@@ -3,16 +3,16 @@
 namespace App\Kernel;
 
 use App\Services\Connector;
-use App\Kernel\RequestObject;
+use App\Kernel\Request;
 use App\Middleware\AuthManagerMiddleware;
 use App\Services\Responses\ErrorResponse;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Services\Responses\ClientErrorResponse;
 
-class RouterObject
+class Kernel
 {
     private string $routeCall;
-    private RequestObject $request;
+    private Request $request;
     private array $routes = [
         '' => ['\App\Controllers\HomeController', 'index',],
         'items' => ['\App\Controllers\ItemController', 'index',],
@@ -23,7 +23,7 @@ class RouterObject
     {
         $datas = GetClientParams::getInputs();
         $headers = GetClientParams::getheaders();
-        $this->request = RequestObject::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
+        $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
         $this->routeCall = $this->request->getURI();
     }
 
