@@ -17,22 +17,8 @@ class RequestObject
     private array $server = [];
     private array $sessions = [];
     private bool $isInit = false;
+    private bool $refererValid = false;
     private ?AuthenticationInterface $auth = null;
-
-    public function __construct()
-    {
-        /* $this->method =
-        $datas = $this->getDatas($_GET, $_POST, []); //Remove in next version
-       $this->method = $_SERVER['REQUEST_METHOD']; //Remove in next version
-        $this->headers = getallheaders(); //Remove in next version
-        $this->server = $_SERVER; //Remove in next version
-        $this->sessions = $_SESSION; //Remove in next version
-        $this->files = $this->convertFiles($_FILES); //Remove in next version
-        if (!$this->isInit) {
-            self::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
-            $this->isInit = true;
-        }*/
-    }
 
     public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): RequestObject
     {
@@ -47,87 +33,26 @@ class RequestObject
         $request->sessions = $session;
         $request->files = $request->convertFiles($files);
         $request->isInit = true;
+        if (!isset($server['HTTP_REFERER'])) {
+            $request->refererValid = false;
+        } else {
+            $referer = parse_url($server['HTTP_REFERER']) ?? '';
+            $host = parse_url($server['HTTP_HOST']) ?? '';
+            $ok = (($referer['host'] === $host['host']) && ($referer['port'] === $host['port']));
+            $request->refererValid = $ok;
+        }
+
         self::$instance = $request;
         return self::$instance;
     }
-    private function decodeJSON(string $json): array
+    public static function getRequestInstance(): RequestObject
     {
-        $data = json_decode($json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
+        if (is_null(self::$instance)) {
+            self::$instance = new RequestObject();
+            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
         }
-        return $data;
+        return self::$instance;
     }
-
-    private function convertFiles(?array $filesFromInit = null): array
-    {
-        if (null === $filesFromInit) {
-            $filesFromInit = $_FILES;
-        }
-        $files = FileFormator::convert($filesFromInit);
-        $fileContainer = [];
-        foreach ($files as $key => $fileFields) {
-
-            foreach ($fileFields as $file) {
-                $file = new FileUpload($file); //, ['image/jpeg', 'image/png', 'application/pdf']
-                $fileContainer[$key][] = $file;
-            }
-        }
-        return $fileContainer;
-    }
-
-    private function getDatas(array $get, array $post, array $datas): array
-    {
-        $method = $this->method;
-        $datas = [];
-        if (empty($get)) {
-            $get = $_GET;
-        }
-        if (empty($post)) {
-            $post = $_POST;
-        }
-        if (empty($datas)) {
-            $datas = [];
-        }
-        $json = file_get_contents("php://input");
-
-        switch ($method) {
-            case 'GET':
-                $datas = array_merge($this->decodeJSON($json), $_GET);
-                break;
-            case 'POST':
-                $datas = array_merge($_POST, $this->decodeJSON($json), $_GET);
-                break;
-            case 'PUT':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            case 'PATCH':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            case 'DELETE':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            default:
-                break;
-        }
-        return $datas;
-    }
-
-    private function makeRoute(string $route): string
-    {
-        $route = filter_var($route, FILTER_SANITIZE_URL);
-        $routes = explode('/', $route);
-        $id = end($routes);
-        if (is_numeric($id)) {
-            if (!key_exists('id', $this->datas)) {
-                $this->setData('id', (int)$id);
-            }
-            array_pop($routes);
-        }
-        return implode('/', $routes);
-        // Remove any unwanted characters from the route
-    }
-
     public function getMethod(): string
     {
         return $this->method;
@@ -136,6 +61,16 @@ class RequestObject
     public function getAllDatas(): array
     {
         return $this->datas;
+    }
+
+    public function getData(string $name): mixed
+    {
+        return $this->datas[$name] ?? null;
+    }
+
+    public function setData(string $key, mixed $value): void
+    {
+        $this->datas[$key] = $value;
     }
 
     public function isAuth(): bool
@@ -147,11 +82,6 @@ class RequestObject
         return $this->auth->isAuth();
     }
 
-    public function setData(string $key, mixed $value): void
-    {
-        $this->datas[$key] = $value;
-    }
-
     public function getFiles(): array
     {
         return $this->files;
@@ -160,15 +90,6 @@ class RequestObject
     public function getFile(string $key): ?array
     {
         return $this->files[$key] ?? null;
-    }
-
-    public static function getRequestInstance(): RequestObject
-    {
-        if (is_null(self::$instance)) {
-            self::$instance = new RequestObject();
-            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
-        }
-        return self::$instance;
     }
 
     public function getURI(): string
@@ -188,6 +109,13 @@ class RequestObject
         $_SESSION[$name] = $value;
     }
 
+    /**
+     * Get the value of isRefererValid
+     */
+    public function isRefererValid(): bool
+    {
+        return $this->refererValid;
+    }
     /**
      * Get the value of server
      */
@@ -218,5 +146,44 @@ class RequestObject
             return null;
         }
         return $this->auth->getUser();
+    }
+
+    private function convertFiles(?array $filesFromInit = null): array
+    {
+        if (null === $filesFromInit) {
+            $filesFromInit = $_FILES;
+        }
+        $files = FileFormator::convert($filesFromInit);
+        $fileContainer = [];
+        foreach ($files as $key => $fileFields) {
+
+            foreach ($fileFields as $file) {
+                $file = new FileUpload($file);
+                $fileContainer[$key][] = $file;
+            }
+        }
+        return $fileContainer;
+    }
+
+    private function getDatas(array $get, array $post, array $datas): array
+    {
+        $allDatas = array_merge($get, $post, $datas);
+        return $allDatas;
+    }
+
+    private function makeRoute(string $route): string
+    {
+        $route = filter_var($route, FILTER_SANITIZE_URL);
+        $routes = explode('/', $route);
+        $id = end($routes);
+        if (is_numeric($id)) {
+            if (!key_exists('id', $this->datas)) {
+                $this->setData('id', (int)$id);
+            }
+            array_pop($routes);
+        }
+        $newRoute = implode('/', $routes);
+        return $newRoute;
+        // Remove any unwanted characters from the route
     }
 }
