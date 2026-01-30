@@ -8,15 +8,20 @@ class GetClientParams
 {
     public static function getInputs(): array
     {
-        try{
+        try {
             $json = self::decodeJSON(file_get_contents("php://input"));
-            if(!is_array($json)){
+            if (!is_array($json)) {
                 $json = [];
             }
             return $json;
         } catch (Exception $e) {
             return [];
         }
+    }
+
+    public static function getheaders(): array
+    {
+        return getallheaders();
     }
 
     private static function decodeJSON(string $json): array
@@ -26,10 +31,5 @@ class GetClientParams
             return [];
         }
         return $data;
-    }
-
-    public static function getheaders(): array
-    {
-        return getallheaders();
     }
 }
