@@ -2,8 +2,9 @@
 
 namespace App\Kernel;
 
-use App\Services\Connector;
 use App\Kernel\Request;
+use App\Services\Connector;
+use App\Kernel\GetClientParams;
 use App\Middleware\AuthManagerMiddleware;
 use App\Services\Responses\ErrorResponse;
 use App\Kernel\Interfaces\ResponseInterface;
@@ -13,14 +14,11 @@ class Kernel
 {
     private string $routeCall;
     private Request $request;
-    private array $routes = [
-        '' => ['\App\Controllers\HomeController', 'index',],
-        'items' => ['\App\Controllers\ItemController', 'index',],
-        'categories' => ['\App\Controllers\CategoryController', 'index',],
-    ];
+    private array $routes;
 
     public function __construct()
     {
+        $this->routes = Router::getRoutes();
         $datas = GetClientParams::getInputs();
         $headers = GetClientParams::getheaders();
         $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
@@ -45,7 +43,7 @@ class Kernel
             $authMiddleware = $manager->getAuthMiddleware();
             $this->request->setAuth($authMiddleware);
             // execute the controller
-            $page = (new $controller($authMiddleware))->$method();
+            $page = (new $controller())->$method();
             return $page;
         } catch (\Exception $e) {
             // if an exception is thrown during controller execution
