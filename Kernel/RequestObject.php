@@ -36,9 +36,10 @@ class RequestObject
         if (!isset($server['HTTP_REFERER'])) {
             $request->refererValid = false;
         } else {
-            $referer = parse_url($server['HTTP_REFERER'], PHP_URL_HOST);
-            $host = $server['HTTP_HOST'] ?? '';
-            $request->refererValid = (($referer['host'] ?? '') === $host);
+            $referer = parse_url($server['HTTP_REFERER']) ?? '';
+            $host = parse_url($server['HTTP_HOST']) ?? '';
+            $ok = (($referer['host'] === $host['host']) && ($referer['port'] === $host['port']));
+            $request->refererValid = $ok;
         }
 
         self::$instance = $request;
@@ -60,6 +61,11 @@ class RequestObject
     public function getAllDatas(): array
     {
         return $this->datas;
+    }
+
+    public function getData(string $name): mixed
+    {
+        return $this->datas[$name] ?? null;
     }
 
     public function setData(string $key, mixed $value): void
@@ -142,15 +148,6 @@ class RequestObject
         return $this->auth->getUser();
     }
 
-    private function decodeJSON(string $json): array
-    {
-        $data = json_decode($json, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
-        }
-        return $data;
-    }
-
     private function convertFiles(?array $filesFromInit = null): array
     {
         if (null === $filesFromInit) {
@@ -170,39 +167,8 @@ class RequestObject
 
     private function getDatas(array $get, array $post, array $datas): array
     {
-        $method = $this->method;
-        $datas = [];
-        if (empty($get)) {
-            $get = $_GET;
-        }
-        if (empty($post)) {
-            $post = $_POST;
-        }
-        if (empty($datas)) {
-            $datas = [];
-        }
-        $json = file_get_contents("php://input");
-
-        switch ($method) {
-            case 'GET':
-                $datas = array_merge($this->decodeJSON($json), $_GET);
-                break;
-            case 'POST':
-                $datas = array_merge($_POST, $this->decodeJSON($json), $_GET);
-                break;
-            case 'PUT':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            case 'PATCH':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            case 'DELETE':
-                $datas = array_merge($datas, $this->decodeJSON($json), $_GET);
-                break;
-            default:
-                break;
-        }
-        return $datas;
+        $allDatas = array_merge($get, $post, $datas);
+        return $allDatas;
     }
 
     private function makeRoute(string $route): string
@@ -216,7 +182,8 @@ class RequestObject
             }
             array_pop($routes);
         }
-        return implode('/', $routes);
+        $newRoute = implode('/', $routes);
+        return $newRoute;
         // Remove any unwanted characters from the route
     }
 }
