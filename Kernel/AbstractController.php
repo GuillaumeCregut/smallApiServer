@@ -2,7 +2,7 @@
 
 namespace App\Kernel;
 
-use App\Kernel\RequestObject;
+use App\Kernel\Request;
 use App\Interfaces\ConnectorInterface;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Services\Responses\ClientErrorResponse;
@@ -11,11 +11,11 @@ use App\Services\Responses\ClientErrorResponse;
 abstract class AbstractController
 {
     protected ConnectorInterface $connector;
-    protected RequestObject $request;
+    protected Request $request;
 
     public function __construct()
     {
-        $this->request = RequestObject::getRequestInstance();
+        $this->request = Request::getRequestInstance();
     }
 
     protected function returnError(int $error): ResponseInterface

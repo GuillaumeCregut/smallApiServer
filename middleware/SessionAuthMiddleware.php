@@ -5,7 +5,7 @@ namespace App\Middleware;
 use App\Interfaces\ConnectorInterface;
 use App\Security\User;
 use App\Kernel\Interfaces\AuthenticationInterface;
-use App\Kernel\RequestObject;
+use App\Kernel\Request;
 use App\Kernel\Traits\GetUserAuthTrait;
 
 class SessionAuthMiddleware implements AuthenticationInterface
@@ -20,7 +20,7 @@ class SessionAuthMiddleware implements AuthenticationInterface
     }
     public function isAuth(): bool
     {
-        $id = (int)RequestObject::getRequestInstance()->getSessionValue('user_id') ?? null;
+        $id = (int)Request::getRequestInstance()->getSessionValue('user_id') ?? null;
         $this->user = $this->getUserFromDB($id);
        return $this->user !== null; 
     }

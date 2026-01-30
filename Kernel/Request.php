@@ -7,9 +7,9 @@ use App\Kernel\Files\FileFormator;
 use App\Kernel\Files\FileUpload;
 use App\Security\User;
 
-class RequestObject
+class Request
 {
-    private static ?RequestObject $instance = null;
+    private static ?Request $instance = null;
     private string $method = '';
     private array $datas = [];
     private array $headers = [];
@@ -20,10 +20,10 @@ class RequestObject
     private bool $refererValid = false;
     private ?AuthenticationInterface $auth = null;
 
-    public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): RequestObject
+    public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): Request
     {
         if (is_null(self::$instance)) {
-            self::$instance = new RequestObject();
+            self::$instance = new Request();
         }
         $request = self::$instance;
         $request->method = $server['REQUEST_METHOD'] ?? '';
@@ -45,10 +45,10 @@ class RequestObject
         self::$instance = $request;
         return self::$instance;
     }
-    public static function getRequestInstance(): RequestObject
+    public static function getRequestInstance(): Request
     {
         if (is_null(self::$instance)) {
-            self::$instance = new RequestObject();
+            self::$instance = new Request();
             self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
         }
         return self::$instance;

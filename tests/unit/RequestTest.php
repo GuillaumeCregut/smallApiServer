@@ -1,7 +1,7 @@
 <?php
 
 use App\Kernel\Files\FileUpload;
-use App\Kernel\RequestObject;
+use App\Kernel\Request;
 use PHPUnit\Framework\TestCase;
 
 class RequestTest extends TestCase
@@ -9,9 +9,9 @@ class RequestTest extends TestCase
     //Test création instance de request
     public function testInitRequest(): void
     {
-        $request = RequestObject::initInstance([], [], [], [], [], [], []);
+        $request = Request::initInstance([], [], [], [], [], [], []);
         $this->assertIsObject($request);
-        $this->assertInstanceOf(RequestObject::class, $request);
+        $this->assertInstanceOf(Request::class, $request);
     }
 
     public function testRequestHasServerInformations(): void
@@ -23,7 +23,7 @@ class RequestTest extends TestCase
             'HTTP_HOST' => 'localhost:8000',
             'SERVER_PROTOCOL' => 'HTTP/1.1',
         ];
-        $request = RequestObject::initInstance($server, [], [], [], [], [], []);
+        $request = Request::initInstance($server, [], [], [], [], [], []);
         $this->assertEquals('GET', $request->getMethod());
         $this->assertEquals('HTTP/1.1', $request->getServer('SERVER_PROTOCOL'));
         $this->assertFalse($request->isRefererValid());
@@ -51,7 +51,7 @@ class RequestTest extends TestCase
             'email' => 'test@test',
             'id' => 1
         ];
-        $request = RequestObject::initInstance($server, $datas, $get, $post, [], [], []);
+        $request = Request::initInstance($server, $datas, $get, $post, [], [], []);
         $this->assertIsArray($request->getAllDatas());
         $this->assertEquals('test@test', $request->getData('email'));
         $this->assertEquals(3, $request->getData('post'));
@@ -69,7 +69,7 @@ class RequestTest extends TestCase
             'HTTP_HOST' => 'localhost:8000',
             'SERVER_PROTOCOL' => 'HTTP/1.1',
         ];
-        $request = RequestObject::initInstance($server, [], [], [], [], [], []);
+        $request = Request::initInstance($server, [], [], [], [], [], []);
         $this->assertEquals('local/index', $request->getURI());
         $this->assertEquals(1, $request->getData('id'));
     }
@@ -93,7 +93,7 @@ class RequestTest extends TestCase
             'email' => 'test@test',
             'id' => 1
         ];
-        $request = RequestObject::initInstance($server, [], [], [], [], [], []);
+        $request = Request::initInstance($server, [], [], [], [], [], []);
         $this->assertArrayNotHasKey('param', $request->getAllDatas());
         $request->setData('param', 10);
         $this->assertArrayHasKey('param', $request->getAllDatas());
@@ -119,8 +119,8 @@ class RequestTest extends TestCase
             'email' => 'test@test',
             'id' => 1
         ];
-        $request = RequestObject::initInstance($server, [], [], [], [], [], []);
-        $request2 = RequestObject::getRequestInstance();
+        $request = Request::initInstance($server, [], [], [], [], [], []);
+        $request2 = Request::getRequestInstance();
         $this->assertSame($request, $request2);
     }
 
@@ -144,7 +144,7 @@ class RequestTest extends TestCase
                 'full_path' => 'toto'
             ],
         ];
-        $request = RequestObject::initInstance([], [], [], [], $files, [], []);
+        $request = Request::initInstance([], [], [], [], $files, [], []);
         $reqFiles = $request->getFiles();
         $this->assertIsArray($reqFiles);
         $this->assertArrayHasKey('documents',$reqFiles);
@@ -157,7 +157,7 @@ class RequestTest extends TestCase
 
     public function RequestHasSession(): void
     {
-         $request = RequestObject::initInstance([], [], [], [], [], [], []);
+         $request = Request::initInstance([], [], [], [], [], [], []);
          $this->assertNull($request->getSessionValue('test'));
          $request->setSessionValue('test', 'toto');
          $this->assertEquals('toto', $request->getSessionValue('test'));
@@ -168,7 +168,7 @@ class RequestTest extends TestCase
         $headers =[
             'pragma'=>'no-cache'
         ];
-        $request = RequestObject::initInstance([], [], [], [], [], [], $headers);
+        $request = Request::initInstance([], [], [], [], [], [], $headers);
         $this->assertEquals('no-cache', $request->getHeaders('pragma'));
     }
 }

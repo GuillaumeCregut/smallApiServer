@@ -4,7 +4,7 @@ namespace App\Middleware;
 
 use App\Interfaces\ConnectorInterface;
 use App\Kernel\Interfaces\AuthenticationInterface;
-use App\Kernel\RequestObject;
+use App\Kernel\Request;
 
 class AuthManagerMiddleware
 {
@@ -17,7 +17,7 @@ class AuthManagerMiddleware
 
     public function getAuthMiddleware(): ?AuthenticationInterface
     {
-        $request = RequestObject::getRequestInstance();
+        $request = Request::getRequestInstance();
         //Check auth
         if((null!==$request->getServer('PHP_AUTH_USER')) && (null!==$request->getServer('PHP_AUTH_PW'))){
             //HTTP Auth
