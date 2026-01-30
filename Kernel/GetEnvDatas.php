@@ -35,10 +35,4 @@ class GetEnvDatas
         }
         return self::$instance;
     }
-
-    public static function getAppPath(): string
-    {
-        $appPath =  dirname(__DIR__, 1);
-        return rtrim($appPath, '/\\') . DIRECTORY_SEPARATOR;
-    }
 }

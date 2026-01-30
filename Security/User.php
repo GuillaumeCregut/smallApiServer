@@ -6,10 +6,12 @@ use App\Services\Connector;
 
 class User
 {
+    private Connector $connector;
     private int $id;
 
-    public function __construct(private Connector $connector)
+    public function __construct()
     {
+        $this->connector = new Connector();
     }
 
     public function getRole(): array
@@ -27,10 +29,5 @@ class User
     public function setId(int $id): void
     {
         $this->id = $id;
-    }
-
-    public function fetchFromDb(): void
-    {
-        //Todo : fetch user data from database using $this->id
     }
 }
