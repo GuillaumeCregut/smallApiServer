@@ -1,13 +1,14 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use App\Kernel\Files\FileFormator;
 
 Class FileFormatorTest  extends TestCase
 {
     public function testFileFormator()
     {
        $files =[];
-       $this->assertEquals($files, App\Kernel\Files\FileFormator::convert([]));
+       $this->assertEquals($files, FileFormator::convert([]));
     }
 
     public function testFileFormatorSingle()
@@ -36,7 +37,7 @@ Class FileFormatorTest  extends TestCase
             ],
         ];
 
-        $this->assertEquals($expected, App\Kernel\Files\FileFormator::convert($files));
+        $this->assertEquals($expected, FileFormator::convert($files));
     }
 
 public function testFileFormatorSingle2Fields()
@@ -83,7 +84,7 @@ public function testFileFormatorSingle2Fields()
             ],
         ];
 
-        $this->assertEquals($expected, App\Kernel\Files\FileFormator::convert($files));
+        $this->assertEquals($expected, FileFormator::convert($files));
     }
 
 
@@ -121,7 +122,7 @@ public function testFileFormatorSingle2Fields()
             ],
         ];
 
-        $this->assertEquals($expected, App\Kernel\Files\FileFormator::convert($files));
+        $this->assertEquals($expected, FileFormator::convert($files));
     }
 
      public function testFileFormatorMultiple2Fields()
@@ -184,6 +185,6 @@ public function testFileFormatorSingle2Fields()
             ],
         ];
 
-        $this->assertEquals($expected, App\Kernel\Files\FileFormator::convert($files));
+        $this->assertEquals($expected, FileFormator::convert($files));
     }
 }

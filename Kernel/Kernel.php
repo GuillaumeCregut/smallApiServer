@@ -2,24 +2,26 @@
 
 namespace App\Kernel;
 
+use App\Kernel\Request;
+use App\Services\Connector;
+use App\Kernel\GetClientParams;
+use App\Middleware\AuthManagerMiddleware;
 use App\Services\Responses\ErrorResponse;
-use App\Kernel\RequestObject;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Services\Responses\ClientErrorResponse;
-use App\Middleware\AuthBearerMiddleware;
 
-class RouterObject
+class Kernel
 {
     private string $routeCall;
-    private RequestObject $request;
-    private array $routes = [
-        '' => ['\App\Controllers\HomeController', 'index',],
-        'items' => ['\App\Controllers\ItemController', 'index',],
-        'categories' => ['\App\Controllers\CategoryController', 'index',],
-    ];
+    private Request $request;
+    private array $routes;
+
     public function __construct()
     {
-        $this->request = RequestObject::getRequestInstance();
+        $this->routes = Router::getRoutes();
+        $datas = GetClientParams::getInputs();
+        $headers = GetClientParams::getheaders();
+        $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
         $this->routeCall = $this->request->getURI();
     }
 
@@ -35,9 +37,13 @@ class RouterObject
         $method = $matchingRoute[1];
 
         try {
+            //Add auth middleware to request
+            $connector = new Connector();
+            $manager = new AuthManagerMiddleware($connector);
+            $authMiddleware = $manager->getAuthMiddleware();
+            $this->request->setAuth($authMiddleware);
             // execute the controller
-            $authMiddleware = new AuthBearerMiddleware();
-            $page = (new $controller($authMiddleware))->$method();
+            $page = (new $controller())->$method();
             return $page;
         } catch (\Exception $e) {
             // if an exception is thrown during controller execution

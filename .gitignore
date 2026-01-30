@@ -2,5 +2,10 @@
 others/*
 .htaccess
 .qodo
+logs/
 tools/.phpunit.cache
 notes.txt
+vendor-stubs/
+/tests/AuthManagerMiddlewareTest.php
+ControllerTest.php
+UploadFileTest.php

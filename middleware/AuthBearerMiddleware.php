@@ -4,42 +4,50 @@ namespace App\Middleware;
 
 use DateTime;
 use App\Security\User;
-use App\Services\Security\JwtToken;
 use App\Kernel\GetEnvDatas;
-use App\Interfaces\AuthenticationInterface;
-
+use App\Kernel\Request;
+use App\Services\Security\JwtToken;
+use App\Interfaces\ConnectorInterface;
+use App\Kernel\Traits\GetUserAuthTrait;
+use App\Kernel\Interfaces\AuthenticationInterface;
 
 class AuthBearerMiddleware implements AuthenticationInterface
 {
-    private User $user;
+    private ?User $user = null;
     private string $secret;
     private JwtToken $jwtToken;
     private array $userRole = [];
+    private ConnectorInterface $connector;
+    private ?string $token = null;
 
-    public function __construct()
+    use GetUserAuthTrait;
+
+    public function __construct(ConnectorInterface $connector)
     {
-        $this->user = new User();
         $envs = GetEnvDatas::getEnvInstance();
         $this->secret = $envs->get('secret');
         $this->jwtToken = new JwtToken();
-    }
-
-    public function getUserRole(): array
-    {
-        return $this->userRole;
+        $this->connector = $connector;
+        $request =Request::getRequestInstance();
+        $authHeader = $request->getHeaders('Authorization');
+        if ($authHeader !== null) {
+            $parts = explode(' ', $authHeader,2);
+            if (count($parts) === 2 && strtolower($parts[0]) === 'bearer') {
+                $this->token = $parts[1];
+            }
+        }
     }
    
-    public function isAuth(string $token): bool
+    public function isAuth(): bool
     {
-        $userInfo = $this->jwtToken->extractPayload($token);
-        if(is_array ($userInfo['role']) ){
-            $this->userRole = $userInfo['role'];
-        } else {
-            $this->userRole = [$userInfo['role']];
+        $userInfo = $this->jwtToken->extractPayload($this->token);
+        $userId = (int)$userInfo['user_id'];
+        $this->user = $this->getUserFromDB($userId);
+        if ($this->user === null) {
+            return false;
         }
-        $this->user->setId((int)$userInfo['user_id']);
         $userToken = $this->user->getToken();
-        if(($token === null) || ($token !== $userToken)){
+        if(($this->token === null) || ($this->token !== $userToken)){
             return false;
         }
         $validity =  $userInfo['exp'] ?? 0;
@@ -48,6 +56,14 @@ class AuthBearerMiddleware implements AuthenticationInterface
         if($exp > 0){
             return false;
         }
-        return $this->jwtToken->checkToken($token, $this->secret) ;
+        return $this->jwtToken->checkToken($this->token, $this->secret) ;
+    }
+
+    /**
+     * Get the value of user
+     */
+    public function getUser(): ?User
+    {
+        return $this->user;
     }
 }
