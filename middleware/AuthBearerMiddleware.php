@@ -5,7 +5,7 @@ namespace App\Middleware;
 use DateTime;
 use App\Security\User;
 use App\Kernel\GetEnvDatas;
-use App\Kernel\RequestObject;
+use App\Kernel\Request;
 use App\Services\Security\JwtToken;
 use App\Interfaces\ConnectorInterface;
 use App\Kernel\Traits\GetUserAuthTrait;
@@ -28,7 +28,7 @@ class AuthBearerMiddleware implements AuthenticationInterface
         $this->secret = $envs->get('secret');
         $this->jwtToken = new JwtToken();
         $this->connector = $connector;
-        $request =RequestObject::getRequestInstance();
+        $request =Request::getRequestInstance();
         $authHeader = $request->getHeaders('Authorization');
         if ($authHeader !== null) {
             $parts = explode(' ', $authHeader,2);
