@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Mailer;
 
 use App\Interfaces\MailerInterface;
+use App\Kernel\GetEnvDatas;
 use App\Kernel\Logger;
 use Exception;
 
-use function PHPUnit\Framework\isArray;
 
 /**
  * Classe d'envoi d'emails moderne respectant les standards actuels
@@ -24,6 +24,7 @@ class Mailer implements MailerInterface
     private bool $useTLS;
     private int $timeout = 30;
     private mixed $socket = null;
+    private int $maxAttachement;
 
     public function __construct(
         MailConfig $config,
@@ -36,6 +37,8 @@ class Mailer implements MailerInterface
         $this->fromEmail = $config->fromEmail;
         $this->fromName = $config->fromName;
         $this->useTLS = $useTLS;
+        $maxAttachement = GetEnvDatas::getEnvInstance()->get('max_attachment',10);
+        $this->maxAttachement =  (int)$maxAttachement * 1024 * 1024;
     }
 
     /**
@@ -52,7 +55,14 @@ class Mailer implements MailerInterface
         string|array $bcc = [],
         string $replyTo = ''
     ): bool {
-        $this->sanitizeValues($to, $subject, $attachments, $cc, $bcc, $replyTo, $headers);
+        $newValues = $this->sanitizeValues($to, $subject, $attachments, $cc, $bcc, $replyTo, $headers);
+        $to = $newValues['to'];
+        $subject = $newValues['subject'];
+        $attachments = $newValues['attachments'];
+        $cc = $newValues['cc'];
+        $bcc = $newValues['bcc'];
+        $replyTo = $newValues['replyTo'];
+        $headers = $newValues['headers'];
         try {
             $this->connect();
             $this->authenticate();
@@ -326,18 +336,11 @@ class Mailer implements MailerInterface
         }
     }
 
-    private function validateEmailLength(string | array $emails): void
-    {
-        $emailList = is_array($emails) ? $emails : [$emails];
-        foreach ($emailList as $email) {
-            if (strlen($email) > 254) {
-                //TODO: remove email from list
-                throw new \Exception('Adresse email trop longue (max 254 caractères)');
-            }
-        }
-    }
     private function sanitizeValues(string |array $to, string $subject, array $attachments, string|array $cc, string|array $bcc, string $replyTo, array $headers): array
     {
+        $newBcc = [];
+        $newCc = [];
+        $newAttachments = [];
         $this->fromEmail = $this->sanitizeEmail($this->fromEmail);
         $subject = $this->sanitizeHeader($subject);
         $newHeader = [];
@@ -350,17 +353,16 @@ class Mailer implements MailerInterface
         }
         $newTo = [];
         if (!empty($to)) {
-            if (isArray($cc)) {
-                foreach ($cc as $mail) {
+            if (is_array($to)) {
+                foreach ($to as $mail) {
                     $newTo[] = $this->sanitizeEmail($mail);
                 }
             } else {
                 $newTo[] = $this->sanitizeEmail($to);
             }
         }
-        $newCc = [];
         if (!empty($cc)) {
-            if (isArray($cc)) {
+            if (is_array($cc)) {
                 foreach ($cc as $mail) {
                     $newCc[] = $this->sanitizeEmail($mail);
                 }
@@ -368,9 +370,8 @@ class Mailer implements MailerInterface
                 $newCc[] = $this->sanitizeEmail($cc);
             }
         }
-        $newBcc = [];
         if (!empty($bcc)) {
-            if (isArray($bcc)) {
+            if (is_array($bcc)) {
                 foreach ($bcc as $mail) {
                     $newBcc[] = $this->sanitizeEmail($mail);
                 }
@@ -378,9 +379,14 @@ class Mailer implements MailerInterface
                 $newBcc[] = $this->sanitizeEmail($cc);
             }
         }
-        $replyTo = $this->sanitizeEmail($replyTo);
+        if (!empty($replyTo)) {
+            $replyTo = $this->sanitizeEmail($replyTo);
+        }
         $newAttachments = $this->sanitizeAttachements($attachments);
-
+        $attachSize = $this->validateAttachments($attachments);
+        if($attachSize>$this->maxAttachement) {
+            throw new Exception('Total files size exceed maximum mail limit');
+        }
         return [
             'to' => $newTo,
             'subject' => $subject,
@@ -393,34 +399,33 @@ class Mailer implements MailerInterface
     }
 
     // TODO : make this functionnal
-    private function validateAttachments(array $attachments): void
+    private function validateAttachments(array $attachments): int
     {
-        //Check total files size
-    }
-
-    private function sanitizeHeader(string $header): ?string
-    {
-        $forbiddenHeaders = ['bcc', 'x-confirm-reading-to', 'disposition-notification-to'];
-        if (in_array(strtolower($header), $forbiddenHeaders)) {
-            return null;
+       $totalSize = 0;
+        
+        foreach ($attachments as $file) {
+            // Vérifier que le fichier est dans le répertoire autorisé
+            $realPath = realpath($file);
+            $totalSize += filesize($realPath);
         }
-        return str_replace(["\r", "\n", "\0"], '', $header);
+        return $totalSize;
     }
 
+    
     private function sanitizeAttachements(array $attachments): array
     {
-        if(empty($attachments)) {
+        if (empty($attachments)) {
             return [];
-        }
-        $returnArray = [];
-        //TODO: make it works
-        foreach ($attachments as $file) {
-            $realPath = realpath($file);
+            }
+            $returnArray = [];
+            //TODO: make it works
+            foreach ($attachments as $file) {
+                $realPath = realpath($file);
             if ($realPath === false) {
-                throw new \Exception('Fichier introuvable');
+                throw new Exception('Fichier introuvable');
             }
             if (!is_file($realPath) || !is_readable($realPath)) {
-                throw new \Exception('Fichier invalide ou non lisible');
+                throw new Exception('Fichier invalide ou non lisible');
             }
             //Supprimer les caractères interdits
             $file = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $file);
@@ -431,19 +436,27 @@ class Mailer implements MailerInterface
 
     private function sanitizeEmail(string $email): string
     {
-        // Supprimer TOUS les caractères de contrôle
-        $email = preg_replace('/[\r\n\t\0]/', '', $email);
-        $email = filter_var($email, FILTER_SANITIZE_EMAIL);
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new \Exception('Email invalide: ' . substr($email, 0, 50));
-        }
-
         // Validation de la longueur
         if (strlen($email) > 254) {
-            throw new \Exception('Email trop long');
+            throw new Exception('Email trop long');
         }
+        // Supprimer TOUS les caractères de contrôle
+        $email = preg_replace('/[\r\n\t\0]/', '', $email);
 
+        if (!$email = filter_var($email, FILTER_SANITIZE_EMAIL, FILTER_FLAG_EMPTY_STRING_NULL)) {
+            throw new Exception('Email invalide: ');
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception('Email invalide: ' . $email);
+        }
         return $email;
+    }
+    private function sanitizeHeader(string $header): ?string
+    {
+        $forbiddenHeaders = ['bcc', 'x-confirm-reading-to', 'disposition-notification-to'];
+        if (in_array(strtolower($header), $forbiddenHeaders)) {
+            return null;
+        }
+        return str_replace(["\r", "\n", "\0"], '', $header);
     }
 }
