@@ -398,7 +398,6 @@ class Mailer implements MailerInterface
         ];
     }
 
-    // TODO : make this functionnal
     private function validateAttachments(array $attachments): int
     {
        $totalSize = 0;
@@ -410,7 +409,6 @@ class Mailer implements MailerInterface
         }
         return $totalSize;
     }
-
     
     private function sanitizeAttachements(array $attachments): array
     {
@@ -418,7 +416,6 @@ class Mailer implements MailerInterface
             return [];
             }
             $returnArray = [];
-            //TODO: make it works
             foreach ($attachments as $file) {
                 $realPath = realpath($file);
             if ($realPath === false) {
@@ -451,6 +448,7 @@ class Mailer implements MailerInterface
         }
         return $email;
     }
+    
     private function sanitizeHeader(string $header): ?string
     {
         $forbiddenHeaders = ['bcc', 'x-confirm-reading-to', 'disposition-notification-to'];
