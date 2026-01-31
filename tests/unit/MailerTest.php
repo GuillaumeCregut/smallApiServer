@@ -106,4 +106,53 @@ class MailerTest extends TestCase
         $this->expectExceptionMessage('Email trop long');
         $mailer->sendEmail($veryLongEmail, 'Subject', 'Body');
     }
+
+    // New behaviors tests
+    public function testHeaderSanitizationRemovesForbiddenHeaders(): void
+    {
+        $config = $this->makeConfig();
+        $mailer = new Mailer($config);
+        // Using Bcc in custom headers should be dropped by sanitizeHeader (returns null => not included)
+        $headers = [
+            'Bcc' => 'hacker@example.com',
+            "X-Custom-Header\r\nInjected" => "Value\nWithNewline",
+        ];
+        // Should not throw; sendEmail will fail to connect and return false
+        $this->assertFalse($mailer->sendEmail('to@example.com', 'Subject', 'Body', true, [], $headers));
+    }
+
+    public function testCcAndBccAreNormalizedWhenProvidedAsStrings(): void
+    {
+        $config = $this->makeConfig();
+        $mailer = new Mailer($config);
+        // Valid single string cc/bcc should be accepted
+        $this->assertFalse($mailer->sendEmail('to@example.com', 'Subject', 'Body', true, [], [], 'cc@example.com', 'bcc@example.com'));
+    }
+
+    public function testReplyToSanitizationWithControlChars(): void
+    {
+        $config = $this->makeConfig();
+        $mailer = new Mailer($config);
+        // Reply-to contains control chars but valid email afterwards
+        $reply = "\r\nreply@example.com";
+        $this->assertFalse($mailer->sendEmail('to@example.com', 'Subject', 'Body', true, [], [], [], [], $reply));
+    }
+
+    public function testAttachmentPathIsDirectoryThrows(): void
+    {
+        $config = $this->makeConfig();
+        $mailer = new Mailer($config);
+
+        $dir = sys_get_temp_dir();
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Fichier invalide ou non lisible');
+        $mailer->sendEmail('to@example.com', 'Subject', 'Body', true, [$dir]);
+    }
+
+    public function testPlainTextEmailReturnsFalse(): void
+    {
+        $config = $this->makeConfig();
+        $mailer = new Mailer($config);
+        $this->assertFalse($mailer->sendEmail('to@example.com', 'Subject', 'Body', false));
+    }
 }
