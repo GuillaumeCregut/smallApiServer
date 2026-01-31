@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Middleware;
+namespace App\Kernel\Middleware\Security;
 
 use App\Interfaces\ConnectorInterface;
 use App\Kernel\Interfaces\AuthenticationInterface;

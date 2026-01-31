@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Responses;
+namespace App\Kernel\Responses;
 
 use App\Kernel\AbstractResponse;
 use App\Kernel\utils\Dumper;

@@ -5,10 +5,10 @@ namespace App\Kernel;
 use App\Kernel\Request;
 use App\Services\Connector;
 use App\Kernel\GetClientParams;
-use App\Middleware\AuthManagerMiddleware;
-use App\Services\Responses\ErrorResponse;
+use App\Kernel\Responses\ErrorResponse;
 use App\Kernel\Interfaces\ResponseInterface;
-use App\Services\Responses\ClientErrorResponse;
+use App\Kernel\Responses\ClientErrorResponse;
+use App\Kernel\Middleware\Security\AuthManagerMiddleware;
 
 class Kernel
 {
