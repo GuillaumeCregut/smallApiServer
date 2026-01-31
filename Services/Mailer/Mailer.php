@@ -1,10 +1,15 @@
 <?php
 
 declare(strict_types=1);
+
 namespace App\Services\Mailer;
 
 use App\Interfaces\MailerInterface;
+use App\Kernel\Logger;
 use Exception;
+
+use function PHPUnit\Framework\isArray;
+
 /**
  * Classe d'envoi d'emails moderne respectant les standards actuels
  */
@@ -21,8 +26,8 @@ class Mailer implements MailerInterface
     private mixed $socket = null;
 
     public function __construct(
-       MailConfig $config,
-        ?bool $useTLS=true
+        MailConfig $config,
+        ?bool $useTLS = true
     ) {
         $this->smtpHost = $config->smtpHost;
         $this->smtpPort = (int)$config->smtpPort;
@@ -47,41 +52,42 @@ class Mailer implements MailerInterface
         string|array $bcc = [],
         string $replyTo = ''
     ): bool {
+        $this->sanitizeValues($to, $subject, $attachments, $cc, $bcc, $replyTo, $headers);
         try {
             $this->connect();
             $this->authenticate();
-            
+
             $recipients = is_array($to) ? $to : [$to];
             $ccList = is_array($cc) ? $cc : (empty($cc) ? [] : [$cc]);
             $bccList = is_array($bcc) ? $bcc : (empty($bcc) ? [] : [$bcc]);
-            
+
             // MAIL FROM
             $this->sendCommand("MAIL FROM:<{$this->fromEmail}>", 250);
-            
+
             // RCPT TO - inclut TO, CC et BCC
             $allRecipients = array_merge($recipients, $ccList, $bccList);
             foreach ($allRecipients as $recipient) {
                 $this->sendCommand("RCPT TO:<{$recipient}>", 250);
             }
-            
+
             // DATA
             $this->sendCommand("DATA", 354);
-            
+
             // Construction du message
             $message = $this->buildMessage($recipients, $subject, $body, $isHtml, $attachments, $headers, $ccList, $replyTo);
-            
+
             // Envoi du message
             $this->sendCommand($message . "\r\n.", 250);
-            
+
             // QUIT
             $this->sendCommand("QUIT", 221);
-            
+
             $this->disconnect();
-            
+
             return true;
         } catch (Exception $e) {
             $this->disconnect();
-            error_log("Erreur d'envoi d'email: " . $e->getMessage());
+            Logger::error($this, "Erreur d'envoi d'email: " . $e->getMessage(), false, false);
             return false;
         }
     }
@@ -115,10 +121,19 @@ class Mailer implements MailerInterface
 
         stream_set_timeout($this->socket, $this->timeout);
         $this->getResponse(220);
-        
+
         // EHLO avec le nom de domaine
         $domain = parse_url($this->fromEmail, PHP_URL_HOST) ?? gethostname();
+        $domain = preg_replace('/[^a-zA-Z0-9\-\.]/', '', $domain);
         $this->sendCommand("EHLO {$domain}", 250);
+        if ($this->useTLS) {
+            $this->sendCommand("STARTTLS", 220);
+            if (!stream_socket_enable_crypto($this->socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                throw new \Exception("Impossible d'activer TLS");
+            }
+            // Re-EHLO après STARTTLS (obligatoire selon la RFC)
+            $this->sendCommand("EHLO {$domain}", 250);
+        }
     }
 
     /**
@@ -146,7 +161,6 @@ class Mailer implements MailerInterface
     ): string {
         $boundary = "----=_Part_" . md5(uniqid((string)time()));
         $boundaryAlt = "----=_Part_Alt_" . md5(uniqid((string)time()));
-        
         // En-têtes obligatoires
         $headers = [
             "From: " . $this->formatEmail($this->fromEmail, $this->fromName),
@@ -237,9 +251,9 @@ class Mailer implements MailerInterface
         $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
 
         return "Content-Type: $mimeType; name=\"$filename\"\r\n" .
-               "Content-Transfer-Encoding: base64\r\n" .
-               "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n" .
-               $encoded;
+            "Content-Transfer-Encoding: base64\r\n" .
+            "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n" .
+            $encoded;
     }
 
     /**
@@ -311,5 +325,125 @@ class Mailer implements MailerInterface
             fclose($this->socket);
         }
     }
-}
 
+    private function validateEmailLength(string | array $emails): void
+    {
+        $emailList = is_array($emails) ? $emails : [$emails];
+        foreach ($emailList as $email) {
+            if (strlen($email) > 254) {
+                //TODO: remove email from list
+                throw new \Exception('Adresse email trop longue (max 254 caractères)');
+            }
+        }
+    }
+    private function sanitizeValues(string |array $to, string $subject, array $attachments, string|array $cc, string|array $bcc, string $replyTo, array $headers): array
+    {
+        $this->fromEmail = $this->sanitizeEmail($this->fromEmail);
+        $subject = $this->sanitizeHeader($subject);
+        $newHeader = [];
+        foreach ($headers as $key => $value) {
+            $key = $this->sanitizeHeader($key);
+            $value = $this->sanitizeHeader($value);
+            if (!is_null($key)  && !is_null($value)) {
+                $newHeader[$key] = $value;
+            }
+        }
+        $newTo = [];
+        if (!empty($to)) {
+            if (isArray($cc)) {
+                foreach ($cc as $mail) {
+                    $newTo[] = $this->sanitizeEmail($mail);
+                }
+            } else {
+                $newTo[] = $this->sanitizeEmail($to);
+            }
+        }
+        $newCc = [];
+        if (!empty($cc)) {
+            if (isArray($cc)) {
+                foreach ($cc as $mail) {
+                    $newCc[] = $this->sanitizeEmail($mail);
+                }
+            } else {
+                $newCc[] = $this->sanitizeEmail($cc);
+            }
+        }
+        $newBcc = [];
+        if (!empty($bcc)) {
+            if (isArray($bcc)) {
+                foreach ($bcc as $mail) {
+                    $newBcc[] = $this->sanitizeEmail($mail);
+                }
+            } else {
+                $newBcc[] = $this->sanitizeEmail($cc);
+            }
+        }
+        $replyTo = $this->sanitizeEmail($replyTo);
+        $newAttachments = $this->sanitizeAttachements($attachments);
+
+        return [
+            'to' => $newTo,
+            'subject' => $subject,
+            'attachments' => $newAttachments,
+            'cc' => $newCc,
+            'bcc' => $newBcc,
+            'replyTo' => $replyTo,
+            'headers' => $newHeader,
+        ];
+    }
+
+    // TODO : make this functionnal
+    private function validateAttachments(array $attachments): void
+    {
+        //Check total files size
+    }
+
+    private function sanitizeHeader(string $header): ?string
+    {
+        $forbiddenHeaders = ['bcc', 'x-confirm-reading-to', 'disposition-notification-to'];
+        if (in_array(strtolower($header), $forbiddenHeaders)) {
+            return null;
+        }
+        return str_replace(["\r", "\n", "\0"], '', $header);
+    }
+
+    private function sanitizeAttachements(array $attachments): array
+    {
+        if(empty($attachments)) {
+            return [];
+        }
+        $returnArray = [];
+        //TODO: make it works
+        foreach ($attachments as $file) {
+            $realPath = realpath($file);
+            if ($realPath === false) {
+                throw new \Exception('Fichier introuvable');
+            }
+            if (!is_file($realPath) || !is_readable($realPath)) {
+                throw new \Exception('Fichier invalide ou non lisible');
+            }
+            //Supprimer les caractères interdits
+            $file = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $file);
+            $returnArray[] = $file;
+        }
+        return $returnArray;
+    }
+
+    private function sanitizeEmail(string $email): string
+    {
+        // Supprimer TOUS les caractères de contrôle
+        $email = preg_replace('/[\r\n\t\0]/', '', $email);
+        $email = filter_var($email, FILTER_SANITIZE_EMAIL);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new \Exception('Email invalide: ' . substr($email, 0, 50));
+        }
+
+        // Validation de la longueur
+        if (strlen($email) > 254) {
+            throw new \Exception('Email trop long');
+        }
+
+        return $email;
+    }
+}
