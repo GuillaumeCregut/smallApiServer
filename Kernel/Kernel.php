@@ -39,8 +39,7 @@ class Kernel
         try {
             //Add auth middleware to request
             $connector = new Connector();
-            $manager = new AuthManagerMiddleware($connector);
-            $authMiddleware = $manager->getAuthMiddleware();
+            $authMiddleware = AuthManagerMiddleware::getAuthMiddleware($connector);
             $this->request->setAuth($authMiddleware);
             // execute the controller
             $page = (new $controller())->$method();
