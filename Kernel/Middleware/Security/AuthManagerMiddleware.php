@@ -10,29 +10,23 @@ class AuthManagerMiddleware
 {
     /*Role de la classe
     -Identifier le type d'authentification et délivre le bon middleware*/
-    public function __construct(private ConnectorInterface $connector)
-    {
-        
-    }
 
-    public function getAuthMiddleware(): ?AuthenticationInterface
+    public static function getAuthMiddleware(ConnectorInterface $connector): ?AuthenticationInterface
     {
         $request = Request::getRequestInstance();
         //Check auth
-        if((null!==$request->getServer('PHP_AUTH_USER')) && (null!==$request->getServer('PHP_AUTH_PW'))){
-            //HTTP Auth
-            return new HttpAuthMiddleware($this->connector);
-        } 
-        if(!is_null($request->getHeaders('Authorization'))){
+        if (!is_null($request->getHeaders('Authorization'))) {
             //Bearer Auth 
-            //Todo : complete
-            return new AuthBearerMiddleware($this->connector);
+            return new AuthBearerMiddleware($connector);
         }
-        if($request->getSessionValue('user_id') !== null){
+        if ($request->getSessionValue('userId') !== null) {
             //Session Auth
-            return new SessionAuthMiddleware($this->connector);
+            return new SessionAuthMiddleware($connector);
+        }
+        if ((null !== $request->getServer('PHP_AUTH_USER')) && (null !== $request->getServer('PHP_AUTH_PW'))) {
+            //HTTP Auth
+            return new HttpAuthMiddleware($connector);
         }
         return null;
     }
-
 }
