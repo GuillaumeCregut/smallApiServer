@@ -4,57 +4,88 @@ namespace App\Kernel\Security;
 
 use DateTime;
 
+use Exception;
+use function PHPUnit\Framework\throwException;
+
 class JwtToken
 {
     /**
      * @var array<mixed>
      */
-    private array $header;
-    /**
-     * @var array<mixed>
-     */
-    private array $payload;
+    private ?array $payload = null;
+    private bool $set =false;
 
-    /**
-     * @param array<mixed> $payload
-     * @param string $secret
-     * @param int|null $validity=86400
-     *
-     * @return string
-     */
-    public function createToken(array $payload, string $secret, ?int $validity = 86400): string
+    public function createToken(array $payload, string $secret, int $validity = 86400): string
     {
-        //Create Header
         $header = [
             'typ' => 'JWT',
             'alg' => 'HS256'
         ];
-        //Generate payload
         if ($validity > 0) {
             $now = new DateTime();
-            $exp = $now->getTimestamp() + $validity;
+            $expiration = $now->getTimestamp() + $validity;
             $payload['iat'] = $now->getTimestamp();
-            $payload['exp'] = $exp;
+            $payload['exp'] = $expiration;
         }
-        $token = $this->makeToken($header, $payload, $secret, $validity);
-        $this->header = $header;
-        $this->payload = $payload;
-        return $token;
-    }
-    /**
-     * @return array<mixed>
-     */
-    public function getHeader(): array
-    {
-        return $this->header;
+        $encodedHeader = $this->encodeData($header);
+        $encodedPayload = $this->encodeData($payload);
+        $signature = $this->makeSignature($secret, $encodedHeader, $encodedPayload);
+        // Create token
+        $jwt = $encodedHeader . '.' . $encodedPayload . '.' . $signature;
+        return $jwt;
     }
 
     /**
-     * @return array<mixed>
+     * Vérification du token
+     * @param string $token token to check
+     * @param string $secret
+     * @return bool 
      */
-    public function getPayload(): array
+    public function checkToken(string $token, string $secret): bool
     {
-        return $this->payload;
+        try{
+            $payload = $this->getHashPayload($token);
+            $verifToken = $this->createToken($payload, $secret, 0);
+            $result =  $token === $verifToken;
+            if($result) {
+                //Store payload for further access
+                $this->payload = $this->extractPayload($token);
+                $this->set= true;
+            }
+            return $result;
+        } catch (Exception $e){
+            return false;
+        }
+    }
+
+    /**
+     * Check expiration
+     * @param string $token
+     * @return bool 
+     */
+    public function isExpired(string $token): bool
+    {
+        try{
+            $payload = $this->gethashPayload($token);
+            $now = new DateTime();
+            return $payload['exp'] < $now->getTimestamp();
+        } catch(Exception $e) {
+            return true;
+        }
+
+    }
+
+    /**
+     * Check Token validity
+     * @param string $token 
+     * @return bool 
+     */
+    public function checkFormat(string $token): bool
+    {
+        return preg_match(
+            '/^[a-zA-Z0-9\-\_\=]+\.[a-zA-Z0-9\-\_\=]+\.[a-zA-Z0-9\-\_\=]+$/',
+            $token
+        ) === 1;
     }
 
     public function extractPayload(string $token): array
@@ -69,88 +100,49 @@ class JwtToken
         }
         $payload = $this->decodeData($tokenParts[1]);
         $this->payload = $payload;
+        $this->set = true;
         return $payload;
     }
-    public function checkToken(string $token, string $secret): bool
-    {
-        if (!$this->checkFormat($token)) {
-            throw new \InvalidArgumentException('Invalid token format');
-        }
-        //Extract Datas from token
-        $tokenParts = explode('.', $token);
-        if (count($tokenParts) !== 3) {
-            throw new \InvalidArgumentException('Invalid token format');
-        }
-        $header = $this->decodeData($tokenParts[0]);
-        $payload = $this->decodeData($tokenParts[1]);
-        //Check Signature
-        $VerifyToken = $this->makeToken($header, $payload, $secret, 0);
-        if ($VerifyToken === $token) {
-            $this->payload = $payload;
-            $this->header = $header;
-            return true;
-        }
-        return false;
-    }
 
-    public function isExpired(): bool
-    {
-        if (!isset($this->payload['exp'])) {
-            return false;
-        }
-        $exp = $this->payload['exp'];
-        $now = new DateTime();
-        return $now->getTimestamp() > $exp;
-    }
-
-    /**
-     * @param array<mixed> $header
-     * @param array<mixed> $payload
-     * @param string $secret
-     * @param int $validity
-     *
-     * @return string
+     /**
+     * Get the value of isSet
      */
-    private function makeToken(array $header, array $payload, string $secret, int $validity): string
+    public function isSet(): bool
     {
-        $JsonHeader = $this->encodeData($header);
-        $JsonPayload = $this->encodeData($payload);
-        //Generate Signature
-        $signature = $this->createSignature($secret, $JsonHeader, $JsonPayload);
-        $JsonSignature = $this->encodeData($signature);
-        //return JWT
-        return $JsonHeader . '.' . $JsonPayload . '.' . $JsonSignature;
-    }
-    private function createSignature(string $secret, string $JsonHeader, string $JsonPayload): string
-    {
-        $secret = base64_encode($secret);
-        $signature = hash_hmac('sha256', $JsonHeader . '.' . $JsonPayload, $secret, true);
-        return $signature;
+        return $this->set;
     }
 
     /**
-     * @param  array<mixed> $data
-     *
-     * @return string
+     * Get the value of payload
      */
-    private function encodeData(array |string $data): string
+    public function getPayload(): ?array
     {
-        if (is_array($data)) {
-            $serialize = json_encode($data);
-        } else {
-            $serialize = $data;
-        }
-        if (!$serialize) {
-            throw new \InvalidArgumentException('Invalid serialization');
-        }
-        $baseEncode = base64_encode($serialize);
-        //Todo : change replacement values
-        $baseEncode = str_replace(['+', '/', '='], ['-', '_', ''], $baseEncode);
-        return $baseEncode;
+        return $this->payload;
     }
 
     /**
-     * @param string $data
+     * Get hash payload
+     * @param string $token Token
+     * @return array Payload
+     */
+    private function getHashPayload(string $token)
+    {
+        if(!$this->checkFormat($token)){
+            throw new Exception('Unable to decode Token');
+        }
+        $array = explode('.', $token);
+        $payload = json_decode(base64_decode($array[1]), true);
+        return $payload;
+    }
+    
+    private function encodeData(array $data): string
+    {
+        $dataEncoded = base64_encode(json_encode($data));
+        $base64value = str_replace(['+', '/', '='], ['-', '_', ''], $dataEncoded);
+        return $base64value;
+    }
+
+     /* @param string $data
      *
      * @return array<mixed>
      */
@@ -158,8 +150,6 @@ class JwtToken
     {
         try {
             $data = base64_decode($data);
-            //Todo : change replacement values
-            //$data = str_replace(['-', '_', ''], ['+', '/', '='], $data);
             $data = json_decode($data, true);
             return $data;
         } catch (\Throwable $th) {
@@ -167,11 +157,13 @@ class JwtToken
         }
     }
 
-    private function checkFormat(string $token): bool
+    private function makeSignature(string $secret, string $header, string $payload): string
     {
-        return preg_match(
-            '/^[a-zA-Z0-9\-\_\=]+\.[a-zA-Z0-9\-\_\=]+\.[a-zA-Z0-9\-\_\=]+$/',
-            $token
-        ) === 1;
+        $secret = base64_encode($secret);
+        $signature = hash_hmac('sha256', $header . '.' . $payload, $secret, true);
+        $encodedSignature = base64_encode($signature);
+        $signature = str_replace(['+', '/', '='], ['-', '_', ''], $encodedSignature);
+        return $signature;
     }
+
 }
