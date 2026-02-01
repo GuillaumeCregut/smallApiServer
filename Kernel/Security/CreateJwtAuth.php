@@ -5,17 +5,17 @@ use App\Kernel\GetEnvDatas;
 
 class CreateJwtAuth
 {
-    public function createToken(int $userId, array $role,?int $validity = 86400, ?string $firstname, ?string $lastname): string
+    public static function createToken(int $userId, array $role, ?string $firstname, ?string $lastname, ?int $validity = 86400,): string
     {
         $envs = new GetEnvDatas();
         $secret = $envs->get('secret');
         $payload = [
-            'user_id' => $userId,
+            'userId' => $userId,
             'role' => $role,
             'firstname' => $firstname,
             'lastname' => $lastname
         ];
         $jwtToken = new JwtToken();
-        return $jwtToken->createToken($payload, $secret, $validity);
+        return JwtToken::createToken($payload, $secret, $validity);
     }
 }
