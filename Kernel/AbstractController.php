@@ -5,7 +5,7 @@ namespace App\Kernel;
 use App\Kernel\Request;
 use App\Interfaces\ConnectorInterface;
 use App\Kernel\Interfaces\ResponseInterface;
-use App\Services\Responses\ClientErrorResponse;
+use App\Kernel\Responses\ClientErrorResponse;
 
 
 abstract class AbstractController

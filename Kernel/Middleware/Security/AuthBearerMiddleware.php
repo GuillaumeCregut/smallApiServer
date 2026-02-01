@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Middleware;
+namespace App\Kernel\Middleware\Security;
 
 use DateTime;
 use App\Security\User;
 use App\Kernel\GetEnvDatas;
 use App\Kernel\Request;
-use App\Services\Security\JwtToken;
+use App\Kernel\Security\JwtToken;
 use App\Interfaces\ConnectorInterface;
 use App\Kernel\Traits\GetUserAuthTrait;
 use App\Kernel\Interfaces\AuthenticationInterface;

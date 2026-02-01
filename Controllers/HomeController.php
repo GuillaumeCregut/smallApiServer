@@ -4,11 +4,11 @@ namespace App\Controllers;
 
 use App\Models\HomeModel;
 use App\Services\Connector;
-use App\Services\Responses\JsonResponse;
-use App\Services\Responses\ErrorResponse;
+use App\Kernel\Responses\JsonResponse;
+use App\Kernel\Responses\ErrorResponse;
 use App\Kernel\AbstractController;
 use App\Kernel\Interfaces\ResponseInterface;
-use App\Services\Responses\ClientErrorResponse;
+use App\Kernel\Responses\ClientErrorResponse;
 
 class HomeController extends AbstractController
 {
