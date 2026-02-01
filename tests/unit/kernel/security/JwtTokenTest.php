@@ -26,6 +26,17 @@ class JwtTokenTest extends TestCase
         $this->assertTrue($jwt->checkToken($newToken, $secret));
     }
 
+     public function testStaticCreateToken(): void
+    {
+        $payload = [
+            'userId' => 1
+        ];
+        $secret = 'secret';
+        $jwt2 = new JwtToken();
+        $newToken = JwtToken::createToken($payload, $secret);
+        $this->assertTrue($jwt2->checkToken($newToken, $secret));
+    }
+
     public function testCheckFormatToken(): void
     {
         $token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwiaWF0IjoxNzY5OTUzMDgzLCJleHAiOjE3NzAwMzk0ODN9.GI5Sx4aNEH6GKneyo5cKzBwGX9mx-ndDO9sDghNbuSk';

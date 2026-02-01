@@ -3,9 +3,7 @@
 namespace App\Kernel\Security;
 
 use DateTime;
-
 use Exception;
-use function PHPUnit\Framework\throwException;
 
 class JwtToken
 {
@@ -15,7 +13,7 @@ class JwtToken
     private ?array $payload = null;
     private bool $set =false;
 
-    public function createToken(array $payload, string $secret, int $validity = 86400): string
+    public static function createToken(array $payload, string $secret, int $validity = 86400): string
     {
         $header = [
             'typ' => 'JWT',
@@ -27,9 +25,9 @@ class JwtToken
             $payload['iat'] = $now->getTimestamp();
             $payload['exp'] = $expiration;
         }
-        $encodedHeader = $this->encodeData($header);
-        $encodedPayload = $this->encodeData($payload);
-        $signature = $this->makeSignature($secret, $encodedHeader, $encodedPayload);
+        $encodedHeader = self::encodeData($header);
+        $encodedPayload = self::encodeData($payload);
+        $signature = self::makeSignature($secret, $encodedHeader, $encodedPayload);
         // Create token
         $jwt = $encodedHeader . '.' . $encodedPayload . '.' . $signature;
         return $jwt;
@@ -135,7 +133,7 @@ class JwtToken
         return $payload;
     }
     
-    private function encodeData(array $data): string
+    private static function encodeData(array $data): string
     {
         $dataEncoded = base64_encode(json_encode($data));
         $base64value = str_replace(['+', '/', '='], ['-', '_', ''], $dataEncoded);
@@ -157,7 +155,7 @@ class JwtToken
         }
     }
 
-    private function makeSignature(string $secret, string $header, string $payload): string
+    private static function makeSignature(string $secret, string $header, string $payload): string
     {
         $secret = base64_encode($secret);
         $signature = hash_hmac('sha256', $header . '.' . $payload, $secret, true);
