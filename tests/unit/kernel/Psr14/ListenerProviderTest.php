@@ -49,8 +49,6 @@ class ListenerProviderTest extends TestCase
         $listener = $this->createStub(ListenerInterface::class);
         $provider = new ListenerProvider();
         $provider->addListener($event::class, $listener);
-        // $this->assertArrayHasKey($event::class, $provider->getListeners());
-        // $this->assertIsArray($provider->getListeners($event::class));
         $provider->clearListener($event::class);
         $this->assertArrayNotHasKey($event::class, $provider->getListeners());
     }
