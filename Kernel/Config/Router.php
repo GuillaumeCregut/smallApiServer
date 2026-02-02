@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Kernel;
+namespace App\Kernel\Config;
 
 use App\Controllers\HomeController;
 

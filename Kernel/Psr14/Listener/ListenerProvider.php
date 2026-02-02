@@ -74,4 +74,9 @@ class ListenerProvider implements ListenerProviderInterface
             unset($this->listeners[$eventType]);
         }
     }
+
+    public function resetListeners(): void
+    {
+        $this->listeners =[];
+    }
 }

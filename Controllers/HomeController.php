@@ -7,6 +7,7 @@ use App\Services\Connector;
 use App\Kernel\Responses\JsonResponse;
 use App\Kernel\Responses\ErrorResponse;
 use App\Kernel\AbstractController;
+use App\Kernel\Config\DatabaseConnector;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ClientErrorResponse;
 
@@ -16,7 +17,7 @@ class HomeController extends AbstractController
     public function __construct()
     {
         parent::__construct();
-        $this->connector = new Connector();
+        $this->connector = DatabaseConnector::getConnector();
     }
     public function index(): ResponseInterface
     {

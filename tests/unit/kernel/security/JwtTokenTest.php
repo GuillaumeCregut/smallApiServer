@@ -1,6 +1,5 @@
 <?php
 
-use App\Kernel\GetEnvDatas;
 use App\Kernel\Security\JwtToken;
 use PHPUnit\Framework\TestCase;
 
