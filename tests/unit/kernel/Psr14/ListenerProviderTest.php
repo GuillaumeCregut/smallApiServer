@@ -70,4 +70,16 @@ class ListenerProviderTest extends TestCase
         $this->assertArrayHasKey($event2::class, $provider3->getListeners());
         $this->assertArrayHasKey($event::class, $provider3->getListeners());
     }
+
+    public function testProviderPriority(): void
+    {
+        $listener1 = $this->createStub(ListenerInterface::class);
+        $listener2 = $this->createStub(ListenerInterface::class);
+        $event = $this->createStub(StoppableEventInterface::class);
+        $provider = new ListenerProvider();
+        $provider->addListener($event::class, $listener2, 3);
+        $provider->addListener($event::class, $listener1, 5);
+        $arrayEvent = $provider->getListenersForEvent(new $event());
+        $this->assertEquals([ $listener1,$listener2], $arrayEvent);
+    }
 }
