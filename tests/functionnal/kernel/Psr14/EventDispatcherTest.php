@@ -17,6 +17,21 @@ class EventDispatcherTest extends TestCase
         $this->assertInstanceOf(EventDispatcher::class, $dispatcher);
     }
 
+    public function testInitWithoutProvider(): void
+    {
+        EventDispatcher::resetInstance();
+        $this->expectException(EventException::class);
+         $dispatcher = EventDispatcher::getInstance();
+    }
+
+    public function testGetInstanceOK(): void
+    {
+        EventDispatcher::resetInstance();
+        $listenerProvider = ListenerProvider::getInstance();
+        $dispatcher = EventDispatcher::getInstance($listenerProvider); 
+        $dispatcher2 = EventDispatcher::getInstance();
+        $this->assertInstanceOf(EventDispatcher::class, $dispatcher2);
+    }
     public function testDispatch(): void
     {
         $listener = $this->createMock(ListenerInterface::class);

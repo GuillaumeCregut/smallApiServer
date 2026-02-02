@@ -17,9 +17,12 @@ class EventDispatcher implements EventDispatcherInterface
     {
         $this->listenerProvider = $listenerProvider;
     }
-    public static function getInstance(ListenerProviderInterface $listenerProvider): EventDispatcher
+    public static function getInstance(?ListenerProviderInterface $listenerProvider=null): EventDispatcher
     {
         if(null === self::$instance) {
+            if(null === $listenerProvider) {
+                throw new EventException('No provider for create Dispatcher');
+            }
             self::$instance = new EventDispatcher($listenerProvider);
         }
         return self::$instance;
@@ -40,5 +43,10 @@ class EventDispatcher implements EventDispatcherInterface
             $listener->execute($event);
         }
         return $event;
+    }
+
+    public static function resetInstance(): void
+    {
+        self::$instance=null;
     }
 }
