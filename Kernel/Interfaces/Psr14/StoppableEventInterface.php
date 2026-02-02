@@ -15,4 +15,6 @@ interface StoppableEventInterface
      *   False to continue calling listeners.
      */
     public function isPropagationStopped(): bool;
+
+    public function stopPropagation(): void;
 }
