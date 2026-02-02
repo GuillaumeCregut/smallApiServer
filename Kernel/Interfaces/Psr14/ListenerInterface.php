@@ -9,5 +9,5 @@ interface ListenerInterface
      *
      * @return void
      */
-    public function execute(...$args): void;
+    public function execute(StoppableEventInterface $event): void;
 }
