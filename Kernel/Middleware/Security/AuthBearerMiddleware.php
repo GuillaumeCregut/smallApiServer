@@ -41,7 +41,7 @@ class AuthBearerMiddleware implements AuthenticationInterface
     public function isAuth(): bool
     {
         $userInfo = $this->jwtToken->extractPayload($this->token);
-        $userId = (int)$userInfo['user_id'];
+        $userId = (int)$userInfo['userId'];
         $this->user = $this->getUserFromDB($userId);
         if ($this->user === null) {
             return false;
