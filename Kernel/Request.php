@@ -148,6 +148,11 @@ class Request
         return $this->auth->getUser();
     }
 
+    public function getAuth(): ?AuthenticationInterface
+    {
+        return $this->auth;
+    }
+
     private function convertFiles(?array $filesFromInit = null): array
     {
         if (null === $filesFromInit) {

@@ -1,1 +1,3 @@
-php ./tools/phpUnit.phar -c ./tools/phpUnit.xml --bootstrap ./tests/bootstrap.php
+@echo off
+if "%1"=="" (echo "test tous les fichiers") else (echo "test fichier %1")
+php ./tools/phpUnit.phar %1 -c ./tools/phpUnit.xml --bootstrap ./tests/bootstrap.php

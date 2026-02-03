@@ -2,8 +2,8 @@
 
 namespace App\Kernel\Config;
 
-use App\Kernel\Psr14\Events\InitKernelEvent;
-use App\Kernel\Psr14\Listener\TestListener;
+use App\Kernel\Middleware\Security\AuthManagerMiddleware;
+use App\Kernel\Psr14\Events\CallAuthKernelEvent;
 
 class Events
 {
@@ -29,7 +29,7 @@ class Events
     public static function getListeners(): array
     {
         $events = [
-            InitKernelEvent::class=>[new TestListener()]
+            CallAuthKernelEvent::class=>[new AuthManagerMiddleware()]
         ];
         return $events;
     }
