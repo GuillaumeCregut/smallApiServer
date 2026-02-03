@@ -9,6 +9,7 @@ class ConnectorDispatcherTest extends TestCase
 {
     public function testNoConnector():void
     {
+        ConnectorDispatcher::resetConnector();
         $this->expectException(DatabaseException::class);
         $connector = ConnectorDispatcher::getConnector();
     }
@@ -18,6 +19,7 @@ class ConnectorDispatcherTest extends TestCase
         ConnectorDispatcher::resetConnector();
         $connector = $this->createStub(ConnectorInterface::class);
         ConnectorDispatcher::setConnector($connector);
-        $this->assertInstanceOf(ConnectorInterface::class, ConnectorDispatcher::getConnector());
+        $newConnector = ConnectorDispatcher::getConnector();
+        $this->assertInstanceOf(ConnectorInterface::class, $newConnector);
     }
 }
