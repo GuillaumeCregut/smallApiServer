@@ -7,7 +7,7 @@ use App\Kernel\Request;
 use App\Kernel\Traits\GetUserAuthTrait;
 use App\Security\User;
 
-class HttpAuthMiddleware implements AuthenticationInterface
+class AuthHttpMiddleware implements AuthenticationInterface
 {
 
     use GetUserAuthTrait;

@@ -1,10 +1,9 @@
 <?php
 
-use App\Kernel\Connector\MySQLConnector;
 use App\Kernel\Request;
-use App\Services\Connector;
 use PHPUnit\Framework\TestCase;
-use App\Kernel\Middleware\Security\HttpAuthMiddleware;
+use App\Kernel\Connector\MySQLConnector;
+use App\Kernel\Middleware\Security\AuthHttpMiddleware;
 use App\Kernel\Middleware\Security\AuthBearerMiddleware;
 use App\Kernel\Middleware\Security\AuthManagerMiddleware;
 use App\Kernel\Middleware\Security\SessionAuthMiddleware;
@@ -31,7 +30,7 @@ class AuthManagerMiddlewareTest extends TestCase
         ];
         $request = Request::initInstance($server, [], [], [], [], [], []);
         $middleware = AuthManagerMiddleware::getAuthMiddleware($connector);
-        $this->assertInstanceOf(HttpAuthMiddleware::class, $middleware);
+        $this->assertInstanceOf(AuthHttpMiddleware::class, $middleware);
     }
 
     public function testSessionAuth(): void
