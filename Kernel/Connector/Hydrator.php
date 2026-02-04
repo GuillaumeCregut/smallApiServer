@@ -9,8 +9,7 @@ class Hydrator
     public static function hydrate(EntityInterface $entity, array $values): EntityInterface
     {
         foreach ($values as $row=>$value){
-            $property=strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $row));
-            $setter = 'set' . ucfirst($property);
+            $setter = 'set' . ucfirst($row);
             if(method_exists($entity, $setter)) {
                 $entity->$setter($value);
             }
