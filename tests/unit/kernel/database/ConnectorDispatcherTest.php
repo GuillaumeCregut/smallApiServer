@@ -1,9 +1,10 @@
 <?php
 
-use App\Interfaces\ConnectorInterface;
-use App\Kernel\Connector\ConnectorDispatcher;
-use App\Kernel\Connector\DatabaseException;
+
 use PHPUnit\Framework\TestCase;
+use App\Kernel\Connector\DatabaseException;
+use App\Kernel\Connector\ConnectorDispatcher;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class ConnectorDispatcherTest extends TestCase
 {

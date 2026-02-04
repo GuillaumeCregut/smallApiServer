@@ -2,11 +2,12 @@
 
 namespace App\Kernel\Middleware\Security;
 
-use App\Interfaces\ConnectorInterface;
+
 use App\Security\User;
-use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Request;
 use App\Kernel\Traits\GetUserAuthTrait;
+use App\Kernel\Interfaces\AuthenticationInterface;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class SessionAuthMiddleware implements AuthenticationInterface
 {

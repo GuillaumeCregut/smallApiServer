@@ -3,9 +3,10 @@
 namespace App\Kernel;
 
 use App\Kernel\Request;
-use App\Interfaces\ConnectorInterface;
+
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ClientErrorResponse;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 
 abstract class AbstractController

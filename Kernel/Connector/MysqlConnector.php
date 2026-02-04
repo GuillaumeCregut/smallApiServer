@@ -2,9 +2,9 @@
 
 namespace App\Kernel\Connector;
 
-use App\Interfaces\ConnectorInterface;
-use App\Kernel\GetEnvDatas;
 use Exception;
+use App\Kernel\GetEnvDatas;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class MySQLConnector implements ConnectorInterface
 {

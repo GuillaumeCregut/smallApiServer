@@ -2,7 +2,7 @@
 
 namespace App\Kernel\Connector;
 
-use App\Interfaces\ConnectorInterface;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class ConnectorDispatcher
 {
