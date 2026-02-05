@@ -27,7 +27,10 @@ class QueryBuilder
                 $newAs = $this->convertPropertyName2Fieldname($value);
                 $value = $newKey . ' AS ' . $newAs;
             }
-            $this->columns[] = $this->convertPropertyName2Fieldname($value);
+            else {
+                $value = $this->convertPropertyName2Fieldname($value);
+            }
+            $this->columns[] = $value;
         }
         return $this;
     }

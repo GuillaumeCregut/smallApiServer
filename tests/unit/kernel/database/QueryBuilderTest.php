@@ -199,15 +199,15 @@ class QueryBuilderTest extends TestCase
     {
         $qb = new QueryBuilder('myTable');
         $qb->select(['name'=>'nom']);
-        $query = 'SELECT name as nom FROM myTable';
+        $query = 'SELECT name AS nom FROM myTable';
         $this->assertEquals($query, $qb->toSQL());
     }
 
-    // public function testSelectAsMultiColumns(): void
-    // {
-    //     $qb = new QueryBuilder('myTable');
-    //     $qb->select(['name', 'firstName']);
-    //     $query = 'SELECT name, first_name FROM myTable';
-    //     $this->assertEquals($query, $qb->toSQL());
-    // }
+    public function testSelectAsMultiColumns(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->select(['FirstName'=>'nameFirst', 'lastName'=>'nameLast']);
+        $query = 'SELECT first_name AS name_first, last_name AS name_last FROM myTable';
+        $this->assertEquals($query, $qb->toSQL());
+    }
 }
