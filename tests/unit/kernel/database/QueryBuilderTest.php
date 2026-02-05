@@ -210,4 +210,13 @@ class QueryBuilderTest extends TestCase
         $query = 'SELECT first_name AS name_first, last_name AS name_last FROM myTable';
         $this->assertEquals($query, $qb->toSQL());
     }
+
+    public function testSelectJoin(): void
+    {
+        $query = "SELECT table1.firstanme, table1.lastname, table2.role FROM table1 INNER JOIN table2 on table1.id= table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname','lastname'])
+        ->join('table2',['role'],['id','userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
 }

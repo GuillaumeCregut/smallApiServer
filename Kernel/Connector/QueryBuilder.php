@@ -19,6 +19,27 @@ class QueryBuilder
         $this->table = $table;
     }
 
+    public function selectJoin(array $columns): self
+    {
+        $this->verb = 'SELECTJOIN';
+        return $this;
+    }
+
+    public function join(string $table, array $columns, array $join): self
+    {
+        return $this;
+    }
+
+    public function leftJoin(string $table, array $columns, array $join): self
+    {
+        return $this;
+    }
+
+    public function RightJoin(string $table, array $columns, array $join): self
+    {
+        return $this;
+    }
+
     public function select(array $columns): self
     {
         foreach($columns as $key => $value) {
