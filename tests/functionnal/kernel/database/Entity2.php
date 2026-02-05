@@ -8,6 +8,10 @@ class Entity2 implements EntityInterface
     private ?string $firstname = null;
     private ?int $age = null;
 
+     public function getID(): int
+    {
+        return 1;
+    }
 
     /**
      * Get the value of name
