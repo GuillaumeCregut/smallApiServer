@@ -29,9 +29,6 @@ class QueryBuilder
             }
             $this->columns[] = $this->convertPropertyName2Fieldname($value);
         }
-      /*  foreach($columns as $value) {
-            $this->columns[] = $this->convertPropertyName2Fieldname($value);
-        }*/
         return $this;
     }
 
