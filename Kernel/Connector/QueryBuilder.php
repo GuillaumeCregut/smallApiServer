@@ -21,14 +21,26 @@ class QueryBuilder
 
     public function select(array $columns): self
     {
-        $this->columns = $columns;
+        foreach($columns as $key => $value) {
+            if (is_string($key)) {
+                $newKey = $this->convertPropertyName2Fieldname($key);
+                $newAs = $this->convertPropertyName2Fieldname($value);
+                $value = $newKey . ' AS ' . $newAs;
+            }
+            $this->columns[] = $this->convertPropertyName2Fieldname($value);
+        }
+      /*  foreach($columns as $value) {
+            $this->columns[] = $this->convertPropertyName2Fieldname($value);
+        }*/
         return $this;
     }
 
     public function insert(array $columns): self
     {
         $this->verb = 'INSERT';
-        $this->columns = $columns;
+        foreach($columns as $value) {
+            $this->columns[] = $this->convertPropertyName2Fieldname($value);
+        }
         return $this;
     }
 
@@ -40,7 +52,7 @@ class QueryBuilder
                 throw new DatabaseException('key is not a valid column name');
             }
             $this->params[] = $value;
-            $this->columns[] = $key;
+            $this->columns[] = $this->convertPropertyName2Fieldname($key);
         }
         return $this;
     }
@@ -62,6 +74,7 @@ class QueryBuilder
 
     public function where(string $column, string $operator, mixed $value): self
     {
+        $column = $this->convertPropertyName2Fieldname($column);
         $this->wheres[] = "$column $operator ?";
         $this->params[] = $value;
         return $this;
@@ -69,6 +82,7 @@ class QueryBuilder
 
     public function whereIn(string $column, array $values): self
     {
+        $column = $this->convertPropertyName2Fieldname($column);
         $placeholders = implode(',', array_fill(0, count($values), '?'));
         $this->wheres[] = "$column IN ($placeholders)";
         $this->params = array_merge($this->params, $values);
@@ -77,6 +91,7 @@ class QueryBuilder
 
     public function orderBy(string $column, string $direction = 'ASC'): self
     {
+        $column = $this->convertPropertyName2Fieldname($column);
         $this->orderBy = "$column $direction";
         return $this;
     }
@@ -134,5 +149,10 @@ class QueryBuilder
     public function getParams(): array
     {
         return $this->params;
+    }
+
+    private function convertPropertyName2Fieldname(string $name): string
+    {
+        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
     }
 }

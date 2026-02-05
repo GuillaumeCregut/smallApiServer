@@ -28,8 +28,8 @@ class QueryBuilderTest extends TestCase
     {
         $qb = new QueryBuilder('myTable');
         $qb->where('status', '=', 'active')
-            ->where('name', '=', 'John');
-        $query = 'SELECT * FROM myTable WHERE status = ? AND name = ?';
+            ->where('firstName', '=', 'John');
+        $query = 'SELECT * FROM myTable WHERE status = ? AND first_name = ?';
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
         $this->assertIsArray($params);
@@ -52,9 +52,9 @@ class QueryBuilderTest extends TestCase
     public function testSelectWhereWhereInSelectRequest(): void
     {
         $qb = new QueryBuilder('myTable');
-        $qb->whereIn('role', ['admin', 'moderator'])
+        $qb->whereIn('roleUser', ['admin', 'moderator'])
             ->Where('name', '=', 'John');
-        $query = 'SELECT * FROM myTable WHERE role IN (?,?) AND name = ?';
+        $query = 'SELECT * FROM myTable WHERE role_user IN (?,?) AND name = ?';
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
         $this->assertIsArray($params);
@@ -86,8 +86,8 @@ class QueryBuilderTest extends TestCase
     {
         $qb = new QueryBuilder('myTable');
         $qb->where('status', '=', 'active')
-            ->orderBy('status', 'DESC');
-        $query = 'SELECT * FROM myTable WHERE status = ? ORDER BY status DESC';
+            ->orderBy('statusObject', 'DESC');
+        $query = 'SELECT * FROM myTable WHERE status = ? ORDER BY status_object DESC';
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
         $this->assertIsArray($params);
@@ -114,8 +114,8 @@ class QueryBuilderTest extends TestCase
     public function testSelectMultiColumns(): void
     {
         $qb = new QueryBuilder('myTable');
-        $qb->select(['name', 'firstname']);
-        $query = 'SELECT name, firstname FROM myTable';
+        $qb->select(['name', 'firstName']);
+        $query = 'SELECT name, first_name FROM myTable';
         $this->assertEquals($query, $qb->toSQL());
     }
 
@@ -131,13 +131,12 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals('John', $params[0]);
     }
 
-
     public function testInsertValues(): void
     {
         $qb = new QueryBuilder('myTable');
-        $qb->insert(['name', 'firstname'])
+        $qb->insert(['name', 'firstName'])
             ->values(['John', 'Doe']);
-        $query = 'INSERT INTO myTable (name, firstname) VALUES (?, ?)';
+        $query = 'INSERT INTO myTable (name, first_name) VALUES (?, ?)';
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
         $this->assertIsArray($params);
@@ -172,11 +171,11 @@ class QueryBuilderTest extends TestCase
         $qb = new QueryBuilder('myTable');
         $updateValues = [
             'name' => 'Doe',
-            'firstname' => 'John'
+            'firstName' => 'John'
         ];
         $qb->update($updateValues)
             ->where('id', '=', 1);
-        $query = 'UPDATE myTable SET name = ?, firstname = ? WHERE id = ?';
+        $query = 'UPDATE myTable SET name = ?, first_name = ? WHERE id = ?';
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
         $this->assertIsArray($params);
@@ -195,4 +194,20 @@ class QueryBuilderTest extends TestCase
         $this->assertIsArray($params);
         $this->assertEquals(1, $params[0]);
     }
+
+    public function testSelectAs(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->select(['name'=>'nom']);
+        $query = 'SELECT name as nom FROM myTable';
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    // public function testSelectAsMultiColumns(): void
+    // {
+    //     $qb = new QueryBuilder('myTable');
+    //     $qb->select(['name', 'firstName']);
+    //     $query = 'SELECT name, first_name FROM myTable';
+    //     $this->assertEquals($query, $qb->toSQL());
+    // }
 }
