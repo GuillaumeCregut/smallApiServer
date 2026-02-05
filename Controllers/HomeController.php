@@ -3,7 +3,6 @@
 namespace App\Controllers;
 
 use App\Models\HomeModel;
-use App\Services\Connector;
 use App\Kernel\Responses\JsonResponse;
 use App\Kernel\Responses\ErrorResponse;
 use App\Kernel\AbstractController;

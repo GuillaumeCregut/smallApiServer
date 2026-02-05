@@ -2,12 +2,13 @@
 
 namespace App\Kernel\Middleware\Security;
 
-use App\Interfaces\ConnectorInterface;
+
+use App\Kernel\Request;
 use App\Kernel\Config\DatabaseConnector;
 use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Psr14\ListenerInterface;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
-use App\Kernel\Request;
 
 class AuthManagerMiddleware implements ListenerInterface
 {

@@ -2,8 +2,9 @@
 
 namespace App\Kernel\Config;
 
-use App\Interfaces\ConnectorInterface;
+
 use App\Kernel\Connector\MySQLConnector;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class DatabaseConnector
 {

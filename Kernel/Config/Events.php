@@ -18,6 +18,7 @@ class Events
                 new EventListener(),
             ]
         ]
+    Note : order is important in array. the last class is called first.
     Usabe KernelEvent :
     - InitKernelEvent
     - CallAuthKernelEvent
