@@ -32,88 +32,19 @@ class QueryBuilder
 
     public function join(string $table, array $columns, array $join): self
     {
-        if (count($join) > 2) {
-            throw new DatabaseException('Array for join is not well formatted');
-        }
-        foreach ($columns as $value) {
-            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
-            $this->columns[] = $field;
-        }
-        $tables = [];
-        $columns = [];
-        foreach ($join as $key => $value) {
-            if (!is_string($key)) {
-                throw new DatabaseException('Array for join is not well formatted');
-            }
-            $tables[] = $key;
-            $columns[] = $value;
-        }
-        $link = '';
-        if (count($this->on) === 0) {
-            $link .=  $tables[0] . ' ';
-        }
-        $link .= 'INNER JOIN ' . $tables[1] . ' ON ';
-        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
-        $link .= $tables[1] . '.' .  $columns[1];
-        $this->on[] = $link;
+        $this->on[] = $this->makeJoin('INNER',  $table, $columns, $join);
         return $this;
     }
 
     public function leftJoin(string $table, array $columns, array $join): self
     {
-        if (count($join) > 2) {
-            throw new DatabaseException('Array for join is not well formatted');
-        }
-        foreach ($columns as $value) {
-            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
-            $this->columns[] = $field;
-        }
-        $tables = [];
-        $columns = [];
-        foreach ($join as $key => $value) {
-            if (!is_string($key)) {
-                throw new DatabaseException('Array for join is not well formatted');
-            }
-            $tables[] = $key;
-            $columns[] = $value;
-        }
-        $link = '';
-        if (count($this->on) === 0) {
-            $link .=  $tables[0] . ' ';
-        }
-        $link .= 'LEFT JOIN ' . $tables[1] . ' ON ';
-        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
-        $link .= $tables[1] . '.' .  $columns[1];
-        $this->on[] = $link;
+        $this->on[] = $this->makeJoin('LEFT',  $table, $columns, $join);
         return $this;
     }
 
     public function RightJoin(string $table, array $columns, array $join): self
     {
-        if (count($join) > 2) {
-            throw new DatabaseException('Array for join is not well formatted');
-        }
-        foreach ($columns as $value) {
-            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
-            $this->columns[] = $field;
-        }
-        $tables = [];
-        $columns = [];
-        foreach ($join as $key => $value) {
-            if (!is_string($key)) {
-                throw new DatabaseException('Array for join is not well formatted');
-            }
-            $tables[] = $key;
-            $columns[] = $value;
-        }
-        $link = '';
-        if (count($this->on) === 0) {
-            $link .=  $tables[0] . ' ';
-        }
-        $link .= 'RIGHT JOIN ' . $tables[1] . ' ON ';
-        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
-        $link .= $tables[1] . '.' .  $columns[1];
-        $this->on[] = $link;
+        $this->on[] = $this->makeJoin('RIGHT',  $table, $columns, $join);
         return $this;
     }
 
@@ -255,5 +186,33 @@ class QueryBuilder
     private function convertPropertyName2Fieldname(string $name): string
     {
         return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
+    }
+
+    private function makeJoin(string $joinVerb, string $table, array $columns, array $join): string
+    {
+        if (count($join) > 2) {
+            throw new DatabaseException('Array for join is not well formatted');
+        }
+        foreach ($columns as $value) {
+            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
+            $this->columns[] = $field;
+        }
+        $tables = [];
+        $columns = [];
+        foreach ($join as $key => $value) {
+            if (!is_string($key)) {
+                throw new DatabaseException('Array for join is not well formatted');
+            }
+            $tables[] = $key;
+            $columns[] = $value;
+        }
+        $link = '';
+        if (count($this->on) === 0) {
+            $link .=  $tables[0] . ' ';
+        }
+        $link .= $joinVerb .' JOIN '. $tables[1] . ' ON ';
+        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
+        $link .= $tables[1] . '.' .  $columns[1];
+        return $link;
     }
 }
