@@ -300,5 +300,36 @@ class QueryBuilderTest extends TestCase
             ->rightJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid']);
         $this->assertEquals($query, $qb->toSQL());
     }
-    
+
+    public function testRightJoinAsOne(): void
+    {
+        $FieldTable1 = [
+            'firstname' => 'firstname1',
+            'lastname' => 'lastname1'
+        ];
+        $FieldTable2 = [
+            'role' => 'role1'
+        ];
+        $query = "SELECT table1.firstname AS firstname1, table1.lastname AS lastname1, table2.role AS role1 FROM table1 RIGHT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin($FieldTable1)
+            ->rightJoin('table2', $FieldTable2, ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testRightJoinAsOneField(): void
+    {
+        $FieldTable1 = [
+            'firstname' => 'firstname1',
+            'lastname' => 'lastname1'
+        ];
+        $FieldTable2 = [
+            'role'
+        ];
+        $query = "SELECT table1.firstname AS firstname1, table1.lastname AS lastname1, table2.role FROM table1 RIGHT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin($FieldTable1)
+            ->rightJoin('table2', $FieldTable2, ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
 }

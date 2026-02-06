@@ -23,8 +23,13 @@ class QueryBuilder
     public function selectJoin(array $columns): self
     {
         $this->verb = 'SELECTJOIN';
-        foreach ($columns as $value) {
-            $field = $this->table . '.' . $this->convertPropertyName2Fieldname($value);
+        foreach ($columns as $key => $value) {
+            if(is_string($key)) {
+                $convertedField = $this->convertPropertyName2Fieldname($key);
+                $field = "{$this->table}.$convertedField AS {$value}";
+            } else {
+                $field = $this->table . '.' . $this->convertPropertyName2Fieldname($value);
+            }
             $this->columns[] = $field;
         }
         return $this;
@@ -193,26 +198,32 @@ class QueryBuilder
         if (count($join) > 2) {
             throw new DatabaseException('Array for join is not well formatted');
         }
-        foreach ($columns as $value) {
-            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
+        foreach ($columns as $key =>$value) {
+            if(is_string($key)) {
+                $convertedField =$this->convertPropertyName2Fieldname($key);
+                $field = "{$table}.{$convertedField} AS $value";
+            } else {
+                $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
+            }
             $this->columns[] = $field;
         }
-        $tables = [];
-        $columns = [];
+        $tablesJoin = [];
+        $columnsJoin = [];
         foreach ($join as $key => $value) {
             if (!is_string($key)) {
                 throw new DatabaseException('Array for join is not well formatted');
             }
-            $tables[] = $key;
-            $columns[] = $value;
+            $tablesJoin[] = $key;
+            $columnsJoin[] = $value;
         }
         $link = '';
         if (count($this->on) === 0) {
-            $link .=  $tables[0] . ' ';
+            $link .=  $tablesJoin[0] . ' ';
         }
-        $link .= $joinVerb .' JOIN '. $tables[1] . ' ON ';
-        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
-        $link .= $tables[1] . '.' .  $columns[1];
+
+        $link .= $joinVerb .' JOIN '. $tablesJoin[1] . ' ON ';
+        $link .= $tablesJoin[0] . '.' .  $columnsJoin[0] . ' = ';
+        $link .= $tablesJoin[1] . '.' .  $columnsJoin[1];
         return $link;
     }
 }
