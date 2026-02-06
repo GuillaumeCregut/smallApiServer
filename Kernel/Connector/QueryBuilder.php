@@ -61,11 +61,59 @@ class QueryBuilder
 
     public function leftJoin(string $table, array $columns, array $join): self
     {
+        if (count($join) > 2) {
+            throw new DatabaseException('Array for join is not well formatted');
+        }
+        foreach ($columns as $value) {
+            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
+            $this->columns[] = $field;
+        }
+        $tables = [];
+        $columns = [];
+        foreach ($join as $key => $value) {
+            if (!is_string($key)) {
+                throw new DatabaseException('Array for join is not well formatted');
+            }
+            $tables[] = $key;
+            $columns[] = $value;
+        }
+        $link = '';
+        if (count($this->on) === 0) {
+            $link .=  $tables[0] . ' ';
+        }
+        $link .= 'LEFT JOIN ' . $tables[1] . ' ON ';
+        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
+        $link .= $tables[1] . '.' .  $columns[1];
+        $this->on[] = $link;
         return $this;
     }
 
     public function RightJoin(string $table, array $columns, array $join): self
     {
+        if (count($join) > 2) {
+            throw new DatabaseException('Array for join is not well formatted');
+        }
+        foreach ($columns as $value) {
+            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
+            $this->columns[] = $field;
+        }
+        $tables = [];
+        $columns = [];
+        foreach ($join as $key => $value) {
+            if (!is_string($key)) {
+                throw new DatabaseException('Array for join is not well formatted');
+            }
+            $tables[] = $key;
+            $columns[] = $value;
+        }
+        $link = '';
+        if (count($this->on) === 0) {
+            $link .=  $tables[0] . ' ';
+        }
+        $link .= 'RIGHT JOIN ' . $tables[1] . ' ON ';
+        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
+        $link .= $tables[1] . '.' .  $columns[1];
+        $this->on[] = $link;
         return $this;
     }
 

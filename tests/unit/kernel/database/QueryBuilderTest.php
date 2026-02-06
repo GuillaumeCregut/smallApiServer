@@ -249,13 +249,56 @@ class QueryBuilderTest extends TestCase
         $qb = new QueryBuilder('table1');
         $qb->selectJoin(['firstname', 'lastname'])
             ->join('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
-            ->join('table3',['champ1'],['table1' => 'id', 'table3' => 'user']);
+            ->join('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
         $this->assertEquals($query, $qb->toSQL());
     }
 
-    // public function testLeftJoinOne(): void
-    // {
-       
-    // }
+    public function testLeftJoinOne(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role FROM table1 LEFT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->leftJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
 
+    public function testSelectLeftJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 LEFT JOIN table2 ON table1.id = table2.userid LEFT JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->leftJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->leftJoin('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testSelectInnerLeftJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 INNER JOIN table2 ON table1.id = table2.userid LEFT JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->join('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->leftJoin('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testSelectLeftInnerJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 LEFT JOIN table2 ON table1.id = table2.userid INNER JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->leftJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->join('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testRightJoinOne(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role FROM table1 RIGHT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->rightJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+    
 }
