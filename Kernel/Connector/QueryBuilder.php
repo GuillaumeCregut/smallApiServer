@@ -13,6 +13,7 @@ class QueryBuilder
     private ?string $orderBy = null;
     private ?int $limit = null;
     private string $verb = 'SELECT';
+    private array $on = [];
 
     public function __construct(string $table)
     {
@@ -22,11 +23,39 @@ class QueryBuilder
     public function selectJoin(array $columns): self
     {
         $this->verb = 'SELECTJOIN';
+        foreach ($columns as $value) {
+            $field = $this->table . '.' . $this->convertPropertyName2Fieldname($value);
+            $this->columns[] = $field;
+        }
         return $this;
     }
 
     public function join(string $table, array $columns, array $join): self
     {
+        if (count($join) > 2) {
+            throw new DatabaseException('Array for join is not well formatted');
+        }
+        foreach ($columns as $value) {
+            $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
+            $this->columns[] = $field;
+        }
+        $tables = [];
+        $columns = [];
+        foreach ($join as $key => $value) {
+            if (!is_string($key)) {
+                throw new DatabaseException('Array for join is not well formatted');
+            }
+            $tables[] = $key;
+            $columns[] = $value;
+        }
+        $link = '';
+        if (count($this->on) === 0) {
+            $link .=  $tables[0] . ' ';
+        }
+        $link .= 'INNER JOIN ' . $tables[1] . ' ON ';
+        $link .= $tables[0] . '.' .  $columns[0] . ' = ';
+        $link .= $tables[1] . '.' .  $columns[1];
+        $this->on[] = $link;
         return $this;
     }
 
@@ -42,13 +71,12 @@ class QueryBuilder
 
     public function select(array $columns): self
     {
-        foreach($columns as $key => $value) {
+        foreach ($columns as $key => $value) {
             if (is_string($key)) {
                 $newKey = $this->convertPropertyName2Fieldname($key);
                 $newAs = $this->convertPropertyName2Fieldname($value);
                 $value = $newKey . ' AS ' . $newAs;
-            }
-            else {
+            } else {
                 $value = $this->convertPropertyName2Fieldname($value);
             }
             $this->columns[] = $value;
@@ -59,7 +87,7 @@ class QueryBuilder
     public function insert(array $columns): self
     {
         $this->verb = 'INSERT';
-        foreach($columns as $value) {
+        foreach ($columns as $value) {
             $this->columns[] = $this->convertPropertyName2Fieldname($value);
         }
         return $this;
@@ -68,7 +96,7 @@ class QueryBuilder
     public function update(array $values): self
     {
         $this->verb = "UPDATE";
-        foreach ($values as $key=>$value) {
+        foreach ($values as $key => $value) {
             if (!is_string($key)) {
                 throw new DatabaseException('key is not a valid column name');
             }
@@ -125,6 +153,10 @@ class QueryBuilder
 
     public function toSql(): string
     {
+        if ($this->verb === 'SELECTJOIN') {
+            $sql = 'SELECT ' . implode(', ', $this->columns) . " FROM ";
+            $sql .= implode(' ', $this->on);
+        }
         switch ($this->verb) {
             case 'SELECT':
                 if (empty($this->columns)) {
@@ -149,11 +181,11 @@ class QueryBuilder
                 break;
             case 'UPDATE':
                 $sql = "UPDATE {$this->table} SET ";
-                foreach($this->columns as $column) {
-                    $sql .= $column .' = ?, ';
+                foreach ($this->columns as $column) {
+                    $sql .= $column . ' = ?, ';
                 }
                 //remove 2 last caracters
-                $sql  = substr($sql,0,-2);
+                $sql  = substr($sql, 0, -2);
                 if (!empty($this->wheres)) {
                     $sql .= " WHERE " . implode(' AND ', $this->wheres);
                 }
