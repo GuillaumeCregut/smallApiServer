@@ -187,7 +187,7 @@ class QueryBuilderTest extends TestCase
     {
         $qb = new QueryBuilder('myTable');
         $qb->delete(1)
-        ->where('id','=',1);
+            ->where('id', '=', 1);
         $query = 'DELETE FROM myTable WHERE id = ?';
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
@@ -198,16 +198,138 @@ class QueryBuilderTest extends TestCase
     public function testSelectAs(): void
     {
         $qb = new QueryBuilder('myTable');
-        $qb->select(['name'=>'nom']);
-        $query = 'SELECT name as nom FROM myTable';
+        $qb->select(['name' => 'nom']);
+        $query = 'SELECT name AS nom FROM myTable';
         $this->assertEquals($query, $qb->toSQL());
     }
 
-    // public function testSelectAsMultiColumns(): void
-    // {
-    //     $qb = new QueryBuilder('myTable');
-    //     $qb->select(['name', 'firstName']);
-    //     $query = 'SELECT name, first_name FROM myTable';
-    //     $this->assertEquals($query, $qb->toSQL());
-    // }
+    public function testSelectAsMultiColumns(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->select(['FirstName' => 'nameFirst', 'lastName' => 'nameLast']);
+        $query = 'SELECT first_name AS name_first, last_name AS name_last FROM myTable';
+        $this->assertEquals($query, $qb->toSQL());
+    }
+    public function testBadSelectJoin(): void
+    {
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname']);
+        $this->expectException(DatabaseException::class);
+        $qb->join('table2', ['role'], ['table2', 'table2' => 'userid']);
+    }
+
+    public function testBadSelectJoin2(): void
+    {
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['table1' => 'id', 'table2' => 'userid']);
+        $this->expectException(DatabaseException::class);
+        $qb->join(
+            'table2',
+            ['role'],
+            [
+                'table1' => 'userizezed',
+                'table2' => 'userid',
+                'table3' => 'toto',
+            ]
+        );
+    }
+
+    public function testSelectJoin(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role FROM table1 INNER JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->join('table2', ['role'], ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testSelectJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 INNER JOIN table2 ON table1.id = table2.userid INNER JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->join('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->join('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testLeftJoinOne(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role FROM table1 LEFT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->leftJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testSelectLeftJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 LEFT JOIN table2 ON table1.id = table2.userid LEFT JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->leftJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->leftJoin('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testSelectInnerLeftJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 INNER JOIN table2 ON table1.id = table2.userid LEFT JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->join('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->leftJoin('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testSelectLeftInnerJoinDouble(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role, table3.champ1 FROM table1 LEFT JOIN table2 ON table1.id = table2.userid INNER JOIN table3 ON table1.id = table3.user";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->leftJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid'])
+            ->join('table3', ['champ1'], ['table1' => 'id', 'table3' => 'user']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testRightJoinOne(): void
+    {
+        $query = "SELECT table1.firstname, table1.lastname, table2.role FROM table1 RIGHT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin(['firstname', 'lastname'])
+            ->rightJoin('table2', ['role'], ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testRightJoinAsOne(): void
+    {
+        $FieldTable1 = [
+            'firstname' => 'firstname1',
+            'lastname' => 'lastname1'
+        ];
+        $FieldTable2 = [
+            'role' => 'role1'
+        ];
+        $query = "SELECT table1.firstname AS firstname1, table1.lastname AS lastname1, table2.role AS role1 FROM table1 RIGHT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin($FieldTable1)
+            ->rightJoin('table2', $FieldTable2, ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
+
+    public function testRightJoinAsOneField(): void
+    {
+        $FieldTable1 = [
+            'firstname' => 'firstname1',
+            'lastname' => 'lastname1'
+        ];
+        $FieldTable2 = [
+            'role'
+        ];
+        $query = "SELECT table1.firstname AS firstname1, table1.lastname AS lastname1, table2.role FROM table1 RIGHT JOIN table2 ON table1.id = table2.userid";
+        $qb = new QueryBuilder('table1');
+        $qb->selectJoin($FieldTable1)
+            ->rightJoin('table2', $FieldTable2, ['table1' => 'id', 'table2' => 'userid']);
+        $this->assertEquals($query, $qb->toSQL());
+    }
 }
