@@ -8,11 +8,15 @@ class Entity2 implements EntityInterface
     private ?string $firstname = null;
     private ?int $age = null;
 
-     public function getID(): int
+    public function getid(): int
     {
         return 1;
     }
 
+    public function setid(int $id): self
+    {
+        return $this;
+    }
     /**
      * Get the value of name
      */
