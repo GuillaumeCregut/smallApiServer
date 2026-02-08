@@ -10,19 +10,31 @@ use App\Kernel\Interfaces\Databases\RepositoryInterface;
 abstract class AbstractRepository implements RepositoryInterface
 {
     protected ConnectorInterface $connector;
-    protected EntityInterface $entity;
+    protected ?string $entity = null;
 
-    abstract function insert(EntityInterface $entity): EntityInterface;
-    abstract function update(EntityInterface $entity): EntityInterface;
-
-
+    abstract public function insert(EntityInterface $entity): EntityInterface;
+    abstract public function update(EntityInterface $entity): EntityInterface;
+    abstract function find(int $id): EntityInterface;
+    abstract public function findBy(array $fields): array;
+    abstract public function findAll(): array;
+    abstract protected function deleteEntity(EntityInterface $entity): void;
     public function __construct()
     {
         $this->connector = ConnectorDispatcher::getConnector();
+        if (!is_subclass_of($this->entity, EntityInterface::class)) {
+            throw new DatabaseException('Entity class must be an instance of EntityInterface');
+        }
+    }
+
+    public function delete(EntityInterface $entity): void
+    {
+        $this->checkEntity($entity);
+        $this->deleteEntity($entity);
     }
 
     public function save(EntityInterface $entity): EntityInterface
     {
+        $this->checkEntity($entity);
         if (null === $entity->getId()) {
             $result = $this->insert($entity);
         } else {
@@ -45,4 +57,14 @@ abstract class AbstractRepository implements RepositoryInterface
         // id → id 
         return lcfirst(str_replace('_', '', ucwords($column, '_')));
     }
+
+    protected function checkEntity(EntityInterface $entity): void
+    {
+        $entityClass = get_class($entity);
+        if($entityClass !== $this->entity) {
+            throw new DatabaseException('Entity class must be an instance of ' . $this->entity);
+        }
+    }
+
+   
 }
