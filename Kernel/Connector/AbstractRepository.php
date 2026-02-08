@@ -7,23 +7,22 @@ use App\Kernel\Connector\Attributes\Nullable;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use App\Kernel\Interfaces\Databases\EntityInterface;
 use App\Kernel\Interfaces\Databases\RepositoryInterface;
-use Reflection;
 use ReflectionClass;
 
 abstract class AbstractRepository implements RepositoryInterface
 {
+    public string $sql = ''; //This is intented for tests.
     protected ConnectorInterface $connector;
     protected ?string $entity = null;
     protected ?string $entityTableName = null;
     protected array $entityProperties = [];
     protected ?ReflectionClass $reflectionEntity = null;
-
-    abstract public function insert(EntityInterface $entity): EntityInterface;
-    abstract public function update(EntityInterface $entity): EntityInterface;
-    abstract function find(int $id): EntityInterface;
-    abstract public function findBy(array $fields): array;
-    abstract public function findAll(): array;
-    abstract protected function deleteEntity(EntityInterface $entity): void;
+    protected ?string $addSql = null;
+    protected ?string $updateSql = null;
+    protected ?string $deleteSql = null;
+    protected ?string $selectSql = null;
+    protected ?string $entityName = null;
+    protected QueryBuilder $qb;
 
     public function __construct()
     {
@@ -31,12 +30,55 @@ abstract class AbstractRepository implements RepositoryInterface
         if (!is_subclass_of($this->entity, EntityInterface::class)) {
             throw new DatabaseException('Entity class must be an instance of EntityInterface');
         }
+        $table = $this->getTableName();
+        if (null === $table) {
+            throw new DatabaseException('Entity class must be an instance of EntityInterface');
+        }
+        $this->qb = new QueryBuilder($table);
+    }
+
+    public function find(int $id): ?EntityInterface
+    {
+        //TODO : create function
+        $query = $this->qb->where('id', '=', $id)->toSql();
+        $this->sql = $query;
+        $params = $this->qb->getParams();
+        $result = $this->sendQuery(true, $query, $params);
+        if (0 === count($result)) {
+            return null;
+        }
+        if (1 < count($result)) {
+            throw new DatabaseException('Many results are found');
+        }
+        $entity = $this->makeEntity($result[0]);
+        return $entity;
+    }
+
+    public function findBy(array $fields): array
+    {
+        return [];
+    }
+
+    public function findAll(): array
+    {
+        $query = $this->qb->toSql();
+        $this->sql = $query;
+        $result = $this->sendQuery(true, $query, []);
+        if (0 === count($result)) {
+            return [];
+        }
+        $returnArray = [];
+        foreach ($result as $values) {
+            $entity = $this->makeEntity($values);
+            $returnArray[] = $entity;
+        }
+        return $returnArray;
     }
 
     public function delete(EntityInterface $entity): void
     {
         $this->checkEntity($entity);
-        $this->deleteEntity($entity);
+        //TODO create function
     }
 
     public function save(EntityInterface $entity): EntityInterface
@@ -50,7 +92,6 @@ abstract class AbstractRepository implements RepositoryInterface
         return $result;
     }
 
-
     public function createSqlTable(): string
     {
         if (null === $this->reflectionEntity) {
@@ -59,13 +100,13 @@ abstract class AbstractRepository implements RepositoryInterface
         $reflexionEntity = $this->reflectionEntity;
         $tableName = $this->getTableName();
         $properties = $this->getEntityProperties($reflexionEntity)['stored'];
-        $pk= "";
+        $pk = "";
         $sql = "CREATE TABLE $tableName (";
-        if(!array_key_exists('id',$properties)) {
-           $sql .= "id INT NOT NULL AUTO_INCREMENT, ";
+        if (!array_key_exists('id', $properties)) {
+            $sql .= "id INT NOT NULL AUTO_INCREMENT, ";
             $pk = "PRIMARY KEY (id)";
         }
-        foreach($properties as $name => $config) {
+        foreach ($properties as $name => $config) {
             if ('id' === $name) {
                 $partSql = "{$name} INT NOT NULL AUTO_INCREMENT, ";
                 $pk = "PRIMARY KEY (id)";
@@ -89,10 +130,46 @@ abstract class AbstractRepository implements RepositoryInterface
             }
             $tableName =  $this->reflectionEntity->getShortName();
             $newName = preg_replace('/entity$/i', '', $tableName);
+            $this->entityName = $newName;
             $tableName = $this->propertyToColumn($newName);
             $this->entityTableName = $tableName;
         }
         return $this->entityTableName;
+    }
+
+    public function insert(EntityInterface $entity): EntityInterface
+    {
+        return $entity;
+    }
+
+    protected function makeEntity(array $values): EntityInterface
+    {
+        $newRow = [];
+        foreach ($values as $attribute => $value) {
+            $key = $this->columnToProperty($attribute);
+            $newRow[$key] = $value;
+        }
+        return Hydrator::hydrate(new $this->entity(), $newRow);
+    }
+
+    protected function sendQuery(bool $isSelect, string $query, array $params): array | bool
+    {
+        try {
+            if ($isSelect) {
+                $result = $this->connector->fetchQuery($query, $params);
+            } else {
+                $result = $this->connector->executeQuery($query, $params);
+            }
+            return $result;
+        } catch (DatabaseException $e) {
+            $name = get_class($this);
+            throw new DatabaseException("Repository {name} failed whith query : '{$query}'");
+        }
+    }
+    protected  function update(EntityInterface $entity): EntityInterface
+    {
+        return $entity;
+        //TODO : create function
     }
 
     protected function getEntityProperties(ReflectionClass $class): array
@@ -112,8 +189,8 @@ abstract class AbstractRepository implements RepositoryInterface
                     $nullable = false;
                 }
                 $arrayProperty = [
-                   'type' => $typeProperty,
-                   'nullable' => $nullable
+                    'type' => $typeProperty,
+                    'nullable' => $nullable
                 ];
 
                 if (null !== $attribute && count($attribute) > 0) {
@@ -160,15 +237,20 @@ abstract class AbstractRepository implements RepositoryInterface
         $types = [
             'string' => 'VARCHAR(255)',
             'int' => 'INT',
-            'DateTimeImmutable' => 'DATETIME', 
-            'DateTime' => 'DATETIME', 
-            'float' =>'FLOAT',
+            'DateTimeImmutable' => 'DATETIME',
+            'DateTime' => 'DATETIME',
+            'float' => 'FLOAT',
             'bool' => 'BOOLEAN',
             'array' => 'JSON'
         ];
-        if(array_key_exists($type, $types)){
+        if (array_key_exists($type, $types)) {
             return $types[$type];
-        } 
+        }
         throw new DatabaseException('Type can not be converted into SQL type');
+    }
+
+    protected function createQuery(string $verb): string
+    {
+        return '';
     }
 }

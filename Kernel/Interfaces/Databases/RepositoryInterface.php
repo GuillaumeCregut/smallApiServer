@@ -10,7 +10,7 @@ interface RepositoryInterface
      * @param int $id entity id
      * @return EntityInterface  
      */ 
-    public function find(int $id): EntityInterface;
+    public function find(int $id): ?EntityInterface;
     
      /**
      * find entities by field
