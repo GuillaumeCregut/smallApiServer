@@ -3,6 +3,7 @@ others/*
 .htaccess
 .qodo
 .vscode/*
+note*.*
 logs/
 tools/.phpunit.cache
 notes.txt
