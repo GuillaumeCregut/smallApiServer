@@ -4,6 +4,7 @@ namespace App\Kernel\Connector;
 
 use PDO;
 use Exception;
+use PDOException;
 use App\Kernel\GetEnvDatas;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
@@ -39,8 +40,8 @@ class MySQLConnector implements ConnectorInterface
         }
         try {
             $this->pdo = new \PDO($dsn, $user, $pass, $options);
-        } catch (\PDOException $e) {
-            throw new \PDOException($e->getMessage(), (int)$e->getCode());
+        } catch (PDOException $e) {
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -63,24 +64,39 @@ class MySQLConnector implements ConnectorInterface
     {
         $this->pdo->rollBack();
     }
-    public function executeQuery(string $sql, array $params = []): bool
+    public function executeQuery(string $sql, array $params = []): bool | int
     {
-        $stmt = $this->pdo->prepare($sql);
-        $result = $stmt->execute($params);
-        return $result;
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $result = $stmt->execute($params);
+            if(!$result) {
+                return $result;
+            } 
+            return (int) $this->pdo->lastInsertId();
+        } catch (Exception $e) {
+            throw new DatabaseException($e->getMessage(), $e->getCode());
+        }
     }
     public function fetchQuery(string $sql, array $params = []): array
     {
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            throw new DatabaseException($e->getMessage(), $e->getCode());
+        }
     }
 
     public function FetchQueryOnce(string $sql, array $params = []): ?array
     {
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (Exception $e) {
+            throw new DatabaseException($e->getMessage(), $e->getCode());
+        }
     }
 }
