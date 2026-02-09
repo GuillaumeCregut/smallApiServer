@@ -1,16 +1,17 @@
 <?php
 
 use App\Security\User;
-use PHPUnit\Framework\TestCase;
 
+use PHPUnit\Framework\TestCase;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\AbstractRepository;
 use App\Kernel\Connector\ConnectorDispatcher;
-use App\Kernel\Interfaces\Databases\EntityInterface;
+
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 include 'entity2.php';
 include 'EntityToCreate.php';
+include 'EntityToUpdate.php';
 class AbstractRepositoryTest extends TestCase
 {
     public function testWithNotEntity(): void
@@ -310,7 +311,7 @@ class AbstractRepositoryTest extends TestCase
         $this->assertNull($result);
     }
 
-     public function testInsertNewEntity(): void
+    public function testInsertNewEntity(): void
     {
         $connector = $this->createStub(ConnectorInterface::class);
         $connector->method('executeQuery')
@@ -326,5 +327,48 @@ class AbstractRepositoryTest extends TestCase
         $query = 'INSERT INTO entity_to_create (name, first_name) VALUES (?, ?)';
         $this->assertEquals( $query, $repository->sql);
         $this->assertEquals(20,$result->getId());
+    }
+
+     public function testUpdateEntityError(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(false);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityToCreate::class;
+        };
+        $entity = new EntityToCreate();
+        $entity->setName('Doe')
+            ->setid(2)
+            ->setFirstName('John');
+        $result = $repository->save($entity);
+        $query = 'UPDATE entity_to_create SET name = ?, first_name = ?, age = ? WHERE id = ?';
+        $this->assertEquals($query, $repository->sql);
+        $this->assertFalse($result);
+    }
+
+    public function testUpdateEntity(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(true);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityToUpdate::class;
+        };
+        $entity = new EntityToUpdate();
+        $entity->setName('Doe')
+            ->setid(2)
+            ->setFirstName('John');
+        /**
+         * @var EntityTocreate $result 
+         */    
+        $result = $repository->save($entity);
+        $query = 'UPDATE entity_to_update SET name = ?, first_name = ?, age = ? WHERE id = ?';
+        $this->assertEquals( $query, $repository->sql);
+        $this->assertEquals(2,$result->getId());
+        $this->assertEquals('Doe',$result->getName());
+        $this->assertEquals('John',$result->getfirstName());
     }
 }

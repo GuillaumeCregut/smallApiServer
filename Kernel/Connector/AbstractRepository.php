@@ -92,7 +92,7 @@ abstract class AbstractRepository implements RepositoryInterface
         //TODO create function
     }
 
-    public function save(EntityInterface $entity): ?EntityInterface
+    public function save(EntityInterface $entity): null | false | EntityInterface 
     {
         $this->checkEntity($entity);
         if (null === $this->reflectionEntity) {
@@ -154,11 +154,10 @@ abstract class AbstractRepository implements RepositoryInterface
 
     protected function insert(EntityInterface $entity): ?EntityInterface
     {
-        //TODO make function
-        $EntityValues = $this->getEntityValues($entity);
+        $entityValues = $this->getEntityValues($entity);
         $columns = [];
         $values = [];
-        foreach ($EntityValues as $key => $value) {
+        foreach ($entityValues as $key => $value) {
             if(null === $value) {
                 continue;
             }
@@ -178,10 +177,23 @@ abstract class AbstractRepository implements RepositoryInterface
         return $entity;
     }
 
-    protected  function update(EntityInterface $entity): EntityInterface
+    protected  function update(EntityInterface $entity): EntityInterface | false 
     {
+        $entityValues = $this->getEntityValues($entity);
+        $id = $entity->getId();
+        if(isset($entityValues['id'])) {
+            unset($entityValues['id']);
+        }
+        $query = $this->qb->update($entityValues)
+        ->where('id', '=', $id )
+        ->toSql();
+        $params = $this->qb->getParams();
+        $this->sql = $query;
+        $result = $this->sendQuery(false, $query, $params);
+        if(!$result) {
+            return false;
+        }
         return $entity;
-        //TODO : create function
     }
 
     protected function getEntityValues(EntityInterface $entity): array

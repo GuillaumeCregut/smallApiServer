@@ -31,7 +31,7 @@ interface RepositoryInterface
      * @param EntityInterface entity
      * @return EntityInterface $new entity created
      */ 
-    public function save(EntityInterface $entity): ?EntityInterface;
+    public function save(EntityInterface $entity): null | false | EntityInterface;
 
      /**
      * delete entity
