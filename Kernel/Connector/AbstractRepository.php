@@ -86,13 +86,19 @@ abstract class AbstractRepository implements RepositoryInterface
         return $returnArray;
     }
 
-    public function delete(EntityInterface $entity): void
+    public function delete(EntityInterface $entity): bool
     {
         $this->checkEntity($entity);
-        //TODO create function
+        $id = $entity->getId();
+        $query = $this->qb->delete($id)
+            ->where('id', '=', $id)
+            ->toSql();
+        $this->sql = $query;
+        $params = $this->qb->getParams();
+        return $this->sendQuery(false, $query, $params);
     }
 
-    public function save(EntityInterface $entity): null | false | EntityInterface 
+    public function save(EntityInterface $entity): null | false | EntityInterface
     {
         $this->checkEntity($entity);
         if (null === $this->reflectionEntity) {
@@ -158,39 +164,39 @@ abstract class AbstractRepository implements RepositoryInterface
         $columns = [];
         $values = [];
         foreach ($entityValues as $key => $value) {
-            if(null === $value) {
+            if (null === $value) {
                 continue;
             }
             $columns[] = $key;
             $values[] = $value;
         }
         $query = $this->qb->insert($columns)
-        ->values($values)
-        ->toSql();
+            ->values($values)
+            ->toSql();
         $params = $this->qb->getParams();
         $this->sql = $query;
         $result = $this->sendQuery(false, $query, $params);
-        if(!$result) {
+        if (!$result) {
             return null;
         }
         $entity->setId($result);
         return $entity;
     }
 
-    protected  function update(EntityInterface $entity): EntityInterface | false 
+    protected  function update(EntityInterface $entity): EntityInterface | false
     {
         $entityValues = $this->getEntityValues($entity);
         $id = $entity->getId();
-        if(isset($entityValues['id'])) {
+        if (isset($entityValues['id'])) {
             unset($entityValues['id']);
         }
         $query = $this->qb->update($entityValues)
-        ->where('id', '=', $id )
-        ->toSql();
+            ->where('id', '=', $id)
+            ->toSql();
         $params = $this->qb->getParams();
         $this->sql = $query;
         $result = $this->sendQuery(false, $query, $params);
-        if(!$result) {
+        if (!$result) {
             return false;
         }
         return $entity;
@@ -200,7 +206,7 @@ abstract class AbstractRepository implements RepositoryInterface
     {
         $storedValues = $this->entityProperties['stored'];
         $returnArray = [];
-        foreach($storedValues as $column => $type){
+        foreach ($storedValues as $column => $type) {
             $getFunction = 'get' . ucfirst($column);
             $value = $entity->$getFunction();
             $returnArray[$column] = $value;

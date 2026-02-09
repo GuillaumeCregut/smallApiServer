@@ -38,6 +38,6 @@ interface RepositoryInterface
      * @param EntityInterface entity
      *
      */ 
-    public function delete(EntityInterface $entity): void;
+    public function delete(EntityInterface $entity): bool;
 
 }
