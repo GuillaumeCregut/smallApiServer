@@ -4,9 +4,8 @@ use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
 use App\Kernel\Interfaces\Databases\EntityInterface;
 
-class EntityToCreate implements EntityInterface
+class EntityToUpdate implements EntityInterface
 {
-     #[NotStored]
     private ?int $id = null;
     private ?string $name = null;
     private ?string $firstName = null;
