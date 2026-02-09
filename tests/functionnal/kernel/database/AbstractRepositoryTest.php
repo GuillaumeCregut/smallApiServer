@@ -9,11 +9,17 @@ use App\Kernel\Connector\ConnectorDispatcher;
 
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
-include 'entity2.php';
+
 include 'EntityToCreate.php';
 include 'EntityToUpdate.php';
+include 'entity3.php';
 class AbstractRepositoryTest extends TestCase
 {
+
+protected function setUp(): void
+{
+    
+}
     public function testWithNotEntity(): void
     {
         $connector = $this->createStub(ConnectorInterface::class);
@@ -27,7 +33,7 @@ class AbstractRepositoryTest extends TestCase
     public function testDeleteWithWrongEntity(): void
     {
         $connector = $this->createStub(ConnectorInterface::class);
-        $entity2 = new Entity2();
+        $entity2 = new Entity3();
         ConnectorDispatcher::setConnector($connector);
         $this->expectException(DatabaseException::class);
         $repository = new class extends AbstractRepository {
@@ -40,7 +46,7 @@ class AbstractRepositoryTest extends TestCase
     public function testSaveWithWrongEntity(): void
     {
         $connector = $this->createStub(ConnectorInterface::class);
-        $entity2 = new Entity2();
+        $entity2 = new Entity3();
         ConnectorDispatcher::setConnector($connector);
         $this->expectException(DatabaseException::class);
         $repository = new class extends AbstractRepository {

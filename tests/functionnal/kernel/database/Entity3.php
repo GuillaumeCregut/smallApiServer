@@ -2,20 +2,19 @@
 
 use App\Kernel\Interfaces\Databases\EntityInterface;
 
-class Entity implements EntityInterface
+class Entity3 implements EntityInterface
 {
     private ?string $name = null;
     private ?string $firstname = null;
     private ?int $age = null;
-    private int $id=0;
 
-    public function getId(): int
+    public function getid(): int
     {
         return 1;
     }
 
-    public function setId(int $id): self {
-        $this->id= $id;
+    public function setid(int $id): self
+    {
         return $this;
     }
     /**
