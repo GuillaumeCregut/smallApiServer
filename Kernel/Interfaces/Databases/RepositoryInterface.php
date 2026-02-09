@@ -10,7 +10,7 @@ interface RepositoryInterface
      * @param int $id entity id
      * @return EntityInterface  
      */ 
-    public function find(int $id): EntityInterface;
+    public function find(int $id): ?EntityInterface;
     
      /**
      * find entities by field
@@ -31,13 +31,13 @@ interface RepositoryInterface
      * @param EntityInterface entity
      * @return EntityInterface $new entity created
      */ 
-    public function save(EntityInterface $entity): EntityInterface;
+    public function save(EntityInterface $entity): null | false | EntityInterface;
 
      /**
      * delete entity
      * @param EntityInterface entity
      *
      */ 
-    public function delete(EntityInterface $entity): void;
+    public function delete(EntityInterface $entity): bool;
 
 }

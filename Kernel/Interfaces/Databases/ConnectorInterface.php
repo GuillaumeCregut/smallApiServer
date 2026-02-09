@@ -7,7 +7,7 @@ interface ConnectorInterface
 {
     public function getConnection(): mixed;
     public static function getInstance(): ConnectorInterface;
-    public function executeQuery(string $sql, array $params=[]): bool;
+    public function executeQuery(string $sql, array $params=[]): bool | int;
     public function fetchQuery(string $sql, array $params=[]): array;
     public function FetchQueryOnce(string $sql, array $params = []): ?array;
     public function startTransac(): void;

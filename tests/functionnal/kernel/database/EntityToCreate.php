@@ -1,21 +1,28 @@
 <?php
 
+use App\Kernel\Connector\Attributes\NotStored;
+use App\Kernel\Connector\Attributes\Nullable;
 use App\Kernel\Interfaces\Databases\EntityInterface;
 
-class Entity implements EntityInterface
+class EntityToCreate implements EntityInterface
 {
+     #[NotStored]
+    private ?int $id = null;
     private ?string $name = null;
-    private ?string $firstname = null;
+    private ?string $firstName = null;
+    #[Nullable]
     private ?int $age = null;
-    private int $id=0;
+    #[NotStored]
+    private ?string $notStored = null;
 
-    public function getId(): int
+    public function getid(): ?int
     {
-        return 1;
+        return $this->id;
     }
 
-    public function setId(int $id): self {
-        $this->id= $id;
+    public function setid(int $id): self
+    {
+        $this->id =$id;
         return $this;
     }
     /**
@@ -39,17 +46,17 @@ class Entity implements EntityInterface
     /**
      * Get the value of firstname
      */
-    public function getFirstname(): ?string
+    public function getFirstName(): ?string
     {
-        return $this->firstname;
+        return $this->firstName;
     }
 
     /**
      * Set the value of firstname
      */
-    public function setFirstname(?string $firstname): self
+    public function setFirstName(?string $firstname): self
     {
-        $this->firstname = $firstname;
+        $this->firstName = $firstname;
 
         return $this;
     }
