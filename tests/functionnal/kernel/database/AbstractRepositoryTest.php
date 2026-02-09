@@ -291,4 +291,40 @@ class AbstractRepositoryTest extends TestCase
         $this->assertEquals('John', $result->getFirstName());
         $this->assertEquals(30, $result->getAge());
     }
+    
+    public function testInsertNewEntityFail(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(false);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityToCreate::class;
+        };
+        $entity = new EntityToCreate();
+        $entity->setName('Doe')
+            ->setFirstName('John');
+        $result = $repository->save($entity);
+        $query = 'INSERT INTO entity_to_create (name, first_name) VALUES (?, ?)';
+        $this->assertEquals( $query, $repository->sql);
+        $this->assertNull($result);
+    }
+
+     public function testInsertNewEntity(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(20);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityToCreate::class;
+        };
+        $entity = new EntityToCreate();
+        $entity->setName('Doe')
+            ->setFirstName('John');
+        $result = $repository->save($entity);
+        $query = 'INSERT INTO entity_to_create (name, first_name) VALUES (?, ?)';
+        $this->assertEquals( $query, $repository->sql);
+        $this->assertEquals(20,$result->getId());
+    }
 }

@@ -51,9 +51,8 @@ abstract class AbstractRepository implements RepositoryInterface
 
     public function findBy(array $fields): array
     {
-        //TODO: Create function
-        foreach($fields as $key => $value) {
-            
+        foreach ($fields as $key => $value) {
+
             $query = $this->qb->where($key, '=', $value);
         }
         $query = $this->qb->toSql();
@@ -93,9 +92,13 @@ abstract class AbstractRepository implements RepositoryInterface
         //TODO create function
     }
 
-    public function save(EntityInterface $entity): EntityInterface
+    public function save(EntityInterface $entity): ?EntityInterface
     {
         $this->checkEntity($entity);
+        if (null === $this->reflectionEntity) {
+            $this->reflectionEntity = new ReflectionClass($this->entity);
+        }
+        $this->getEntityProperties($this->reflectionEntity);
         if (null === $entity->getId()) {
             $result = $this->insert($entity);
         } else {
@@ -149,10 +152,48 @@ abstract class AbstractRepository implements RepositoryInterface
         return $this->entityTableName;
     }
 
-    protected function insert(EntityInterface $entity): EntityInterface
+    protected function insert(EntityInterface $entity): ?EntityInterface
     {
         //TODO make function
+        $EntityValues = $this->getEntityValues($entity);
+        $columns = [];
+        $values = [];
+        foreach ($EntityValues as $key => $value) {
+            if(null === $value) {
+                continue;
+            }
+            $columns[] = $key;
+            $values[] = $value;
+        }
+        $query = $this->qb->insert($columns)
+        ->values($values)
+        ->toSql();
+        $params = $this->qb->getParams();
+        $this->sql = $query;
+        $result = $this->sendQuery(false, $query, $params);
+        if(!$result) {
+            return null;
+        }
+        $entity->setId($result);
         return $entity;
+    }
+
+    protected  function update(EntityInterface $entity): EntityInterface
+    {
+        return $entity;
+        //TODO : create function
+    }
+
+    protected function getEntityValues(EntityInterface $entity): array
+    {
+        $storedValues = $this->entityProperties['stored'];
+        $returnArray = [];
+        foreach($storedValues as $column => $type){
+            $getFunction = 'get' . ucfirst($column);
+            $value = $entity->$getFunction();
+            $returnArray[$column] = $value;
+        }
+        return $returnArray;
     }
 
     protected function makeEntity(array $values): EntityInterface
@@ -165,7 +206,7 @@ abstract class AbstractRepository implements RepositoryInterface
         return Hydrator::hydrate(new $this->entity(), $newRow);
     }
 
-    protected function sendQuery(bool $isSelect, string $query, array $params): array | bool
+    protected function sendQuery(bool $isSelect, string $query, array $params): array | bool | int
     {
         try {
             if ($isSelect) {
@@ -176,14 +217,10 @@ abstract class AbstractRepository implements RepositoryInterface
             return $result;
         } catch (DatabaseException $e) {
             $name = get_class($this);
-            throw new DatabaseException("Repository {name} failed whith query : '{$query}'");
+            throw new DatabaseException("Repository {$name} failed whith query : '{$query}'", $e->getCode());
         }
     }
-    protected  function update(EntityInterface $entity): EntityInterface
-    {
-        return $entity;
-        //TODO : create function
-    }
+
 
     protected function getEntityProperties(ReflectionClass $class): array
     {
