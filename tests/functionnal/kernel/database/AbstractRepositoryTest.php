@@ -180,11 +180,9 @@ class AbstractRepositoryTest extends TestCase
         $result = $repository->find(1);
     }
 
-      public function testFindNoResult(): void
+    public function testFindNoResult(): void
     {
-        $values = [
-            
-        ];
+        $values = [];
         $connector = $this->createStub(ConnectorInterface::class);
         $connector->method('fetchQuery')
             ->willReturn($values);
@@ -217,6 +215,77 @@ class AbstractRepositoryTest extends TestCase
          * @var EntityTocreate $result 
          */
         $result = $repository->find(1);
+        $this->assertEquals(1, $result->getid());
+        $this->assertEquals('Doe', $result->getName());
+        $this->assertEquals('John', $result->getFirstName());
+        $this->assertEquals(30, $result->getAge());
+    }
+
+    public function testFindByOneParam(): void
+    {
+        $values = [
+            [
+                'id' => 1,
+                'name' => 'Doe',
+                'first_name' => 'John',
+                'age' => 30
+            ],
+        ];
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('fetchQuery')
+            ->willReturn($values);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityToCreate::class;
+        };
+        $search =[
+            'firstName' =>'John'
+        ];
+        $results = $repository->findBy($search);
+        $query = 'SELECT * FROM entity_to_create WHERE first_name = ?';
+        $this->assertEquals($query, $repository->sql);
+        $this->assertEquals(1, count($results));
+        /**
+         * @var EntityTocreate $result 
+         */
+        $result = $results[0];
+        $this->assertInstanceOf(EntityToCreate::class,$result);
+        $this->assertEquals(1, $result->getid());
+        $this->assertEquals('Doe', $result->getName());
+        $this->assertEquals('John', $result->getFirstName());
+        $this->assertEquals(30, $result->getAge());
+    }
+
+    public function testFindByTwoParam(): void
+    {
+        $values = [
+            [
+                'id' => 1,
+                'name' => 'Doe',
+                'first_name' => 'John',
+                'age' => 30
+            ],
+        ];
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('fetchQuery')
+            ->willReturn($values);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityToCreate::class;
+        };
+        $search =[
+            'firstName' =>'John',
+            'name' =>'Doe'
+        ];
+        $results = $repository->findBy($search);
+        $query = 'SELECT * FROM entity_to_create WHERE first_name = ? AND name = ?';
+        $this->assertEquals($query, $repository->sql);
+        $this->assertEquals(1, count($results));
+        /**
+         * @var EntityTocreate $result 
+         */
+        $result = $results[0];
+        $this->assertInstanceOf(EntityToCreate::class,$result);
         $this->assertEquals(1, $result->getid());
         $this->assertEquals('Doe', $result->getName());
         $this->assertEquals('John', $result->getFirstName());

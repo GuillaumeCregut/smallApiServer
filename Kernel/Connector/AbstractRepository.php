@@ -17,10 +17,6 @@ abstract class AbstractRepository implements RepositoryInterface
     protected ?string $entityTableName = null;
     protected array $entityProperties = [];
     protected ?ReflectionClass $reflectionEntity = null;
-    protected ?string $addSql = null;
-    protected ?string $updateSql = null;
-    protected ?string $deleteSql = null;
-    protected ?string $selectSql = null;
     protected ?string $entityName = null;
     protected QueryBuilder $qb;
 
@@ -39,7 +35,6 @@ abstract class AbstractRepository implements RepositoryInterface
 
     public function find(int $id): ?EntityInterface
     {
-        //TODO : create function
         $query = $this->qb->where('id', '=', $id)->toSql();
         $this->sql = $query;
         $params = $this->qb->getParams();
@@ -56,6 +51,23 @@ abstract class AbstractRepository implements RepositoryInterface
 
     public function findBy(array $fields): array
     {
+        //TODO: Create function
+        foreach($fields as $key => $value) {
+            
+            $query = $this->qb->where($key, '=', $value);
+        }
+        $query = $this->qb->toSql();
+        $this->sql = $query;
+        $result = $this->sendQuery(true, $query, []);
+        if (0 === count($result)) {
+            return [];
+        }
+        $returnArray = [];
+        foreach ($result as $values) {
+            $entity = $this->makeEntity($values);
+            $returnArray[] = $entity;
+        }
+        return $returnArray;
         return [];
     }
 
@@ -137,8 +149,9 @@ abstract class AbstractRepository implements RepositoryInterface
         return $this->entityTableName;
     }
 
-    public function insert(EntityInterface $entity): EntityInterface
+    protected function insert(EntityInterface $entity): EntityInterface
     {
+        //TODO make function
         return $entity;
     }
 
@@ -247,10 +260,5 @@ abstract class AbstractRepository implements RepositoryInterface
             return $types[$type];
         }
         throw new DatabaseException('Type can not be converted into SQL type');
-    }
-
-    protected function createQuery(string $verb): string
-    {
-        return '';
     }
 }
