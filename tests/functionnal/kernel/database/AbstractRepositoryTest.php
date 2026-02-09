@@ -16,10 +16,6 @@ include 'entity3.php';
 class AbstractRepositoryTest extends TestCase
 {
 
-protected function setUp(): void
-{
-    
-}
     public function testWithNotEntity(): void
     {
         $connector = $this->createStub(ConnectorInterface::class);
