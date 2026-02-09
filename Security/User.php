@@ -2,35 +2,36 @@
 
 namespace App\Security;
 
-use App\Services\Connector;
+use App\Kernel\Connector\AbstractEntity;
 
-class User
+class User extends AbstractEntity
 {
-    private int $id;
-
-    public function __construct(private Connector $connector)
+    private array $roles = [];
+    public function getRoles(): array
     {
+        return $this->roles;
     }
 
-    public function getRole(): array
+    public function setRole(string $role): self
     {
-        //Todo : get user role from database
-        return ['ROLE_USER'];
+        $this->roles[] = $role;
+        return $this;
+    }
+
+    public function removeRole(string $role): self
+    {
+        $key = array_find_key($this->roles, function ($value) use ($role) {
+            return $value === $role;
+        });
+        if(null !== $key){
+            unset($this->roles[$key]);
+        }
+        return $this;
     }
 
     public function getToken(): string
     {
         //Todo : get user key from database
         return '';
-    }
-
-    public function setId(int $id): void
-    {
-        $this->id = $id;
-    }
-
-    public function fetchFromDb(): void
-    {
-        //Todo : fetch user data from database using $this->id
     }
 }
