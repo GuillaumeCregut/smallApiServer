@@ -2,10 +2,10 @@
 
 namespace App\Kernel\Connector;
 
+use App\Kernel\Exceptions\KernelException;
 use PDO;
 use Exception;
 use PDOException;
-use App\Kernel\GetEnvDatas;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class MySQLConnector implements ConnectorInterface
@@ -13,22 +13,24 @@ class MySQLConnector implements ConnectorInterface
     private \PDO $pdo;
     private static ?MysqlConnector $instance = null;
 
-    public static function getInstance(): ConnectorInterface
+    public static function getInstance(?array $env = null): ConnectorInterface
     {
+        if((null === self::$instance) && (null === $env)) {
+            throw new KernelException('Databse not initilized');
+        }
         if (null === self::$instance) {
-            self::$instance = new MySQLConnector();
+            self::$instance = new MySQLConnector($env);
         }
         return self::$instance;
     }
-    public function __construct()
+    public function __construct($envs)
     {
         $charset = 'utf8mb4';
-        $envs = GetEnvDatas::getEnvInstance();
         try {
-            $host = $envs->get('host');
-            $db = $envs->get('db');
-            $user = $envs->get('user');
-            $pass = $envs->get('pass');
+            $host = $envs['host'];
+            $db = $envs['db'];
+            $user = $envs['user'];
+            $pass = $envs['pass'];
             $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
             $options = [
                 \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,

@@ -7,6 +7,7 @@ use App\Kernel\Request;
 use App\Kernel\Config\Events;
 use App\Kernel\Config\Router;
 use App\Kernel\Connector\ConnectorDispatcher;
+use App\Kernel\Exceptions\KernelException;
 use App\Kernel\GetClientParams;
 use App\Kernel\Responses\ErrorResponse;
 use App\Kernel\Interfaces\ResponseInterface;
@@ -28,6 +29,13 @@ class Kernel
 
     public function __construct()
     {
+        $iniFile = dirname(__DIR__, 1) . DIRECTORY_SEPARATOR . '.env';
+        try {
+            $env = GetEnvDatas::getEnvInstance($iniFile);
+        } catch (KernelException $e) {
+            $response = new ErrorResponse(500);
+            return $response;
+        }
         $this->routes = Router::getRoutes();
         $datas = GetClientParams::getInputs();
         $headers = GetClientParams::getheaders();

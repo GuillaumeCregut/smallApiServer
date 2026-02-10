@@ -28,7 +28,8 @@ class Mailer implements MailerInterface
 
     public function __construct(
         MailConfig $config,
-        ?bool $useTLS = true
+        ?bool $useTLS = true,
+        ?int $maxFiles = 10
     ) {
         $this->smtpHost = $config->smtpHost;
         $this->smtpPort = (int)$config->smtpPort;
@@ -37,7 +38,7 @@ class Mailer implements MailerInterface
         $this->fromEmail = $config->fromEmail;
         $this->fromName = $config->fromName;
         $this->useTLS = $useTLS;
-        $maxAttachement = GetEnvDatas::getEnvInstance()->get('max_attachment',10);
+        $maxAttachement = $maxFiles;
         $this->maxAttachement =  (int)$maxAttachement * 1024 * 1024;
     }
 
