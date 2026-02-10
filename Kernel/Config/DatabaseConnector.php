@@ -4,6 +4,7 @@ namespace App\Kernel\Config;
 
 
 use App\Kernel\Connector\MySQLConnector;
+use App\Kernel\GetEnvDatas;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 class DatabaseConnector
@@ -11,7 +12,8 @@ class DatabaseConnector
     public static function getConnector(): ConnectorInterface
     {
         //Here spécify default database connector class you use
-        return MySQLConnector::getInstance();
+        $env = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        return MySQLConnector::getInstance($env);
     }
 
 }
