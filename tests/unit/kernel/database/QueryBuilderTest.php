@@ -144,6 +144,21 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals('Doe', $params[1]);
     }
 
+    public function testInsertArrayValues(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $roles = ['admin', 'user'];
+        $jsonRoles = json_encode($roles);
+        $qb->insert(['name', 'firstName'])
+            ->values(['John', $roles]);
+        $query = 'INSERT INTO myTable (name, first_name) VALUES (?, ?)';
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('John', $params[0]);
+        $this->assertEquals($jsonRoles, $params[1]);
+    }
+
     public function testUpdateBadValue(): void
     {
         $qb = new QueryBuilder('myTable');

@@ -24,7 +24,7 @@ class QueryBuilder
     {
         $this->verb = 'SELECTJOIN';
         foreach ($columns as $key => $value) {
-            if(is_string($key)) {
+            if (is_string($key)) {
                 $convertedField = $this->convertPropertyName2Fieldname($key);
                 $field = "{$this->table}.$convertedField AS {$value}";
             } else {
@@ -84,7 +84,7 @@ class QueryBuilder
             if (!is_string($key)) {
                 throw new DatabaseException('key is not a valid column name');
             }
-            $this->params[] = $value;
+            $this->insertParam($value);
             $this->columns[] = $this->convertPropertyName2Fieldname($key);
         }
         return $this;
@@ -98,7 +98,9 @@ class QueryBuilder
 
     public function values(array $values): self
     {
-        $this->params = $values;
+        foreach ($values as $value) {
+            $this->insertParam($value);
+        }
         for ($i = 0; $i < count($values); $i++) {
             $this->insertParam[] = '?';
         }
@@ -109,7 +111,7 @@ class QueryBuilder
     {
         $column = $this->convertPropertyName2Fieldname($column);
         $this->wheres[] = "$column $operator ?";
-        $this->params[] = $value;
+        $this->insertParam($value);
         return $this;
     }
 
@@ -198,9 +200,9 @@ class QueryBuilder
         if (count($join) > 2) {
             throw new DatabaseException('Array for join is not well formatted');
         }
-        foreach ($columns as $key =>$value) {
-            if(is_string($key)) {
-                $convertedField =$this->convertPropertyName2Fieldname($key);
+        foreach ($columns as $key => $value) {
+            if (is_string($key)) {
+                $convertedField = $this->convertPropertyName2Fieldname($key);
                 $field = "{$table}.{$convertedField} AS $value";
             } else {
                 $field = $table . '.' . $this->convertPropertyName2Fieldname($value);
@@ -221,9 +223,19 @@ class QueryBuilder
             $link .=  $tablesJoin[0] . ' ';
         }
 
-        $link .= $joinVerb .' JOIN '. $tablesJoin[1] . ' ON ';
+        $link .= $joinVerb . ' JOIN ' . $tablesJoin[1] . ' ON ';
         $link .= $tablesJoin[0] . '.' .  $columnsJoin[0] . ' = ';
         $link .= $tablesJoin[1] . '.' .  $columnsJoin[1];
         return $link;
+    }
+
+    private function insertParam(mixed $param): void
+    {
+        if(is_array($param)) {
+            $value = json_encode($param);
+        } else {
+            $value = $param;
+        }
+        $this->params[] = $value;
     }
 }
