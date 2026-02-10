@@ -62,7 +62,7 @@ class Kernel
             return $page;
         } catch (\Exception $e) {
             // if an exception is thrown during controller execution
-            $response = new ErrorResponse(500);
+            $response = new ErrorResponse(500, $e);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
