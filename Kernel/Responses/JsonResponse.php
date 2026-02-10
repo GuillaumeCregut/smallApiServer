@@ -2,8 +2,9 @@
 
 namespace App\Kernel\Responses;
 
-use App\Kernel\AbstractResponse;
 use App\Kernel\utils\Dumper;
+use App\Kernel\Responses\AbstractResponse;
+
 
 class JsonResponse extends AbstractResponse
 {

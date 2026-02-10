@@ -3,7 +3,7 @@
 namespace App\Kernel\Responses;
 
 use App\Kernel\utils\Dumper;
-use App\Kernel\AbstractResponse;
+use App\Kernel\Responses\AbstractResponse;
 use App\Kernel\Interfaces\ResponseInterface;
 
 class HTMLResponse extends AbstractResponse implements ResponseInterface

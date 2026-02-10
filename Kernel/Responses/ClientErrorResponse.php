@@ -2,7 +2,7 @@
 
 namespace App\Kernel\Responses;
 
-use App\Kernel\AbstractResponse;
+use App\Kernel\Responses\AbstractResponse;
 use App\Kernel\Interfaces\ResponseInterface;
 
 class ClientErrorResponse extends AbstractResponse implements ResponseInterface
