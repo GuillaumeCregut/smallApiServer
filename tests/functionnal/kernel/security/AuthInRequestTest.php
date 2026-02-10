@@ -1,6 +1,7 @@
 <?php
 
 use App\Kernel\Request;
+use App\Kernel\GetEnvDatas;
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Psr14\Listener\ListenerProvider;
 use App\Kernel\Psr14\Dispatcher\EventDispatcher;
@@ -13,8 +14,15 @@ use App\Kernel\Middleware\Security\SessionAuthMiddleware;
 class AuthInRequestTest extends TestCase
 {
 
+    protected function setUp(): void
+    {
+        
+    }
     public function testNoAuth(): void
     {
+        GetEnvDatas::resetInstance();
+        $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
+        $env = GetEnvDatas::getEnvInstance($filename);
         EventDispatcher::resetInstance();
         $request = Request::initInstance([], [], [], [], [], [], []);
         $provider = ListenerProvider::getInstance();
@@ -30,6 +38,9 @@ class AuthInRequestTest extends TestCase
 
     public function testHTTPAuth(): void
     {
+        GetEnvDatas::resetInstance();
+       $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
+        $env = GetEnvDatas::getEnvInstance($filename);
         EventDispatcher::resetInstance();
         $server = [
             'PHP_AUTH_USER' => 'Bearer YOUR_TOKEN_HERE',
@@ -49,6 +60,9 @@ class AuthInRequestTest extends TestCase
     }
     public function testSessionAuth(): void
     {
+        GetEnvDatas::resetInstance();
+        $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
+        $env = GetEnvDatas::getEnvInstance($filename);
         EventDispatcher::resetInstance();
         $session = [
             'userId' => 1,
@@ -67,6 +81,9 @@ class AuthInRequestTest extends TestCase
     }
     public function testBearerAuth(): void
     {
+        GetEnvDatas::resetInstance();
+        $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
+        $env = GetEnvDatas::getEnvInstance($filename);
         EventDispatcher::resetInstance();
         $headers = [
             'Authorization' => 'Bearer YOUR_TOKEN_HERE'

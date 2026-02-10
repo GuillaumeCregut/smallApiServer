@@ -1,7 +1,8 @@
 <?php
 
-use PHPUnit\Framework\TestCase;
+use App\Kernel\GetEnvDatas;
 use App\Services\Mailer\Mailer;
+use PHPUnit\Framework\TestCase;
 use App\Services\Mailer\MailConfig;
 
 class MailerTest extends TestCase
@@ -14,6 +15,8 @@ class MailerTest extends TestCase
         string $smtpUser = 'user',
         string $smtpPass = 'pass'
     ): MailConfig {
+        $filename = __DIR__ . DIRECTORY_SEPARATOR . '.env.sample';
+        GetEnvDatas::getEnvInstance($filename);
         $cfg = new MailConfig();
         $cfg->fromEmail = $fromEmail;
         $cfg->fromName = $fromName;
@@ -34,7 +37,7 @@ class MailerTest extends TestCase
 
     public function testThrowsWhenFromEmailIsInvalid(): void
     {
-        $config = $this->makeConfig($fromEmail="bad\nemail");
+        $config = $this->makeConfig($fromEmail = "bad\nemail");
         $mailer = new Mailer($config);
 
         $this->expectException(\Exception::class);
@@ -91,7 +94,7 @@ class MailerTest extends TestCase
         $mailer = new Mailer($config);
 
         $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('Fichier introuvable'); 
+        $this->expectExceptionMessage('Fichier introuvable');
         $mailer->sendEmail('to@example.com', 'Subject', 'Body', true, ['Z:/definitely/not/here/xyz.bin']);
     }
     public function testThrowsWhenEmailIsTooLong(): void
@@ -102,7 +105,7 @@ class MailerTest extends TestCase
         $domain = str_repeat('b', 256);
         $veryLongEmail = $local . '@' . $domain . '.com';
         $this->expectException(\Exception::class);
-        
+
         $this->expectExceptionMessage('Email trop long');
         $mailer->sendEmail($veryLongEmail, 'Subject', 'Body');
     }

@@ -1,13 +1,17 @@
 <?php
 
-use App\Kernel\Security\CreateJwtAuth;
-use App\Kernel\Security\JwtToken;
+use App\Kernel\GetEnvDatas;
 use PHPUnit\Framework\TestCase;
+use App\Kernel\Security\JwtToken;
+use App\Kernel\Security\CreateJwtAuth;
 
 class CreateJwtAuthTest extends TestCase
 {
     public function testCreateAuthJwt()
     {
+        GetEnvDatas::resetInstance();
+        $filename = __DIR__ . DIRECTORY_SEPARATOR . '.env.sample';
+        $env = GetEnvDatas::getEnvInstance($filename);
         $payload = [
             'userId' => 1,
             'role' => ['admin'],
