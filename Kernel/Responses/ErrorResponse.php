@@ -2,24 +2,26 @@
 
 namespace App\Kernel\Responses;
 
-use App\Kernel\utils\Dumper;
-use App\Kernel\AbstractResponse;
-use App\Kernel\GetEnvDatas;
-use App\Kernel\Interfaces\ResponseInterface;
 use Exception;
+use App\Kernel\utils\Dumper;
+use App\Kernel\Responses\AbstractResponse;
+use App\Kernel\Interfaces\ResponseInterface;
 
 class ErrorResponse extends AbstractResponse implements ResponseInterface
 {
     private array $statusMessages = [
         500 => ['HTTP/1.0 500 Internal Server Error', '500 - Internal Server Error'],
     ];
-    public function __construct(int $statusCode = 500, ?Exception $e=null)
+    public function __construct(int $statusCode = 500, ?bool $debug = false, ?Exception $e = null)
     {
         $this->setStatusCode(500);
         $body = $this->statusMessages[500][1];
-        $debug = GetEnvDatas::getEnvInstance()->get('debug_mode', false);
+        $this->setHeader('content-type', 'text/plain');
         if ($debug && (null !== $e)) {
-            $body .= $this->makeDebugBody($e);
+            $this->setHeader('content-type', 'application/json');
+            $message = $this->makeDebugBody($e);
+            $message['body'] = $body;
+            $body = json_encode($message);
         }
         $this->setBody($body);
     }
@@ -35,12 +37,17 @@ class ErrorResponse extends AbstractResponse implements ResponseInterface
 
     protected function displayDump(): void
     {
-        
+
         Dumper::displayHTML();
     }
 
-    private function makeDebugBody(Exception $e): string
+    private function makeDebugBody(Exception $e): array
     {
-        return '';
+        return [
+            'message' => $e->getMessage(),
+            'code' => $e->getCode(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ];
     }
 }

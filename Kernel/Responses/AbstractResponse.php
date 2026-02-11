@@ -32,7 +32,7 @@ abstract class AbstractResponse implements ResponseInterface
         $this->headers[$name] = $value;
     }
 
-    public function send(): void
+    public function send(): string
     {
         // Send status code
         $this->sendReponse();
@@ -43,7 +43,23 @@ abstract class AbstractResponse implements ResponseInterface
         }
         $this->DisplayDebugMode();
         // Send body
-        echo $this->body;
+        return $this->body;
+    }
+
+    //for tests purposes
+    public function getBody():string
+    {
+        return $this->body;
+    }
+
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    public function getStatusCode(): int
+    {
+        return $this->statusCode;
     }
 
     private function DisplayDebugMode(): void
