@@ -1,18 +1,18 @@
 <?php
 
 use App\Security\User;
-
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\AbstractRepository;
-use App\Kernel\Connector\ConnectorDispatcher;
 
+use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 
 
 include 'EntityToCreate.php';
 include 'EntityToUpdate.php';
 include 'entity3.php';
+include 'entity4.php';
 class AbstractRepositoryTest extends TestCase
 {
 
@@ -410,5 +410,36 @@ class AbstractRepositoryTest extends TestCase
         $query = 'DELETE FROM entity_to_create WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertTrue($result);
+    }
+
+    public function testfestchEntityWithArray(): void
+    {
+        $roles = json_encode(['ADMIN']);
+        $values = [
+            [
+                'id' => 1,
+                'name' => 'Doe',
+                'firstname' => 'John',
+                'age' => 30,
+                'roles' => $roles
+            ],
+        ];
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('fetchQuery')
+            ->willReturn($values);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = Entity4::class;
+        };
+        /**
+         * @var Entity4 $result 
+         */
+        $result = $repository->find(1);
+        $this->assertEquals(1, $result->getid());
+        $this->assertEquals('Doe', $result->getName());
+        $this->assertEquals('John', $result->getFirstName());
+        $this->assertEquals(30, $result->getAge());
+        $this->assertIsArray($result->getRoles());
+        $this->assertSame('ADMIN', $result->getRoles()[0]);
     }
 }

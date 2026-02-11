@@ -219,9 +219,22 @@ abstract class AbstractRepository implements RepositoryInterface
         $newRow = [];
         foreach ($values as $attribute => $value) {
             $key = $this->columnToProperty($attribute);
-            $newRow[$key] = $value;
+            //CheckValue for array
+            $newValue = $this->checkIncomingValue($key, $value);
+            $newRow[$key] = $newValue;
         }
         return Hydrator::hydrate(new $this->entity(), $newRow);
+    }
+
+    protected function  checkIncomingValue(string $name, mixed $value): mixed
+    {
+        $properties = $this->getEntityProperties(new ReflectionClass($this->entityName))['stored'];
+        if ('id' !== $name) {
+            if ($properties[$name]['type'] == 'array') {
+                $value = json_decode($value, true);
+            }
+        }
+        return $value;
     }
 
     protected function sendQuery(bool $isSelect, string $query, array $params): array | bool | int
