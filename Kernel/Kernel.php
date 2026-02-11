@@ -20,6 +20,7 @@ use App\Kernel\Psr14\Events\ConnectorKernelEvent;
 use App\Kernel\Psr14\Events\CheckApiKeyKernelEvent;
 use App\Kernel\Psr14\Events\ReturnResponseKernelEvent;
 use App\Kernel\Psr14\Events\StartControllerKernelEvent;
+use Exception;
 
 class Kernel
 {
@@ -33,7 +34,7 @@ class Kernel
         try {
             $env = GetEnvDatas::getEnvInstance($iniFile);
         } catch (KernelException $e) {
-            $response = new ErrorResponse(500);
+            $response = new ErrorResponse(500, true, $e);
             return $response;
         }
         $this->routes = Router::getRoutes();
@@ -68,9 +69,10 @@ class Kernel
             $page = (new $controller())->$method();
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $page;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // if an exception is thrown during controller execution
-            $response = new ErrorResponse(500, $e);
+            $debug = GetEnvDatas::getEnvInstance()->get('debug_mode');
+            $response = new ErrorResponse(500, $debug, $e);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
