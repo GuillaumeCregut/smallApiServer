@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Services\Mailer;
 
 use App\Interfaces\MailerInterface;
-use App\Kernel\GetEnvDatas;
 use App\Kernel\Logger;
 use Exception;
 

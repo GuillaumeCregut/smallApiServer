@@ -1,7 +1,10 @@
 <?php
 
-namespace App\Kernel;
+namespace App\Kernel\Responses;
+
+use App\Kernel\GetEnvDatas;
 use App\Kernel\utils\Dumper;
+use App\Kernel\Exceptions\KernelException;
 use App\Kernel\Interfaces\ResponseInterface;
 
 abstract class AbstractResponse implements ResponseInterface
@@ -9,9 +12,9 @@ abstract class AbstractResponse implements ResponseInterface
     protected int $statusCode = 200;
     protected array $headers = [];
     protected string $body = '';
-    
+
     abstract public function setBody(mixed $content): void;
-    abstract public function sendReponse(): void; 
+    abstract public function sendReponse(): void;
     abstract protected function displayDump(): void;
 
     public function setStatusCode(int $code): void
@@ -29,7 +32,7 @@ abstract class AbstractResponse implements ResponseInterface
         $this->headers[$name] = $value;
     }
 
-    public function send(): void
+    public function send(): string
     {
         // Send status code
         $this->sendReponse();
@@ -40,14 +43,33 @@ abstract class AbstractResponse implements ResponseInterface
         }
         $this->DisplayDebugMode();
         // Send body
-        echo $this->body;
+        return $this->body;
+    }
+
+    //for tests purposes
+    public function getBody():string
+    {
+        return $this->body;
+    }
+
+    public function getHeaders(): array
+    {
+        return $this->headers;
+    }
+
+    public function getStatusCode(): int
+    {
+        return $this->statusCode;
     }
 
     private function DisplayDebugMode(): void
     {
-        $isDebug = GetEnvDatas::getEnvInstance()->get('debug_mode', false);
-        if($isDebug && class_exists(Dumper::class)){
-            $this->displayDump();
+        try {
+            $isDebug = GetEnvDatas::getEnvInstance()->get('debug_mode', false);
+            if ($isDebug && class_exists(Dumper::class)) {
+                $this->displayDump();
+            }
+        } catch (KernelException $e) {
         }
     }
 }

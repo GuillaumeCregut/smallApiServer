@@ -7,7 +7,7 @@ use App\Kernel\Request;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ClientErrorResponse;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
-
+use Exception;
 
 abstract class AbstractController
 {
@@ -19,9 +19,9 @@ abstract class AbstractController
         $this->request = Request::getRequestInstance();
     }
 
-    protected function returnError(int $error): ResponseInterface
+    protected function returnError(int $error, ?Exception $e = null): ResponseInterface
     {
-        $response = new ClientErrorResponse($error);
+        $response = new ClientErrorResponse($error, $e);
                 return $response;
     }
 

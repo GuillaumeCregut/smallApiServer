@@ -7,7 +7,7 @@ class CreateJwtAuth
 {
     public static function createToken(int $userId, array $role, ?string $firstname, ?string $lastname, ?int $validity = 86400,): string
     {
-        $envs = new GetEnvDatas();
+        $envs = GetEnvDatas::getEnvInstance();
         $secret = $envs->get('secret');
         $payload = [
             'userId' => $userId,

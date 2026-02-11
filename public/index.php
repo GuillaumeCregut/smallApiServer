@@ -11,7 +11,7 @@ use App\Kernel\Kernel;
 App\Vendor\Autoload::register();
 $router= new Kernel();
 $response =  $router->route();
-$response->send();
+echo $response->send();
 
 
 

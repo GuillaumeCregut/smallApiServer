@@ -1,9 +1,11 @@
 <?php
 
 use App\Kernel\Request;
+use App\Kernel\GetEnvDatas;
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Connector\MySQLConnector;
 use App\Kernel\Middleware\Security\AuthHttpMiddleware;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use App\Kernel\Middleware\Security\AuthBearerMiddleware;
 use App\Kernel\Middleware\Security\AuthManagerMiddleware;
 use App\Kernel\Middleware\Security\SessionAuthMiddleware;
@@ -12,7 +14,10 @@ class AuthManagerMiddlewareTest extends TestCase
 {
     public function testBearerAuth(): void
     {
-        $connector = new MySQLConnector();
+        GetEnvDatas::resetInstance();
+        $filename = __DIR__ . DIRECTORY_SEPARATOR . '.env.sample';
+        $env = GetEnvDatas::getEnvInstance($filename);
+        $connector = $this->createStub(ConnectorInterface::class);
         $headers = [
             'Authorization' => 'Bearer YOUR_TOKEN_HERE'
         ];
@@ -23,7 +28,7 @@ class AuthManagerMiddlewareTest extends TestCase
 
     public function testHTTPAuth(): void
     {
-        $connector = new MySQLConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
         $server = [
             'PHP_AUTH_USER' => 'Bearer YOUR_TOKEN_HERE',
             'PHP_AUTH_PW' => 'pass'
@@ -35,7 +40,7 @@ class AuthManagerMiddlewareTest extends TestCase
 
     public function testSessionAuth(): void
     {
-        $connector = new MySQLConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
         $session = [
             'userId' => 1,
         ];
@@ -46,7 +51,7 @@ class AuthManagerMiddlewareTest extends TestCase
 
     public function testNoAuth(): void
     {
-        $connector = new MySQLConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
         $request = Request::initInstance([], [], [], [], [], [], []);
         $middleware = AuthManagerMiddleware::getAuthMiddleware($connector);
         $this->assertNull($middleware);
@@ -64,7 +69,7 @@ class AuthManagerMiddlewareTest extends TestCase
         $headers = [
             'Authorization' => 'Bearer YOUR_TOKEN_HERE'
         ];
-        $connector = new MySQLConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
         $request = Request::initInstance($server, [], [], [], [], $session, $headers);
         $middleware = AuthManagerMiddleware::getAuthMiddleware($connector);
         $this->assertInstanceOf(AuthBearerMiddleware::class, $middleware);
