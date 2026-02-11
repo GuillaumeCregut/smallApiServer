@@ -19,8 +19,8 @@ class ErrorResponseTest extends TestCase
         $this->assertArrayHasKey('line', $arrayBody);
         $headers = $response->getHeaders();
         $this->assertIsArray($headers);
-        $this->assertArrayHasKey('content-type', $headers);
-        $this->assertSame('application/json', $headers['content-type']);
+        $this->assertArrayHasKey('Content-Type', $headers);
+        $this->assertSame('application/json', $headers['Content-Type']);
         $this->assertSame(500, $response->getStatusCode());
     }
 
@@ -32,8 +32,8 @@ class ErrorResponseTest extends TestCase
         $this->assertStringContainsString('500 - Internal Server',$body);
         $headers = $response->getHeaders();
         $this->assertIsArray($headers);
-        $this->assertArrayHasKey('content-type', $headers);
-        $this->assertSame('text/plain', $headers['content-type']);
+        $this->assertArrayHasKey('Content-Type', $headers);
+        $this->assertSame('text/plain', $headers['Content-Type']);
         $this->assertSame(500, $response->getStatusCode());
     }
 

@@ -13,7 +13,7 @@ class ClientErrorResponseTest extends TestCase
         $this->assertStringContainsString('400 - Bad Request',$body);
         $headers = $response->getHeaders();
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame('text/plain', $headers['content-type']);
+        $this->assertSame('text/plain', $headers['Content-Type']);
     }
     
     public function test467Error(): void
@@ -32,6 +32,6 @@ class ClientErrorResponseTest extends TestCase
         $this->assertJson($body);
         $headers = $response->getHeaders();
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame('application/json', $headers['content-type']);
+        $this->assertSame('application/json', $headers['Content-Type']);
     }
 }

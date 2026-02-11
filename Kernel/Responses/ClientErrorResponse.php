@@ -55,7 +55,7 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
         }
         $this->setStatusCode($statusCode);
         $this->setBody($this->statusMessages[$statusCode][1] ?? '400 - Bad Request');
-        $this->setHeader('content-type', 'text/plain');
+        $this->setHeader('Content-Type', 'text/plain');
     }
 
     public function setBody(mixed $content): void
@@ -63,7 +63,7 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
         json_decode($content);
         $isJson = json_last_error() === JSON_ERROR_NONE;
         if ($isJson) {
-            $this->setHeader('content-type', 'application/json');
+            $this->setHeader('Content-Type', 'application/json');
         }
         $this->body = $content;
     }

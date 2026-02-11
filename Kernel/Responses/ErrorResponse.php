@@ -16,9 +16,9 @@ class ErrorResponse extends AbstractResponse implements ResponseInterface
     {
         $this->setStatusCode(500);
         $body = $this->statusMessages[500][1];
-        $this->setHeader('content-type', 'text/plain');
+        $this->setHeader('Content-Type', 'text/plain');
         if ($debug && (null !== $e)) {
-            $this->setHeader('content-type', 'application/json');
+            $this->setHeader('Content-Type', 'application/json');
             $message = $this->makeDebugBody($e);
             $message['body'] = $body;
             $body = json_encode($message);
