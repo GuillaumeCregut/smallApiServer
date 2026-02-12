@@ -2,32 +2,41 @@
 
 namespace App\Kernel\Middleware\Security;
 
-
+use App\Kernel\Connector\DatabaseException;
 use App\Security\User;
 use App\Kernel\Request;
 use App\Kernel\Traits\GetUserAuthTrait;
 use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Interfaces\Databases\RepositoryInterface;
 
 class SessionAuthMiddleware implements AuthenticationInterface
 {
     private ?User $user = null;
+    private ?int $id = null;
+   // use GetUserAuthTrait;
 
-    use GetUserAuthTrait;
-
-    public function __construct(private ConnectorInterface $connector)
+    public function __construct(private RepositoryInterface $repo)
     {
-        // Initialization if needed
+        $this->id = (int)Request::getRequestInstance()->getSessionValue('userId') ?? null;
+        $this->user = $this->getUserFromDB($this->id);
     }
     public function isAuth(): bool
     {
-        $id = (int)Request::getRequestInstance()->getSessionValue('user_id') ?? null;
-        $this->user = $this->getUserFromDB($id);
        return $this->user !== null; 
     }
 
     public function getUser(): ?User
     {
         return $this->user;
+    }
+
+    private function getUserFromDB(int $id): ?User
+    {
+        try{
+            return $this->repo->find($id);
+        } catch(DatabaseException $e){
+            throw new DatabaseException($e->getMessage(),$e->getCode());
+        }
     }
 }
