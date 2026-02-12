@@ -2,9 +2,11 @@
 
 namespace App\Kernel\Files;
 
+use App\Kernel\Interfaces\FileSystemInterface;
 use Error;
 use Exception;
 use SplFileInfo;
+use App\Kernel\Files\FileSystem;
 
 class FileUpload extends SplFileInfo
 {
@@ -15,8 +17,9 @@ class FileUpload extends SplFileInfo
     private int $error;
     private string $full_path;
     private bool $fileOK = false;
+    private FileSystemInterface $fileSystem;
 
-    public function __construct(array $fileData)
+    public function __construct(array $fileData, ?FileSystemInterface $fileSystem = null)
     {
         $this->name = $fileData['name'];
         $this->mimeType = $fileData['type'] ?: 'application/octet-stream';
@@ -24,23 +27,44 @@ class FileUpload extends SplFileInfo
         $this->size = $fileData['size'];
         $this->error = $fileData['error'];
         $this->full_path = $fileData['full_path'] ?? '';
+        $this->fileSystem = $fileSystem ?? new FileSystem();
         parent::__construct($this->tmp_name);
     }
-    public function isValid(int $maxSize, array $allowedMimeTypes = []): bool
+    public function isValid(int $maxSize, array $allowedMimeTypes = [], array $allowedExtensions = []): bool
     {
         $isOK = \UPLOAD_ERR_OK === $this->error;
 
         if (!is_file($this->tmp_name)) {
-           $isOK = false;
+            $isOK = false;
         }
         if ($this->size > $maxSize) {
             $isOK = false;
         }
-        if (!in_array($this->mimeType, $allowedMimeTypes)) {
+
+        if ($this->hasDoubleExtension()) {
             $isOK = false;
         }
 
-        $this->fileOK = $isOK && is_uploaded_file($this->getPathname());
+        $realMimeType = $realMimeType = $this->detectRealMimeType();
+        $this->mimeType = $realMimeType;
+        if (!empty($allowedMimeTypes) && !in_array($realMimeType, $allowedMimeTypes, true)) {
+            $isOK = false;
+        }
+
+        if (!empty($allowedExtensions)) {
+            $extension = strtolower(pathinfo($this->name, PATHINFO_EXTENSION));
+            if (!in_array($extension, $allowedExtensions, true)) {
+                $isOK = false;
+            }
+        }
+
+        if (in_array($realMimeType, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
+            if (!$this->isValidImage()) {
+                $isOK = false;
+            }
+        }
+
+        $this->fileOK = $isOK && $this->fileSystem->isUploadedFile($this->getPathname());
         return $this->fileOK;
     }
 
@@ -67,17 +91,19 @@ class FileUpload extends SplFileInfo
                 'size' => $this->size,
                 'error' => UPLOAD_ERR_OK,
                 'full_path' => $targetFullPath,
-            ]);
+            ],
+            $this->fileSystem
+        );
         try {
-                $moved = move_uploaded_file($this->getPathname(), $target);
-            } catch (Error $e) {
-                throw new Exception($this->getErrorMessage($this->error));
-            }
-            if (!$moved) {
-                throw new Exception("Could not move the file");
-            }
-            @chmod($target, 0666 & ~umask()); // Set permissions on the moved file to 0666 max  
-            return $target;    
+            $moved = $this->fileSystem->moveUploadedFile($this->getPathname(), $targetFullPath);
+        } catch (Error $e) {
+            throw new Exception($this->getErrorMessage($this->error));
+        }
+        if (!$moved) {
+            throw new Exception("Could not move the file");
+        }
+        @chmod($targetFullPath, 0666 & ~umask()); // Set permissions on the moved file to 0666 max  
+        return $target;
     }
     /**
      * Get the value of name
@@ -141,5 +167,45 @@ class FileUpload extends SplFileInfo
         ];
         $message = $errorsMessages[$error] ?? 'The file was not uploaded due to an unknown error.';
         return $message;
+    }
+
+    private function detectRealMimeType(): string
+    {
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $this->tmp_name);
+            if ($mimeType !== false) {
+                return $mimeType;
+            }
+        }
+
+        if (function_exists('mime_content_type')) {
+            $mimeType = mime_content_type($this->tmp_name);
+            if ($mimeType !== false) {
+                return $mimeType;
+            }
+        }
+
+        return $this->mimeType;
+    }
+
+    private function hasDoubleExtension(): bool
+    {
+        $dangerousExtensions = ['php', 'phtml', 'php3', 'php4', 'php5', 'phar', 'exe', 'sh', 'bat'];
+        $filename = strtolower($this->name);
+
+        foreach ($dangerousExtensions as $ext) {
+            if (str_contains($filename, '.' . $ext . '.')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isValidImage(): bool
+    {
+        $imageInfo = @getimagesize($this->tmp_name);
+        return $imageInfo !== false;
     }
 }
