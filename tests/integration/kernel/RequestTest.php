@@ -9,6 +9,7 @@ class RequestTest extends TestCase
     //Test création instance de request
     public function testInitRequest(): void
     {
+        Request::resetInstance();
         $request = Request::initInstance([], [], [], [], [], [], []);
         $this->assertIsObject($request);
         $this->assertInstanceOf(Request::class, $request);
@@ -16,6 +17,7 @@ class RequestTest extends TestCase
 
     public function testRequestHasServerInformations(): void
     {
+        Request::resetInstance();
         $server = [
             'REQUEST_METHOD' => 'GET',
             'REQUEST_URI' => '/local/index?id=123&name=john',
@@ -34,6 +36,7 @@ class RequestTest extends TestCase
 
     public function testRequestHasDatas(): void
     {
+        Request::resetInstance();
         $server = [
             'HTTP_REFERER' => 'localhost:8000',
             'HTTP_HOST' => 'localhost:8000',
@@ -62,6 +65,7 @@ class RequestTest extends TestCase
 
     public function testRequestHasIdFromUrl()
     {
+        Request::resetInstance();
         $server = [
             'REQUEST_METHOD' => 'GET',
             'REQUEST_URI' => '/local/index/1',
@@ -76,6 +80,7 @@ class RequestTest extends TestCase
 
     public function testSetRequestData(): void
     {
+        Request::resetInstance();
         $server = [
             'HTTP_REFERER' => 'localhost:8000',
             'HTTP_HOST' => 'localhost:8000',
@@ -102,6 +107,7 @@ class RequestTest extends TestCase
 
     public function testRequestInstance(): void
     {
+        Request::resetInstance();
         $server = [
             'HTTP_REFERER' => 'localhost:8000',
             'HTTP_HOST' => 'localhost:8000',
@@ -126,6 +132,7 @@ class RequestTest extends TestCase
 
     public function testRequestHasFile(): void
     {
+        Request::resetInstance();
        $files = [
             'documents' => [
                 'name' => 'file2.pdf',
@@ -157,6 +164,7 @@ class RequestTest extends TestCase
 
     public function RequestHasSession(): void
     {
+        Request::resetInstance();
          $request = Request::initInstance([], [], [], [], [], [], []);
          $this->assertNull($request->getSessionValue('test'));
          $request->setSessionValue('test', 'toto');
@@ -165,10 +173,29 @@ class RequestTest extends TestCase
 
     public function testRequestHasHeaders(): void
     {
+        Request::resetInstance();
         $headers =[
             'pragma'=>'no-cache'
         ];
         $request = Request::initInstance([], [], [], [], [], [], $headers);
         $this->assertEquals('no-cache', $request->getHeaders('pragma'));
+    }
+
+     public function testRequestHaCookies(): void
+    {
+        Request::resetInstance();
+        $cookies =[
+            'pragma'=>'no-cache'
+        ];
+        $request = Request::initInstance([], [], [], [], [], [], [], $cookies);
+        $this->assertEquals('no-cache', $request->getCookie('pragma'));
+    }
+
+     public function testUserParam(): void
+    {
+        Request::resetInstance();
+        $request = Request::initInstance([], [], [], [], [], [], []);
+        $request->addParam('name', 'john');
+        $this->assertEquals('john', $request->getParam('name'));
     }
 }
