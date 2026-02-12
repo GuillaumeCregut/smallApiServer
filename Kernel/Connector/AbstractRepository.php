@@ -4,6 +4,10 @@ namespace App\Kernel\Connector;
 
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
+use App\Kernel\Connector\ConnectorDispatcher;
+use App\Kernel\Connector\DatabaseException;
+use App\Kernel\Connector\Hydrator;
+use App\Kernel\Connector\QueryBuilder;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use App\Kernel\Interfaces\Databases\EntityInterface;
 use App\Kernel\Interfaces\Databases\RepositoryInterface;
