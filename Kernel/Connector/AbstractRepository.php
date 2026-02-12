@@ -232,8 +232,8 @@ abstract class AbstractRepository implements RepositoryInterface
 
     protected function  checkIncomingValue(string $name, mixed $value): mixed
     {
-        $properties = $this->getEntityProperties(new ReflectionClass($this->entityName))['stored'];
-        if ('id' !== $name) {
+        $properties = $this->getEntityProperties($this->reflectionEntity)['stored'];
+        if (key_exists($name, $properties)) {
             if ($properties[$name]['type'] == 'array') {
                 $value = json_decode($value, true);
             }
