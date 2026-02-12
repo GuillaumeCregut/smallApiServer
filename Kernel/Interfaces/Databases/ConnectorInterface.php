@@ -11,6 +11,6 @@ interface ConnectorInterface
     public function fetchQuery(string $sql, array $params=[]): array;
     public function FetchQueryOnce(string $sql, array $params = []): ?array;
     public function startTransac(): void;
-    public function commitTransc(): void;
+    public function commitTransac(): void;
     public function rollBack(): void;
 }
