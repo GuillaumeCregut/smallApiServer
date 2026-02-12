@@ -10,4 +10,3 @@ notes.txt
 vendor-stubs/
 /tests/AuthManagerMiddlewareTest.php
 ControllerTest.php
-UploadFileTest.php
