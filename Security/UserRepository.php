@@ -2,9 +2,10 @@
 
 namespace App\Security;
 
+use App\Security\User;
 use App\Kernel\Connector\AbstractRepository;
+use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Interfaces\Databases\EntityInterface;
-use Exception;
 
 /**
  * @template T of EntityInterface
@@ -23,7 +24,7 @@ class UserRepository extends AbstractRepository
             return null;
         }
         if(1<count($result)) {
-            throw new Exception('More than one user found');
+            throw new DatabaseException('More than one user found');
         }
         return $result[0];
     }
