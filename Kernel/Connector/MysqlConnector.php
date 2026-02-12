@@ -103,7 +103,7 @@ class MySQLConnector implements ConnectorInterface
             'db' => $envs['db'],
             'user' => $envs['user'],
             'pass' => $envs['pass'],
-            'port' =>$nev['port'] ?? 3306
+            'port' =>$envs['port'] ?? 3306
         ];
         $this->connect();
     }
