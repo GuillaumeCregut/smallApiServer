@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Kernel;
 
 use App\Kernel\Config\DatabaseConnector;
@@ -30,18 +35,27 @@ class Kernel
 
     public function __construct()
     {
+        //Get env values
         $iniFile = dirname(__DIR__, 1) . DIRECTORY_SEPARATOR . '.env';
         try {
-            $env = GetEnvDatas::getEnvInstance($iniFile);
+            GetEnvDatas::getEnvInstance($iniFile);
         } catch (KernelException $e) {
             $response = new ErrorResponse(500, true, $e);
             return $response;
         }
+
+        //get routes for controller instantiation
         $this->routes = Router::getRoutes();
+
+        //Get Values from server
         $datas = GetClientParams::getInputs();
         $headers = GetClientParams::getheaders();
+
+        //Create Request
         $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
         $this->routeCall = $this->request->getURI();
+
+        //Init Events
         $eventList = Events::getListeners();
         MakeListener::applyListener($eventList);
     }
@@ -49,12 +63,18 @@ class Kernel
     public function route(): ResponseInterface
     {
         $provider = ListenerProvider::getInstance();
+
+        //Launch initKernelEvent
         EventDispatcher::getInstance($provider)->dispatch(new InitKernelEvent());
+
+        //If no routes for request
         if (!key_exists($this->routeCall, $this->routes)) {
             $response = new ClientErrorResponse(404);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
+
+        //Getting associated controller
         $matchingRoute = $this->routes[$this->routeCall];
         $controller = $matchingRoute[0];
         $method = $matchingRoute[1];
@@ -62,11 +82,14 @@ class Kernel
         try {
             EventDispatcher::getInstance()->dispatch(new ConnectorKernelEvent());
             ConnectorDispatcher::setConnector(DatabaseConnector::getConnector());
+            
             EventDispatcher::getInstance()->dispatch(new CallAuthKernelEvent());
             EventDispatcher::getInstance()->dispatch(new CheckApiKeyKernelEvent());
+
             // execute the controller
             EventDispatcher::getInstance()->dispatch(new StartControllerKernelEvent());
             $page = (new $controller())->$method();
+
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $page;
         } catch (Exception $e) {
