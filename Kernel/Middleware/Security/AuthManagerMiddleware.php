@@ -4,7 +4,7 @@ namespace App\Kernel\Middleware\Security;
 
 
 use App\Kernel\Request;
-use App\Kernel\Config\DatabaseConnector;
+use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Psr14\ListenerInterface;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
@@ -17,7 +17,7 @@ class AuthManagerMiddleware implements ListenerInterface
     public function execute(StoppableEventInterface $event): void
     {
         $auth = null;
-        $connector = DatabaseConnector::getConnector();
+        $connector = ConnectorDispatcher::getConnector();
          $request = Request::getRequestInstance();
         if (!is_null($request->getHeaders('Authorization'))) { 
             $auth=new AuthBearerMiddleware($connector);

@@ -1,7 +1,9 @@
 <?php
 
+use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Request;
 use App\Kernel\GetEnvDatas;
+use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Psr14\Listener\ListenerProvider;
 use App\Kernel\Psr14\Dispatcher\EventDispatcher;
@@ -20,9 +22,9 @@ class AuthInRequestTest extends TestCase
     }
     public function testNoAuth(): void
     {
-        GetEnvDatas::resetInstance();
-        $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
-        $env = GetEnvDatas::getEnvInstance($filename);
+        ConnectorDispatcher::resetConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
+        ConnectorDispatcher::setConnector($connector);
         EventDispatcher::resetInstance();
         $request = Request::initInstance([], [], [], [], [], [], []);
         $provider = ListenerProvider::getInstance();
@@ -38,9 +40,9 @@ class AuthInRequestTest extends TestCase
 
     public function testHTTPAuth(): void
     {
-        GetEnvDatas::resetInstance();
-       $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
-        $env = GetEnvDatas::getEnvInstance($filename);
+        ConnectorDispatcher::resetConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
+        ConnectorDispatcher::setConnector($connector);
         EventDispatcher::resetInstance();
         $server = [
             'PHP_AUTH_USER' => 'Bearer YOUR_TOKEN_HERE',
@@ -60,9 +62,9 @@ class AuthInRequestTest extends TestCase
     }
     public function testSessionAuth(): void
     {
-        GetEnvDatas::resetInstance();
-        $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
-        $env = GetEnvDatas::getEnvInstance($filename);
+        ConnectorDispatcher::resetConnector();
+        $connector = $this->createStub(ConnectorInterface::class);
+        ConnectorDispatcher::setConnector($connector);
         EventDispatcher::resetInstance();
         $session = [
             'userId' => 1,
@@ -79,8 +81,12 @@ class AuthInRequestTest extends TestCase
         $this->assertNotNull($request2->getAuth());
         $this->assertInstanceOf(SessionAuthMiddleware::class, $request2->getAuth());
     }
+
     public function testBearerAuth(): void
     {
+        GetEnvDatas::resetInstance();
+        $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
+        $env = GetEnvDatas::getEnvInstance($filename);
         GetEnvDatas::resetInstance();
         $filename = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR .'.env';
         $env = GetEnvDatas::getEnvInstance($filename);
