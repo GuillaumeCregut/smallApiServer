@@ -8,7 +8,6 @@ class FileFormator
     {
         $filesArray = [];
         foreach($files as $key => $fileElement) {
-            $tempFileArray = [];
             if(is_array($fileElement['name'])) {
                 $filesArray[$key] = self::formatMultipleFiles($fileElement);
             } else {
