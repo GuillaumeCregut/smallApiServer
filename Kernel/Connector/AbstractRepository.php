@@ -60,13 +60,17 @@ abstract class AbstractRepository implements RepositoryInterface
             $query = $this->qb->where($key, '=', $value);
         }
         $query = $this->qb->toSql();
+        $params = $this->qb->getParams();
         $this->sql = $query;
-        $result = $this->sendQuery(true, $query, []);
+        $result = $this->sendQuery(true, $query, $params);
         if (0 === count($result)) {
             return [];
         }
         $returnArray = [];
         foreach ($result as $values) {
+            if(!is_array($values)) {
+                throw new DatabaseException('missformed query result');
+            }
             $entity = $this->makeEntity($values);
             $returnArray[] = $entity;
         }
@@ -232,8 +236,8 @@ abstract class AbstractRepository implements RepositoryInterface
 
     protected function  checkIncomingValue(string $name, mixed $value): mixed
     {
-        $properties = $this->getEntityProperties(new ReflectionClass($this->entityName))['stored'];
-        if ('id' !== $name) {
+        $properties = $this->getEntityProperties($this->reflectionEntity)['stored'];
+        if (key_exists($name, $properties)) {
             if ($properties[$name]['type'] == 'array') {
                 $value = json_decode($value, true);
             }

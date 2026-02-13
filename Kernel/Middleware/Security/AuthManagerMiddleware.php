@@ -2,13 +2,15 @@
 
 namespace App\Kernel\Middleware\Security;
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
 
 use App\Kernel\Request;
-use App\Kernel\Config\DatabaseConnector;
-use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Psr14\ListenerInterface;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
+use App\Security\UserRepository;
 
 class AuthManagerMiddleware implements ListenerInterface
 {
@@ -17,10 +19,10 @@ class AuthManagerMiddleware implements ListenerInterface
     public function execute(StoppableEventInterface $event): void
     {
         $auth = null;
-        $connector = DatabaseConnector::getConnector();
-         $request = Request::getRequestInstance();
-        if (!is_null($request->getHeaders('Authorization'))) { 
-            $auth=new AuthBearerMiddleware($connector);
+        $connector = new UserRepository();
+        $request = Request::getRequestInstance();
+        if (!is_null($request->getHeaders('Authorization'))) {
+            $auth = new AuthBearerMiddleware($connector);
         }
         if ($request->getSessionValue('userId') !== null) {
             $auth = new SessionAuthMiddleware($connector);
@@ -28,26 +30,7 @@ class AuthManagerMiddleware implements ListenerInterface
         if ((null !== $request->getServer('PHP_AUTH_USER')) && (null !== $request->getServer('PHP_AUTH_PW'))) {
             $auth = new AuthHttpMiddleware($connector);
         }
-        $request->setAuth($auth);
+        $request->setUser($auth->getUser());
         $event->stopPropagation();
-    }
-    #[\Deprecated(message: "use execute() instead", since: "0.2")]
-    public static function getAuthMiddleware(ConnectorInterface $connector): ?AuthenticationInterface
-    {
-        $request = Request::getRequestInstance();
-        //Check auth
-        if (!is_null($request->getHeaders('Authorization'))) {
-            //Bearer Auth 
-            return new AuthBearerMiddleware($connector);
-        }
-        if ($request->getSessionValue('userId') !== null) {
-            //Session Auth
-            return new SessionAuthMiddleware($connector);
-        }
-        if ((null !== $request->getServer('PHP_AUTH_USER')) && (null !== $request->getServer('PHP_AUTH_PW'))) {
-            //HTTP Auth
-            return new AuthHttpMiddleware($connector);
-        }
-        return null;
     }
 }

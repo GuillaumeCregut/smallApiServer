@@ -4,33 +4,43 @@ namespace App\Kernel\Middleware\Security;
 
 use App\Security\User;
 use App\Kernel\Request;
-use App\Kernel\Traits\GetUserAuthTrait;
+use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Interfaces\AuthenticationInterface;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Interfaces\Databases\RepositoryInterface;
+use App\Security\UserRepository;
 
 class AuthHttpMiddleware implements AuthenticationInterface
 {
 
-    use GetUserAuthTrait;
-    private ?User $user=null;
-
-    public function __construct(private ConnectorInterface $connector)
-    {
-        // Initialization if needed
-    }
-    
-    // Implementation for HTTP authentication middleware
-    public function isAuth(): bool
+    private ?User $user = null;
+    /**
+     * @param UserRepository $repo
+     */
+    public function __construct(private RepositoryInterface $repo)
     {
         $request = Request::getRequestInstance();
         $username = $request->getServer('PHP_AUTH_USER');
         $password = $request->getServer('PHP_AUTH_PW');
+        $this->user = $this->getUserFromDb($username, $password);
+    }
 
-        throw new \Exception('Not implemented');
+    public function isAuth(): bool
+    {
+        return $this->user !== null;
     }
 
     public function getUser(): ?User
     {
         return $this->user;
+    }
+
+    private function getUserFromDb(string $user, string $password): ? User 
+    {
+        try {
+            return $this->repo->findByUserNameCredentials($user, $password);
+        } catch (DatabaseException $e) {
+            throw new DatabaseException($e->getMessage(), $e->getCode());
+        }
+        return null;
     }
 }

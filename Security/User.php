@@ -7,9 +7,21 @@ use App\Kernel\Connector\AbstractEntity;
 class User extends AbstractEntity
 {
     private array $roles = [];
+    private ?string $name = null;
+    private ?string $firstname = null;
+    private ?string $username = null;
+    private ?string $password = null;
+    private ?string $token = null;
+    
     public function getRoles(): array
     {
         return $this->roles;
+    }
+
+    public function setRoles(array $roles): self
+    {
+        $this->roles = $roles;
+        return $this;
     }
 
     public function setRole(string $role): self
@@ -31,7 +43,59 @@ class User extends AbstractEntity
 
     public function getToken(): string
     {
-        //Todo : get user key from database
-        return '';
+        return $this->token;
+    }
+
+    public function setToken(?string $token): self
+    {
+        $this->token = $token;
+        return $this;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(?string $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public function getFirstname(): ?string
+    {
+        return $this->firstname;
+    }
+
+    public function setFirstname(?string $firstname): self
+    {
+        $this->firstname = $firstname;
+
+        return $this;
+    }
+
+    public function getUsername(): ?string
+    {
+        return $this->username;
+    }
+
+    public function setUsername(?string $username): self
+    {
+        $this->username = $username;
+
+        return $this;
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(?string $password): self
+    {
+        $this->password = $password;
+        return $this;
     }
 }
