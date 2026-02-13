@@ -7,9 +7,6 @@ use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\AbstractRepository;
 use App\Kernel\Interfaces\Databases\EntityInterface;
 
-/**
- * @template T of EntityInterface
- */
 class UserRepository extends AbstractRepository
 {
     protected ?string $entity = User::class;

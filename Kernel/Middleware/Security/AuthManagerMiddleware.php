@@ -8,7 +8,6 @@ namespace App\Kernel\Middleware\Security;
  */
 
 use App\Kernel\Request;
-use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Psr14\ListenerInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
 use App\Security\UserRepository;

@@ -4,7 +4,6 @@ namespace App\Kernel\Middleware\Security;
 
 use App\Security\User;
 use App\Kernel\Request;
-use App\Kernel\Traits\GetUserAuthTrait;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Databases\RepositoryInterface;
@@ -15,8 +14,6 @@ class AuthHttpMiddleware implements AuthenticationInterface
 
     private ?User $user = null;
     /**
-     *  
-     *
      * @param UserRepository $repo
      */
     public function __construct(private RepositoryInterface $repo)
@@ -27,7 +24,6 @@ class AuthHttpMiddleware implements AuthenticationInterface
         $this->user = $this->getUserFromDb($username, $password);
     }
 
-    // Implementation for HTTP authentication middleware
     public function isAuth(): bool
     {
         return $this->user !== null;

@@ -5,16 +5,13 @@ namespace App\Kernel\Middleware\Security;
 use App\Kernel\Connector\DatabaseException;
 use App\Security\User;
 use App\Kernel\Request;
-use App\Kernel\Traits\GetUserAuthTrait;
 use App\Kernel\Interfaces\AuthenticationInterface;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
 use App\Kernel\Interfaces\Databases\RepositoryInterface;
 
 class SessionAuthMiddleware implements AuthenticationInterface
 {
     private ?User $user = null;
     private ?int $id = null;
-   // use GetUserAuthTrait;
 
     public function __construct(private RepositoryInterface $repo)
     {
