@@ -3,8 +3,8 @@
 namespace App\Security;
 
 use App\Security\User;
-use App\Kernel\Connector\AbstractRepository;
 use App\Kernel\Connector\DatabaseException;
+use App\Kernel\Connector\AbstractRepository;
 use App\Kernel\Interfaces\Databases\EntityInterface;
 
 /**
@@ -13,6 +13,30 @@ use App\Kernel\Interfaces\Databases\EntityInterface;
 class UserRepository extends AbstractRepository
 {
     protected ?string $entity = User::class;
+
+    public function find(int $id): ?EntityInterface
+    {
+        /**
+         * @var User $user
+         */
+        $user = parent::find($id);
+        $user->setPassword(null);
+        return $user;
+    }
+
+     public function findBy(array $fields): array
+     {
+        $users = parent::findBy($fields);
+        if(0 < count($users)) {
+            /**
+             * @var User $user
+             */
+            foreach($users as $user) {
+                $user->setPassword(null);
+            }
+        }
+        return $users;
+     }
    
     public function findOneByEmail(string $email): ?EntityInterface
     {
