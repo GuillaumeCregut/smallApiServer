@@ -18,10 +18,7 @@ class EventDispatcher implements EventDispatcherInterface
     private static ?EventDispatcher $instance = null;
     private ListenerProviderInterface $listenerProvider;
 
-    public function __construct(ListenerProviderInterface $listenerProvider)
-    {
-        $this->listenerProvider = $listenerProvider;
-    }
+    
     public static function getInstance(?ListenerProviderInterface $listenerProvider=null): EventDispatcher
     {
         if(null === self::$instance) {
@@ -53,5 +50,10 @@ class EventDispatcher implements EventDispatcherInterface
     public static function resetInstance(): void
     {
         self::$instance=null;
+    }
+
+    private function __construct(ListenerProviderInterface $listenerProvider)
+    {
+        $this->listenerProvider = $listenerProvider;
     }
 }
