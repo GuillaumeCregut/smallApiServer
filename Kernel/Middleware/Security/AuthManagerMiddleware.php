@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Kernel\Middleware\Security;
-
 /**
  * @license MIT
  * Copyright (c) 2026 Guillaume Crégut
  */
+
+namespace App\Kernel\Middleware\Security;
 
 use App\Kernel\Request;
 use App\Kernel\Interfaces\Psr14\ListenerInterface;

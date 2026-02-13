@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Kernel\Middleware\Security;
 
 use App\Kernel\Connector\DatabaseException;

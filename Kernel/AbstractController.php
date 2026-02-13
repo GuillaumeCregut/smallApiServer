@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Kernel;
 
 use App\Kernel\Request;
@@ -27,7 +32,7 @@ abstract class AbstractController
 
     protected function isUserAuth(): bool
     {
-        return $this->request->isAuth();
+        return $this->request->isConnected();
     }
 
 } 
