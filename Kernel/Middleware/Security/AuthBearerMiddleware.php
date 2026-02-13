@@ -48,7 +48,11 @@ class AuthBearerMiddleware implements AuthenticationInterface
             return false;
         }
         $userInfo = $this->jwtToken->extractPayload($this->token);
-        $userId = (int)$userInfo['userId'];
+        if(key_exists('userId',$userInfo)) {
+            $userId = (int)$userInfo['userId'];
+        } else {
+            $userId = 0;
+        }
         $validity =  $userInfo['exp'] ?? 0;
         $now = new DateTime();
         $exp = $now->getTimestamp() - $validity;
