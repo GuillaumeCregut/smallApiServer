@@ -456,7 +456,7 @@ $user = Hydrator::hydrate(new User(), $userData);
 echo $user->getUsername();  // Output: john_doe
 ```
 
-### (Example 2: Processing Form Submission
+### Example 2: Processing Form Submission
 
 ```php
 <?php
