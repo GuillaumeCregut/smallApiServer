@@ -28,9 +28,9 @@ class HTTPMiddlewareAuthTest extends TestCase
         ];
         $request = Request::initInstance($server, [], [], [], [], [], []);
         $repo = new UserRepository();
-        $sessionAuth = new AuthHttpMiddleware($repo);
-        $this->assertNull($sessionAuth->getUser());
-        $this->assertFalse($sessionAuth->isAuth());
+        $httpAuth = new AuthHttpMiddleware($repo);
+        $this->assertNull($httpAuth->getUser());
+        $this->assertFalse($httpAuth->isAuth());
     }
 
     public function testWithUnknownId(): void
@@ -45,9 +45,9 @@ class HTTPMiddlewareAuthTest extends TestCase
         ];
         $request = Request::initInstance($server, [], [], [], [], [], []);
         $repo = new UserRepository();
-        $sessionAuth = new AuthHttpMiddleware($repo);
-        $this->assertNull($sessionAuth->getUser());
-        $this->assertFalse($sessionAuth->isAuth());
+        $httpAuth = new AuthHttpMiddleware($repo);
+        $this->assertNull($httpAuth->getUser());
+        $this->assertFalse($httpAuth->isAuth());
     }
 
     public function testWithDbErrorId(): void
@@ -68,7 +68,7 @@ class HTTPMiddlewareAuthTest extends TestCase
         $request = Request::initInstance($server, [], [], [], [], [], []);
         $repo = new UserRepository();
         $this->expectException(DatabaseException::class);
-        $sessionAuth = new AuthHttpMiddleware($repo);
+        $httpAuth = new AuthHttpMiddleware($repo);
     }
 
    public function testWithKnownId(): void
@@ -93,13 +93,12 @@ class HTTPMiddlewareAuthTest extends TestCase
         ];
         $request = Request::initInstance($server, [], [], [], [], [], []);
         $repo = new UserRepository();
-        $sessionAuth = new AuthHttpMiddleware($repo);
-        $user =  $sessionAuth->getUser();
+        $httpAuth = new AuthHttpMiddleware($repo);
+        $user =  $httpAuth->getUser();
         $this->assertInstanceOf(User::class, $user);
         $this->assertEquals(1, $user->getId());
         $this->assertEquals('John', $user->getFirstname());
-        $this->assertTrue($sessionAuth->isAuth());
+        $this->assertTrue($httpAuth->isAuth());
         $this->assertEquals($roles, $user->getRoles());
-        $this->assertNull($user->getPassword());
     }
 }

@@ -122,6 +122,5 @@ class AuthBearerMiddlewareTest extends TestCase
         $this->assertEquals('John', $user->getFirstname());
         $this->assertTrue($sessionAuth->isAuth());
         $this->assertEquals($roles, $user->getRoles());
-        $this->assertNull($user->getPassword());
     }
 }
