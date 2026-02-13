@@ -18,41 +18,28 @@ class Request
     private array $sessions = [];
     private bool $isInit = false;
     private bool $refererValid = false;
-    private ?AuthenticationInterface $auth = null;
+    private array $cookies = [];
+    private array $userParam = [];
+    private bool $connected = false;
+    private ?User $user = null;
 
-    public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers): Request
+
+    public static function initInstance(array $server, array $datas, array $get, array $post, array $files, array $session, array $headers, ?array $cookies = []): Request
     {
         if (is_null(self::$instance)) {
-            self::$instance = new Request();
+            self::$instance = new Request($server, $datas, $get, $post, $files, $session, $headers, $cookies);
         }
-        $request = self::$instance;
-        $request->method = $server['REQUEST_METHOD'] ?? '';
-        $request->datas = $request->getDatas($get, $post, $datas);
-        $request->headers = $headers;
-        $request->server = $server;
-        $request->sessions = $session;
-        $request->files = $request->convertFiles($files);
-        $request->isInit = true;
-        if (!isset($server['HTTP_REFERER'])) {
-            $request->refererValid = false;
-        } else {
-            $referer = parse_url($server['HTTP_REFERER']) ?? '';
-            $host = parse_url($server['HTTP_HOST']) ?? '';
-            $ok = (($referer['host'] === $host['host']) && ($referer['port'] === $host['port']));
-            $request->refererValid = $ok;
-        }
-
-        self::$instance = $request;
         return self::$instance;
     }
+
     public static function getRequestInstance(): Request
     {
         if (is_null(self::$instance)) {
-            self::$instance = new Request();
-            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders());
+            self::initInstance($_SERVER, [], $_GET, $_POST, $_FILES, $_SESSION, getallheaders(), $_COOKIE);
         }
         return self::$instance;
     }
+
     public function getMethod(): string
     {
         return $this->method;
@@ -71,15 +58,6 @@ class Request
     public function setData(string $key, mixed $value): void
     {
         $this->datas[$key] = $value;
-    }
-
-    public function isAuth(): bool
-    {
-        //Todo : make authentication
-        if ($this->auth === null) {
-            return false;
-        }
-        return $this->auth->isAuth();
     }
 
     public function getFiles(): array
@@ -109,48 +87,100 @@ class Request
         $_SESSION[$name] = $value;
     }
 
-    /**
-     * Get the value of isRefererValid
-     */
     public function isRefererValid(): bool
     {
         return $this->refererValid;
     }
-    /**
-     * Get the value of server
-     */
+   
     public function getServer(string $name): string|null
     {
         return $this->server[$name] ?? null;
     }
 
-    /**
-     * Get the value of headers
-     */
     public function getHeaders(string $name): ?string
     {
         return $this->headers[$name] ?? null;
     }
 
-    /**
-     * Set the value of auth
-     */
-    public function setAuth(?AuthenticationInterface $auth): void
-    {
-        $this->auth = $auth;
-    }
-
     public function getUser(): ?User
     {
-        if ($this->auth === null) {
-            return null;
-        }
-        return $this->auth->getUser();
+        return $this->user;
     }
 
-    public function getAuth(): ?AuthenticationInterface
+    public function setUser(?User $user): self
     {
-        return $this->auth;
+        $this->user = $user;
+
+        return $this;
+    }
+
+    public function getCookies(): array
+    {
+        return $this->cookies;
+    }
+
+    public function getCookie(string $name): ?string
+    {
+        return $this->cookies[$name] ?? null;
+    }
+
+    public function addParam(string $name, mixed $value): self
+    {
+        $this->userParam[$name] = $value;
+        return $this;
+    }
+
+    public function getParam(string $name): mixed
+    {
+        return $this->userParam[$name] ?? null;
+    }
+
+    public function getParams(): array
+    {
+        return $this->userParam;
+    }
+    
+    public static function resetInstance(): void
+    {
+        self::$instance = null;
+    }
+
+    public function isIsInit(): bool
+    {
+        return $this->isInit;
+    }
+
+    public function isConnected(): bool
+    {
+        return null !== $this->user;
+    }
+
+    private function __construct(
+        array $server,
+        array $datas,
+        array $get,
+        array $post,
+        array $files,
+        array $session,
+        array $headers,
+        array $cookies
+    ) {
+        $this->method = $server['REQUEST_METHOD'] ?? '';
+        $this->server = $server;
+        $this->datas = $this->getDatas($get, $post, $datas);
+        $this->headers = $headers;
+        $this->sessions = $session;
+        $this->cookies = $cookies;
+        $this->files = $this->convertFiles($files);
+        $this->isInit = true;
+        if (!isset($server['HTTP_REFERER'])) {
+            $this->refererValid = false;
+        } else {
+            $referer = parse_url($server['HTTP_REFERER']) ?? '';
+            $host = parse_url($server['HTTP_HOST']) ?? '';
+            $ok = (($referer['host'] === $host['host']) && ($referer['port'] === $host['port']));
+            $this->refererValid = $ok;
+        }
     }
 
     private function convertFiles(?array $filesFromInit = null): array
@@ -189,6 +219,5 @@ class Request
         }
         $newRoute = implode('/', $routes);
         return $newRoute;
-        // Remove any unwanted characters from the route
     }
 }
