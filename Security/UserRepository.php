@@ -20,21 +20,12 @@ class UserRepository extends AbstractRepository
          * @var User $user
          */
         $user = parent::find($id);
-        $user->setPassword(null);
         return $user;
     }
 
      public function findBy(array $fields): array
      {
         $users = parent::findBy($fields);
-        if(0 < count($users)) {
-            /**
-             * @var User $user
-             */
-            foreach($users as $user) {
-                $user->setPassword(null);
-            }
-        }
         return $users;
      }
    
@@ -54,7 +45,6 @@ class UserRepository extends AbstractRepository
         /**
          * @var User $user
          */
-        $user->setPassword(null);
         return $user;
     }
 
@@ -80,7 +70,6 @@ class UserRepository extends AbstractRepository
             return null;
         }
        //return new User
-       $user->setPassword(null);
        return $user;
     }
 }
