@@ -11,6 +11,8 @@ class User extends AbstractEntity
     private ?string $firstname = null;
     private ?string $username = null;
     private ?string $password = null;
+    private ?string $token = null;
+    
     public function getRoles(): array
     {
         return $this->roles;
@@ -41,8 +43,13 @@ class User extends AbstractEntity
 
     public function getToken(): string
     {
-        //Todo : get user key from database
-        return '';
+        return $this->token;
+    }
+
+    public function setToken(?string $token): self
+    {
+        $this->token = $token;
+        return $this;
     }
 
     public function getName(): ?string
