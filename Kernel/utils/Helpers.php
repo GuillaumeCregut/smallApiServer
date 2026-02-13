@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 declare(strict_types=1);
 
 use App\Kernel\utils\Dumper;

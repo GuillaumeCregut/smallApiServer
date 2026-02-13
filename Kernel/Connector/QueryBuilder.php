@@ -1,7 +1,11 @@
 <?php
 
-namespace App\Kernel\Connector;
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
 
+namespace App\Kernel\Connector;
 
 class QueryBuilder
 {

@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Kernel\Psr14\Listener;
 
 use App\Kernel\Psr14\Exceptions\EventException;
