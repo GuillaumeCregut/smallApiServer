@@ -10,11 +10,6 @@ namespace App\Kernel;
 class Logger
 {
 
-    public static function test(object $data): void
-    {
-        echo get_class($data);
-        die();
-    }
     public static function error(object | string $sender, string $message, bool $debugOnly, bool $systemFile): void
     {
         $senderName = self::getCallerName($sender);

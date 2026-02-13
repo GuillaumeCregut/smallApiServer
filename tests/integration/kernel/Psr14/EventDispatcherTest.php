@@ -10,6 +10,11 @@ use App\Kernel\Psr14\Exceptions\EventException;
 
 class EventDispatcherTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        EventDispatcher::resetInstance();
+    }
     public function testInstance(): void
     {
         $listenerProvider = ListenerProvider::getInstance();
@@ -37,7 +42,7 @@ class EventDispatcherTest extends TestCase
         $listener = $this->createMock(ListenerInterface::class);
         $provider=new ListenerProvider();
         $provider->addListener( InitKernelEvent::class, $listener, 3);
-        $eventDispatcher= new EventDispatcher($provider);
+        $eventDispatcher= EventDispatcher::getInstance($provider);
         $listener->expects($this->once())
         ->method('execute');
         $eventDispatcher->dispatch(new InitKernelEvent());       
@@ -49,7 +54,7 @@ class EventDispatcherTest extends TestCase
         $event = $this->createStub(stdClass::class);
         $provider=new ListenerProvider();
         $provider->addListener(InitKernelEvent::class, $listener, 3);
-        $eventDispatcher= new EventDispatcher($provider);
+        $eventDispatcher= EventDispatcher::getInstance($provider);
         $this->expectException(EventException::class);
         $eventDispatcher->dispatch($event);   
     }
@@ -62,7 +67,7 @@ class EventDispatcherTest extends TestCase
             ->willReturn(true);
         $provider=new ListenerProvider();
         $provider->addListener(get_class($event), $listener, 3);
-        $eventDispatcher= new EventDispatcher($provider);
+        $eventDispatcher= EventDispatcher::getInstance($provider);
         $listener->expects($this->exactly(0))
         ->method('execute');
         $eventDispatcher->dispatch($event);    

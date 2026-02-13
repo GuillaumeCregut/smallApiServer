@@ -30,6 +30,9 @@ class AuthManagerMiddleware implements ListenerInterface
         if ((null !== $request->getServer('PHP_AUTH_USER')) && (null !== $request->getServer('PHP_AUTH_PW'))) {
             $auth = new AuthHttpMiddleware($connector);
         }
+        if(null === $auth) {
+            return;
+        }
         $request->setUser($auth->getUser());
         $event->stopPropagation();
     }
