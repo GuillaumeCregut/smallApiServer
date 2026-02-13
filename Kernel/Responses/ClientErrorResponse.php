@@ -21,18 +21,18 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
         405 => ['HTTP/1.1 405 Method Not Allowed', '405 - Method Not Allowed'],
         406 => ['HTTP/1.1 406 Not Acceptable', '406 - Not Acceptable'],
         407 => ['HTTP/1.1 407 Proxy Authentication Required', '407 - Proxy Authentication Required'],
-        408 => ['HTTP/1.1 408 Request Timeout','408 - equest Timeout'],
-        409 => ['HTTP/1.1 409 Conflict','409 - Conflict'],
-        410 => ['HTTP/1.1 410 Gone',' 410 - Gone'],
-        411 => ['HTTP/1.1 411 Length Required','411 - Length Required'],
-        412 => ['HTTP/1.1 412 Precondition Failed','412 - Precondition Failed'],
-        413 => ['HTTP/1.1 413 Content Too Large','413 - Content Too Large'], 
-        414 => ['HTTP/1.1 414 URI Too Long','414 - URI Too Long'],
-        415 => ['HTTP/1.1 415 Unsupported Media Type','415 - Unsupported Media Type'],
-        416 => ['HTTP/1.1 416 Range Not Satisfiable','416 - Range Not Satisfiable'],
-        417 => ['HTTP/1.1 417 Expectation Failed','417 - Expectation Failed'],
-        418 => ["HTTP/1.1 418 I'm a teapot","418 - I'm a teapot"],
-        421 => ['HTTP/1.1 421 Misdirected Request','421 - Misdirected Request'],
+        408 => ['HTTP/1.1 408 Request Timeout', '408 - equest Timeout'],
+        409 => ['HTTP/1.1 409 Conflict', '409 - Conflict'],
+        410 => ['HTTP/1.1 410 Gone', ' 410 - Gone'],
+        411 => ['HTTP/1.1 411 Length Required', '411 - Length Required'],
+        412 => ['HTTP/1.1 412 Precondition Failed', '412 - Precondition Failed'],
+        413 => ['HTTP/1.1 413 Content Too Large', '413 - Content Too Large'],
+        414 => ['HTTP/1.1 414 URI Too Long', '414 - URI Too Long'],
+        415 => ['HTTP/1.1 415 Unsupported Media Type', '415 - Unsupported Media Type'],
+        416 => ['HTTP/1.1 416 Range Not Satisfiable', '416 - Range Not Satisfiable'],
+        417 => ['HTTP/1.1 417 Expectation Failed', '417 - Expectation Failed'],
+        418 => ["HTTP/1.1 418 I'm a teapot", "418 - I'm a teapot"],
+        421 => ['HTTP/1.1 421 Misdirected Request', '421 - Misdirected Request'],
         422 => ['HTTP/1.1 422 Unprocessable Entity', '422 - Unprocessable Entity'],
         423 => ['HTTP/1.1 423 Locked', '423 - Locked'],
         424 => ['HTTP/1.1 424 Failed Dependency', '424 - Failed Dependency'],
@@ -44,18 +44,19 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
         451 => ['HTTP/1.1 451 Unavailable For Legal Reasons', '451 - Unavailable For Legal Reasons'],
     ];
 
-    private array $listCodes = [
-        400. . .418,
-        421. . .426,
-        428,
-        429,
-        431,
-        451
-    ];
 
     public function __construct(int $statusCode = 404)
     {
-        if (!in_array($statusCode, $this->listCodes)) {
+        $listCodes = [
+            ...range(400, 418),
+            ...range(421, 426),
+            428,
+            429,
+            431,
+            451
+        ];
+        if (!in_array($statusCode, $listCodes)) {
+            echo "pas dans le tableau $statusCode";
             $statusCode = 400;
         }
         $this->setStatusCode($statusCode);
