@@ -15,15 +15,6 @@ class GetEnvDatas
     private array $envVar = [];
     private static ?GetEnvDatas $instance = null;
 
-    public function __construct(string $iniFile)
-    {
-        //$iniFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
-        $envs = parse_ini_file($iniFile, false);
-        if (!$envs) {
-            throw new KernelException('Error loading env File');
-        }
-        $this->envVar = $envs;
-    }
     public function get(string $key, $default = null): mixed
     {
         if (key_exists($key, $this->envVar)) {
@@ -71,5 +62,15 @@ class GetEnvDatas
     public static function resetInstance(): void
     {
         self::$instance = null;
+    }
+
+    private function __construct(string $iniFile)
+    {
+        //$iniFile = dirname(__DIR__) . DIRECTORY_SEPARATOR . '.env';
+        $envs = parse_ini_file($iniFile, false);
+        if (!$envs) {
+            throw new KernelException('Error loading env File');
+        }
+        $this->envVar = $envs;
     }
 }
