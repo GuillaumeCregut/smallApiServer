@@ -142,7 +142,7 @@ abstract class AbstractRepository implements RepositoryInterface
         }
         foreach ($properties as $name => $config) {
             if ('id' === $name) {
-                $partSql = "{$name} INT NOT NULL AUTO_INCREMENT, ";
+                $partSql = "{$name} INT NOT NULL AUTO_INCREMENT ";
                 $pk = "PRIMARY KEY (id)";
             } else {
                 $isNull = $config['nullable'] ? 'NULL' : 'NOT NULL';
@@ -152,6 +152,7 @@ abstract class AbstractRepository implements RepositoryInterface
             }
             $sql .= $partSql . ", ";
         }
+
         $sql .= "{$pk})";
         return $sql;
     }
@@ -166,7 +167,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $newName = preg_replace('/entity$/i', '', $tableName);
             $this->entityName = $newName;
             $tableName = $this->propertyToColumn($newName);
-            $this->entityTableName = $tableName;
+            $this->entityTableName = $tableName . 's';
         }
         return $this->entityTableName;
     }
@@ -286,7 +287,6 @@ abstract class AbstractRepository implements RepositoryInterface
                     'type' => $typeProperty,
                     'nullable' => $nullable
                 ];
-
                 if (null !== $attribute && count($attribute) > 0) {
                     //Unstored value
                     $unStored[$nameProperty] = $arrayProperty;
