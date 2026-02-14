@@ -56,7 +56,6 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
             451
         ];
         if (!in_array($statusCode, $listCodes)) {
-            echo "pas dans le tableau $statusCode";
             $statusCode = 400;
         }
         $this->setStatusCode($statusCode);
