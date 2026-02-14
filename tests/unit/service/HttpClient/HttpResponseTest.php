@@ -79,7 +79,7 @@ class HttpResponseTest extends TestCase
         $this->assertEquals('John', $data['name']);
         $this->assertEquals('30', $data['age']);
     }
-/*
+    
     public function testHeadersRetrieval()
     {
         $headers = [
@@ -117,6 +117,6 @@ class HttpResponseTest extends TestCase
 
         $this->assertNull($response->getData());
         $this->assertEquals('', $response->getBody());
-    }*/
+    }
 }
 
