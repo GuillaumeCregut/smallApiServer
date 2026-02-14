@@ -13,24 +13,24 @@ class User extends AbstractEntity
     private ?string $password = null;
     private ?string $token = null;
     
-    public function getRoles(): array
+    final public function getRoles(): array
     {
         return $this->roles;
     }
 
-    public function setRoles(array $roles): self
+    final public function setRoles(array $roles): self
     {
         $this->roles = $roles;
         return $this;
     }
 
-    public function setRole(string $role): self
+    final public function setRole(string $role): self
     {
         $this->roles[] = $role;
         return $this;
     }
 
-    public function removeRole(string $role): self
+    final public function removeRole(string $role): self
     {
         $key = array_find_key($this->roles, function ($value) use ($role) {
             return $value === $role;
@@ -41,59 +41,59 @@ class User extends AbstractEntity
         return $this;
     }
 
-    public function getToken(): string
+    final public function getToken(): string
     {
         return $this->token;
     }
 
-    public function setToken(?string $token): self
+    final public function setToken(?string $token): self
     {
         $this->token = $token;
         return $this;
     }
 
-    public function getName(): ?string
+    final public function getName(): ?string
     {
         return $this->name;
     }
 
-    public function setName(?string $name): self
+    final public function setName(?string $name): self
     {
         $this->name = $name;
 
         return $this;
     }
 
-    public function getFirstname(): ?string
+    final public function getFirstname(): ?string
     {
         return $this->firstname;
     }
 
-    public function setFirstname(?string $firstname): self
+    final public function setFirstname(?string $firstname): self
     {
         $this->firstname = $firstname;
 
         return $this;
     }
 
-    public function getUsername(): ?string
+    final public function getUsername(): ?string
     {
         return $this->username;
     }
 
-    public function setUsername(?string $username): self
+    final public function setUsername(?string $username): self
     {
         $this->username = $username;
 
         return $this;
     }
 
-    public function getPassword(): ?string
+    final public function getPassword(): ?string
     {
         return $this->password;
     }
 
-    public function setPassword(?string $password): self
+    final public function setPassword(?string $password): self
     {
         $this->password = $password;
         return $this;
