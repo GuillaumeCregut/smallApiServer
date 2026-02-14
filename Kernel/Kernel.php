@@ -52,7 +52,7 @@ class Kernel
         $headers = GetClientParams::getheaders();
 
         //Create Request
-        $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers);
+        $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers, $_COOKIE);
         $this->routeCall = $this->request->getURI();
 
         //Init Events
