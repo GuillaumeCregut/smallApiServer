@@ -64,7 +64,7 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
         $this->setHeader('Content-Type', 'text/plain');
     }
 
-    public function setBody(mixed $content): void
+    public function setBody(mixed $content): self
     {
         json_decode($content);
         $isJson = json_last_error() === JSON_ERROR_NONE;
@@ -72,6 +72,7 @@ class ClientErrorResponse extends AbstractResponse implements ResponseInterface
             $this->setHeader('Content-Type', 'application/json');
         }
         $this->body = $content;
+        return $this;
     }
 
     public function sendReponse(): void

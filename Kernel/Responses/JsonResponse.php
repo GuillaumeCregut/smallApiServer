@@ -24,9 +24,10 @@ class JsonResponse extends AbstractResponse
         $this->setHeader('Content-Type', 'application/json');
     }
 
-    public function setBody(mixed $content): void
+    public function setBody(mixed $content): self
     {
         $this->body = json_encode($content);
+        return $this;
     }
 
     public function sendReponse(): void
