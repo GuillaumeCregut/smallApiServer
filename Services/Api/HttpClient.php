@@ -26,27 +26,18 @@ class HttpClient
     private Closure|null $logger = null;
     private string $userAgent = 'PHP-HttpClient/1.0';
 
-    /**
-     * Configure les headers par défaut
-     */
     public function setDefaultHeaders(array $headers): self
     {
         $this->defaultHeaders = $headers;
         return $this;
     }
 
-    /**
-     * Ajoute un header par défaut
-     */
     public function addDefaultHeader(string $name, string $value): self
     {
         $this->defaultHeaders[$name] = $value;
         return $this;
     }
 
-    /**
-     * Configure l'authentification Basic (user:password)
-     */
     public function setBasicAuth(string $username, string $password): self
     {
         $this->authType = 'basic';
@@ -54,9 +45,6 @@ class HttpClient
         return $this;
     }
 
-    /**
-     * Configure l'authentification Bearer Token
-     */
     public function setBearerAuth(string $token): self
     {
         $this->authType = 'bearer';
@@ -64,9 +52,7 @@ class HttpClient
         return $this;
     }
 
-    /**
-     * Configure l'authentification API Key
-     */
+
     public function setApiKeyAuth(string $apiKey, string $headerName = 'X-API-Key'): self
     {
         $this->authType = 'apikey';
@@ -75,72 +61,48 @@ class HttpClient
         return $this;
     }
 
-    /**
-     * Configure les timeouts (en secondes)
-     */
     public function setTimeout(int $seconds): self
     {
         $this->timeout = $seconds;
         return $this;
     }
 
-    /**
-     * Configure le timeout de connexion
-     */
     public function setConnectTimeout(int $seconds): self
     {
         $this->connectTimeout = $seconds;
         return $this;
     }
 
-    /**
-     * Désactive/active la vérification SSL (déconseillé en production)
-     */
     public function setVerifySSL(bool $verify): self
     {
         $this->verifySSL = $verify;
         return $this;
     }
 
-    /**
-     * Configure le nombre de retries automatiques
-     */
     public function setMaxRetries(int $count): self
     {
         $this->maxRetries = $count;
         return $this;
     }
 
-    /**
-     * Configure les statuts HTTP à retry automatiquement
-     */
     public function setRetryableStatuses(array $statuses): self
     {
         $this->retryableStatuses = $statuses;
         return $this;
     }
 
-    /**
-     * Configure un logger (callable)
-     */
     public function setLogger(callable $logger): self
     {
         $this->logger = $logger;
         return $this;
     }
 
-    /**
-     * Configure le User-Agent
-     */
     public function setUserAgent(string $agent): self
     {
         $this->userAgent = $agent;
         return $this;
     }
 
-    /**
-     * Effectue une requête GET
-     */
     public function get(string $url, array $query = [], array $headers = []): HttpResponse
     {
         if (!empty($query)) {
@@ -149,84 +111,64 @@ class HttpClient
         return $this->request('GET', $url, null, $headers);
     }
 
-    /**
-     * Effectue une requête POST
-     */
     public function post(string $url, $body = null, array $headers = []): HttpResponse
     {
         return $this->request('POST', $url, $body, $headers);
     }
 
-    /**
-     * Effectue une requête PUT
-     */
     public function put(string $url, $body = null, array $headers = []): HttpResponse
     {
         return $this->request('PUT', $url, $body, $headers);
     }
 
-    /**
-     * Effectue une requête PATCH
-     */
+ 
     public function patch(string $url, $body = null, array $headers = []): HttpResponse
     {
         return $this->request('PATCH', $url, $body, $headers);
     }
 
-    /**
-     * Effectue une requête DELETE
-     */
+  
     public function delete(string $url, $body = null, array $headers = []): HttpResponse
     {
         return $this->request('DELETE', $url, $body, $headers);
     }
 
-    /**
-     * Effectue une requête HTTP générique
-     */
     public function request(
         string $method,
         string $url,
         $body = null,
         array $headers = []
     ): HttpResponse {
-        // Valider l'URL
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             throw new InvalidUrlException("Invalid URL: {$url}");
         }
 
-        // Fusionner les headers
         $allHeaders = array_merge($this->defaultHeaders, $headers);
         $allHeaders['User-Agent'] = $this->userAgent;
 
-        // Ajouter l'authentification
         $allHeaders = $this->addAuthHeader($allHeaders);
 
-        // Boucle de retry
         $lastException = null;
         for ($attempt = 0; $attempt <= $this->maxRetries; $attempt++) {
             try {
                 $response = $this->executeRequest($method, $url, $body, $allHeaders);
-
-                // Vérifier si on doit retry
-                if ($attempt < $this->maxRetries && 
-                    in_array($response->getStatusCode(), $this->retryableStatuses)) {
-                    $this->log("Attempt {$attempt}/". $this->maxRetries . 
-                        " failed with status " . $response->getStatusCode() . 
+                if (
+                    $attempt < $this->maxRetries &&
+                    in_array($response->getStatusCode(), $this->retryableStatuses)
+                ) {
+                    $this->log("Attempt {$attempt}/" . $this->maxRetries .
+                        " failed with status " . $response->getStatusCode() .
                         ". Retrying...");
-                    
-                    // Attendre avant le retry (backoff exponentiel)
                     usleep($this->retryDelay * pow(2, $attempt) * 1000);
                     continue;
                 }
 
                 return $response;
-
             } catch (NetworkException $e) {
                 $lastException = $e;
-                
+
                 if ($attempt < $this->maxRetries) {
-                    $this->log("Network error on attempt {$attempt}: " . $e->getMessage() . 
+                    $this->log("Network error on attempt {$attempt}: " . $e->getMessage() .
                         ". Retrying...");
                     usleep($this->retryDelay * pow(2, $attempt) * 1000);
                     continue;
@@ -234,17 +176,12 @@ class HttpClient
             }
         }
 
-        // Si on arrive ici, tous les retries ont échoué
         if ($lastException) {
             throw $lastException;
         }
-
         throw new NetworkException("Request failed after {$this->maxRetries} retries");
     }
 
-    /**
-     * Exécute réellement la requête avec cURL
-     */
     private function executeRequest(
         string $method,
         string $url,
@@ -259,45 +196,44 @@ class HttpClient
         }
 
         try {
-            // Configuration basique
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HEADER, false);
             curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-
-            // SSL
+            
             if (!$this->verifySSL) {
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             }
 
-            // Méthode HTTP
             if ($method !== 'GET') {
                 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
             }
 
-            // Body
+            $headerList = [];
+            
+            if ($body !== null && !isset($headers['Content-Type'])) {
+                $headers['Content-Type'] = 'application/json';
+            }
+            
+            foreach ($headers as $name => $value) {
+                $headerList[] = "{$name}: {$value}";
+            }
+
             if ($body !== null) {
                 $bodyString = is_array($body) ? json_encode($body) : (string)$body;
                 curl_setopt($ch, CURLOPT_POSTFIELDS, $bodyString);
             }
 
-            // Headers
-            $headerList = [];
-            foreach ($headers as $name => $value) {
-                $headerList[] = "{$name}: {$value}";
-            }
             if (!empty($headerList)) {
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $headerList);
             }
 
-            // Capturer les headers de réponse
             $responseHeaders = [];
-            curl_setopt($ch, CURLOPT_HEADERFUNCTION, function($curl, $header) use (&$responseHeaders) {
+            curl_setopt($ch, CURLOPT_HEADERFUNCTION, function ($curl, $header) use (&$responseHeaders) {
                 $len = strlen($header);
-                // Ignorer les lignes vides et la ligne de status
                 if (strpos($header, ':') !== false) {
                     [$name, $value] = explode(':', $header, 2);
                     $responseHeaders[trim($name)] = trim($value);
@@ -305,7 +241,6 @@ class HttpClient
                 return $len;
             });
 
-            // Exécuter la requête
             $body = curl_exec($ch);
             $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE) ?? 'application/json';
@@ -337,18 +272,13 @@ class HttpClient
                 $contentType,
                 $executionTime
             );
-
         } finally {
-           
         }
     }
 
-    /**
-     * Ajoute le header d'authentification
-     */
     private function addAuthHeader(array $headers): array
     {
-        match($this->authType) {
+        match ($this->authType) {
             'basic' => $headers['Authorization'] = "Basic {$this->authValue}",
             'bearer' => $headers['Authorization'] = "Bearer {$this->authValue}",
             'apikey' => $headers[$this->authKeyName] = $this->authValue,
@@ -358,9 +288,6 @@ class HttpClient
         return $headers;
     }
 
-    /**
-     * Enregistre un message dans le logger
-     */
     private function log(string $message): void
     {
         if ($this->logger !== null) {
