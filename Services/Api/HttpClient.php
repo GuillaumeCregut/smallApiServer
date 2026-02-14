@@ -14,14 +14,14 @@ use Closure;
 class HttpClient
 {
     private array $defaultHeaders = [];
-    private string $authType = 'none'; // none, basic, bearer, apikey
+    private string $authType = 'none';
     private string $authValue = '';
-    private string $authKeyName = 'X-API-Key'; // Pour authType = apikey
+    private string $authKeyName = 'X-API-Key';
     private int $timeout = 30;
     private int $connectTimeout = 10;
     private bool $verifySSL = true;
     private int $maxRetries = 3;
-    private int $retryDelay = 1000; // millisecondes
+    private int $retryDelay = 1000;
     private array $retryableStatuses = [408, 429, 500, 502, 503, 504];
     private Closure|null $logger = null;
     private string $userAgent = 'PHP-HttpClient/1.0';
@@ -51,7 +51,6 @@ class HttpClient
         $this->authValue = $token;
         return $this;
     }
-
 
     public function setApiKeyAuth(string $apiKey, string $headerName = 'X-API-Key'): self
     {
@@ -121,13 +120,13 @@ class HttpClient
         return $this->request('PUT', $url, $body, $headers);
     }
 
- 
+
     public function patch(string $url, $body = null, array $headers = []): HttpResponse
     {
         return $this->request('PATCH', $url, $body, $headers);
     }
 
-  
+
     public function delete(string $url, $body = null, array $headers = []): HttpResponse
     {
         return $this->request('DELETE', $url, $body, $headers);
@@ -202,7 +201,7 @@ class HttpClient
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
             curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
             curl_setopt($ch, CURLOPT_MAXREDIRS, 5);
-            
+
             if (!$this->verifySSL) {
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
@@ -213,11 +212,11 @@ class HttpClient
             }
 
             $headerList = [];
-            
+
             if ($body !== null && !isset($headers['Content-Type'])) {
                 $headers['Content-Type'] = 'application/json';
             }
-            
+
             foreach ($headers as $name => $value) {
                 $headerList[] = "{$name}: {$value}";
             }
