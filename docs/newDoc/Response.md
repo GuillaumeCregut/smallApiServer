@@ -111,6 +111,368 @@ If debug mode is enabled in environment configuration, the response will display
 
 ---
 
+## Cookies
+
+### Description
+
+All response classes support setting HTTP cookies through the `setCookie()` method inherited from `AbstractResponse`. Cookies are automatically sent as HTTP Set-Cookie headers when the response is sent. The cookie system provides secure options including HTTP-only access and secure transmission flags.
+
+### Cookie Constants
+
+The `Cookie` class provides security flag constants:
+
+**Location:** `App\Kernel\Responses\Cookie`
+
+```php
+class Cookie
+{
+    public const COOKIE_SECURE = 1;      // Send only over HTTPS
+    public const COOKIE_HTTPONLY = 2;    // Not accessible from JavaScript
+}
+```
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `COOKIE_SECURE` | 1 | Only transmit cookie over HTTPS connections |
+| `COOKIE_HTTPONLY` | 2 | Prevent browser JavaScript from accessing cookie value |
+
+### setCookie() Method
+
+#### Signature
+
+```php
+public function setCookie(string $name, string $value, ?array $params = []): self
+```
+
+**Parameters:**
+- `$name` (string): Cookie name (identifier)
+- `$value` (string): Cookie value (data to store)
+- `$params` (array, optional): Cookie options (see below)
+
+**Returns:** `self` - Returns the response object for method chaining
+
+#### Cookie Parameters
+
+The `$params` array supports the following options:
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `domain` | string | Domain where cookie is valid | `'example.com'` |
+| `path` | string | URL path where cookie is valid | `'/'`, `'/api'` |
+| `expire` | int | Expiration time as Unix timestamp | `time() + 3600` |
+| `sameSite` | string | SameSite policy for CSRF protection | `'Strict'`, `'Lax'`, `'None'` |
+| `security` | int | Security flags (bitwise OR combination) | `Cookie::COOKIE_HTTPONLY \| Cookie::COOKIE_SECURE` |
+
+### Cookie Parameter Details
+
+#### Domain
+
+Specifies the domain(s) for which the cookie is valid.
+
+```php
+// Cookie available on example.com and subdomains
+$response->setCookie('session', 'abc123', [
+    'domain' => '.example.com'
+]);
+
+// Cookie available on current domain only
+$response->setCookie('session', 'abc123', [
+    'domain' => ''  // Empty string = current domain
+]);
+```
+
+#### Path
+
+Specifies the URL path for which the cookie is valid.
+
+```php
+// Cookie available at all paths
+$response->setCookie('session', 'abc123', [
+    'path' => '/'
+]);
+
+// Cookie available only under /admin
+$response->setCookie('admin_token', 'xyz789', [
+    'path' => '/admin'
+]);
+```
+
+#### Expire
+
+Specifies when the cookie expires. Value is a Unix timestamp.
+
+```php
+// Session cookie (expires when browser closes)
+$response->setCookie('session', 'abc123', [
+    'expire' => 0
+]);
+
+// Expires in 1 hour
+$response->setCookie('token', 'xyz789', [
+    'expire' => time() + 3600
+]);
+
+// Expires in 30 days
+$response->setCookie('remember', 'user123', [
+    'expire' => time() + (30 * 24 * 60 * 60)
+]);
+```
+
+#### SameSite
+
+Specifies when the cookie should be sent in cross-site requests, providing CSRF protection.
+
+**Values:**
+- `'Strict'`: Cookie sent only when request originates from same site
+- `'Lax'`: Cookie sent with same-site requests and top-level navigations
+- `'None'`: Cookie sent with all requests; requires `COOKIE_SECURE` flag
+
+```php
+// Strict CSRF protection
+$response->setCookie('session', 'abc123', [
+    'sameSite' => 'Strict'
+]);
+
+// Lax CSRF protection (balanced)
+$response->setCookie('session', 'abc123', [
+    'sameSite' => 'Lax'
+]);
+
+// Allow cross-site with HTTPS only
+$response->setCookie('tracking', 'id123', [
+    'sameSite' => 'None',
+    'security' => Cookie::COOKIE_SECURE
+]);
+```
+
+#### Security
+
+Specifies security flags using bitwise OR combination of constants.
+
+```php
+// HTTP-only only
+$response->setCookie('session', 'abc123', [
+    'security' => Cookie::COOKIE_HTTPONLY
+]);
+
+// HTTPS only
+$response->setCookie('session', 'abc123', [
+    'security' => Cookie::COOKIE_SECURE
+]);
+
+// Both HTTP-only AND HTTPS (recommended for sensitive data)
+$response->setCookie('auth', 'token123', [
+    'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE
+]);
+
+// No security flags
+$response->setCookie('public', 'data', [
+    'security' => 0
+]);
+```
+
+### Usage Examples
+
+#### Example 1: Session Cookie (HomeController getDatas)
+
+This example shows how to set a secure session cookie in the HomeController's getDatas method:
+
+```php
+class HomeController extends AbstractController
+{
+    public function getDatas(): ResponseInterface
+    {
+        // Get data from database
+        $datas = $this->getDataFromDB();
+        
+        // Create JSON response
+        $response = $this->returnJson($datas, 200);
+        
+        // Set secure session cookie
+        $options = [
+            'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE
+        ];
+        $response->setCookie('test', 'toto', $options);
+        
+        return $response;
+    }
+}
+```
+
+**Result:**
+- Cookie name: `test`
+- Cookie value: `toto`
+- Security: HTTPS only, not accessible from JavaScript
+- Expires: When browser closes (session cookie)
+
+#### Example 2: Remember Me Cookie
+
+```php
+public function login(string $username, string $password): ResponseInterface
+{
+    if ($this->authenticate($username, $password)) {
+        $response = new JsonResponse(200);
+        $response->setBody(['success' => true]);
+        
+        // Set 30-day remember me cookie
+        $rememberToken = bin2hex(random_bytes(32));
+        $response->setCookie('remember_me', $rememberToken, [
+            'expire' => time() + (30 * 24 * 60 * 60),
+            'path' => '/',
+            'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE,
+            'sameSite' => 'Lax'
+        ]);
+        
+        return $response;
+    }
+    
+    return new ClientErrorResponse(401);
+}
+```
+
+#### Example 3: API Token Cookie
+
+```php
+public function generateApiToken(): ResponseInterface
+{
+    $user = $this->request->getUser();
+    $token = $this->generateJwtToken($user->getId());
+    
+    $response = new JsonResponse(200);
+    $response->setBody(['token' => $token]);
+    
+    // Set secure API token cookie for AJAX requests
+    $response->setCookie('api_token', $token, [
+        'path' => '/api',
+        'expire' => time() + 3600,  // 1 hour validity
+        'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE,
+        'sameSite' => 'Strict',
+        'domain' => ''  // Current domain
+    ]);
+    
+    return $response;
+}
+```
+
+#### Example 4: Multi-Domain Cookie
+
+```php
+public function setSharedCookie(): ResponseInterface
+{
+    $response = new JsonResponse(200);
+    
+    // Set cookie available across subdomains
+    $response->setCookie('shared_session', 'abcd1234', [
+        'domain' => '.example.com',  // Available on app.example.com, api.example.com, etc.
+        'path' => '/',
+        'expire' => time() + 86400,  // 24 hours
+        'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE,
+        'sameSite' => 'Lax'
+    ]);
+    
+    return $response;
+}
+```
+
+### Method Chaining
+
+The `setCookie()` method returns `self`, allowing fluent interface chaining:
+
+```php
+$response = new JsonResponse(200);
+$response
+    ->setBody(['data' => 'value'])
+    ->setCookie('session', 'abc123', ['security' => Cookie::COOKIE_HTTPONLY])
+    ->setCookie('tracking', 'def456', ['path' => '/admin'])
+    ->send();
+```
+
+### Cookie Lifecycle
+
+```
+1. setCookie() called on response object
+   ↓
+2. Cookie added to response's internal cookies array
+   ↓
+3. send() method called
+   ↓
+4. Status code sent
+   ↓
+5. Headers sent
+   ↓
+6. Cookies sent via HTTP Set-Cookie headers
+   ↓
+7. Body sent
+   ↓
+8. Cookies stored in client browser
+```
+
+### How setcookie() Works Internally
+
+When `send()` is called, the response invokes `sendCookies()` which:
+
+1. Iterates through stored cookies
+2. Extracts cookie value and parameters
+3. Sets defaults for omitted parameters
+4. Handles security flags (bitwise AND operations)
+5. Calls PHP's `setcookie()` with appropriate options
+6. Sends HTTP `Set-Cookie` header
+
+### Security Best Practices for Cookies
+
+#### 1. Always Use HTTPS in Production
+
+```php
+✅ Good (production):
+'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE
+
+❌ Bad (development only):
+'security' => 0  // No security flags!
+```
+
+#### 2. Set HTTP-Only Flag for Security-Sensitive Cookies
+
+```php
+✅ Good - Token not accessible to JavaScript:
+'security' => Cookie::COOKIE_HTTPONLY | Cookie::COOKIE_SECURE
+
+❌ Bad - Cookie accessible to XSS attacks:
+'security' => Cookie::COOKIE_SECURE  // Missing HTTPONLY
+```
+
+#### 3. Use Appropriate SameSite Policy
+
+```php
+✅ Good - CSRF protection:
+'sameSite' => 'Strict'  // Strictest protection
+'sameSite' => 'Lax'     // Balanced approach
+
+❌ Bad - No CSRF protection:
+// No sameSite specified
+```
+
+#### 4. Set Short Expiration for Security Tokens
+
+```php
+✅ Good - Tokens expire quickly:
+'expire' => time() + 3600  // 1 hour
+
+❌ Bad - Tokens valid too long:
+'expire' => time() + (365 * 24 * 60 * 60)  // 1 year!
+```
+
+#### 5. Use Specific Paths for API Cookies
+
+```php
+✅ Good - Limited scope:
+'path' => '/api'  // Only sent with /api requests
+
+❌ Bad - Too broad:
+'path' => '/'  // Sent with all requests
+```
+
+---
+
 ## JsonResponse
 
 ### Description
