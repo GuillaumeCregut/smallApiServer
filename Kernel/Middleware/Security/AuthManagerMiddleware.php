@@ -8,9 +8,9 @@
 namespace App\Kernel\Middleware\Security;
 
 use App\Kernel\Request;
+use App\Security\UserRepositoryAuth;
 use App\Kernel\Interfaces\Psr14\ListenerInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
-use App\Security\UserRepository;
 
 class AuthManagerMiddleware implements ListenerInterface
 {
@@ -19,7 +19,7 @@ class AuthManagerMiddleware implements ListenerInterface
     public function execute(StoppableEventInterface $event): void
     {
         $auth = null;
-        $connector = new UserRepository();
+        $connector = new UserRepositoryAuth();
         $request = Request::getRequestInstance();
         if (!is_null($request->getHeaders('Authorization'))) {
             $auth = new AuthBearerMiddleware($connector);

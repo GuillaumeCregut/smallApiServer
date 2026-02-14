@@ -4,8 +4,8 @@ use App\Security\User;
 use App\Kernel\Request;
 use App\Kernel\GetEnvDatas;
 use PHPUnit\Framework\TestCase;
-use App\Security\UserRepository;
 use App\Kernel\Security\JwtToken;
+use App\Security\UserRepositoryAuth;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
@@ -29,7 +29,7 @@ class AuthBearerMiddlewareTest extends TestCase
         ConnectorDispatcher::setConnector($connector);
         $headers = [];
         $request = Request::initInstance([], [], [], [], [], [], $headers);
-        $repo = new UserRepository();
+        $repo = new UserRepositoryAuth();
         $bearerAuth = new AuthBearerMiddleware($repo);
         $this->assertNull($bearerAuth->getUser());
         $this->assertFalse($bearerAuth->isAuth());
@@ -47,7 +47,7 @@ class AuthBearerMiddlewareTest extends TestCase
             'Authorization' => 'Bearer YOUR_TOKEN_HERE'
         ];
         $request = Request::initInstance([], [], [], [], [], [], $headers);
-        $repo = new UserRepository();
+        $repo = new UserRepositoryAuth();
         $bearerAuth = new AuthBearerMiddleware($repo);
         $this->assertNull($bearerAuth->getUser());
         $this->assertFalse($bearerAuth->isAuth());
@@ -77,7 +77,7 @@ class AuthBearerMiddlewareTest extends TestCase
             'Authorization' => 'Bearer ' . $newToken
         ];
         $request = Request::initInstance([], [], [], [], [], [], $headers);
-        $repo = new UserRepository();
+        $repo = new UserRepositoryAuth();
         $this->expectException(DatabaseException::class);
         $bearerAuth = new AuthBearerMiddleware($repo);
         $user = $bearerAuth->getUser();
@@ -114,7 +114,7 @@ class AuthBearerMiddlewareTest extends TestCase
             'Authorization' => 'Bearer ' . $newToken
         ];
         $request = Request::initInstance([], [], [], [], [], [], $headers);
-        $repo = new UserRepository();
+        $repo = new UserRepositoryAuth();
         $sessionAuth = new AuthBearerMiddleware($repo);
         $user =  $sessionAuth->getUser();
         $this->assertInstanceOf(User::class, $user);
