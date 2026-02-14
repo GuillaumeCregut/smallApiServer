@@ -12,6 +12,7 @@ use App\Kernel\Request;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ClientErrorResponse;
 use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Responses\JsonResponse;
 use Exception;
 
 abstract class AbstractController
@@ -33,6 +34,15 @@ abstract class AbstractController
     protected function isUserAuth(): bool
     {
         return $this->request->isConnected();
+    }
+
+    protected function returnJson(mixed $body = null, ?int $code=200):ResponseInterface
+    {
+        $response =  new JsonResponse($code);
+        if(null !==$body) {
+            $response->setBody($body);
+        }
+        return $response;
     }
 
 } 
