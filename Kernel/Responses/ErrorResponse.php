@@ -31,9 +31,10 @@ class ErrorResponse extends AbstractResponse implements ResponseInterface
         $this->setBody($body);
     }
 
-    public function setBody(mixed $content): void
+    public function setBody(mixed $content): self
     {
         $this->body = $content;
+        return $this;
     }
     public function sendReponse(): void
     {
