@@ -73,16 +73,27 @@ class Kernel
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
+        //Get Controller and method
+        $clientMethod = Request::getRequestInstance()->getMethod();
+        $routeAndMethod = $this->routes[$this->routeCall];
+        
+        if (!key_exists($clientMethod, $routeAndMethod)) {
+            $response = new ClientErrorResponse(405);
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            return $response;
+        }
+        else {
+            $matchingRoute = $routeAndMethod[$clientMethod];
+        }
 
         //Getting associated controller
-        $matchingRoute = $this->routes[$this->routeCall];
         $controller = $matchingRoute[0];
         $method = $matchingRoute[1];
 
         try {
             EventDispatcher::getInstance()->dispatch(new ConnectorKernelEvent());
             ConnectorDispatcher::setConnector(DatabaseConnector::getConnector());
-            
+
             EventDispatcher::getInstance()->dispatch(new CallAuthKernelEvent());
             EventDispatcher::getInstance()->dispatch(new CheckApiKeyKernelEvent());
 
