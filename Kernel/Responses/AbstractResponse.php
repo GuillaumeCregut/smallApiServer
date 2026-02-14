@@ -97,6 +97,7 @@ abstract class AbstractResponse implements ResponseInterface
 
     private function sendCookies(): void
     {
+        $sameSiteValues =['Lax', 'None', 'Strict'];
         /*each cookie =
          [
         'value'=>string
@@ -133,11 +134,14 @@ abstract class AbstractResponse implements ResponseInterface
             }
              if(key_exists('sameSite', $cookie)){
                 $sameSite= $cookie['sameSite'];
+                if(!in_array($sameSite, $sameSiteValues)) {
+                    $sameSite = null;
+                }
                 if("None" === $sameSite) {
                     $secure = true;
                 }
             } else {
-                $sameSite= null; // check default value None, Lax, Strict
+                $sameSite= null; 
             }
             if(key_exists('expire', $cookie)){
                 $expire = $cookie['expire'];
