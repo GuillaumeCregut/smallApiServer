@@ -73,7 +73,7 @@ abstract class AbstractRepository implements RepositoryInterface
         }
         $returnArray = [];
         foreach ($result as $values) {
-            if(!is_array($values)) {
+            if (!is_array($values)) {
                 throw new DatabaseException('missformed query result');
             }
             $entity = $this->makeEntity($values);
@@ -295,12 +295,22 @@ abstract class AbstractRepository implements RepositoryInterface
                     $stored[$nameProperty] = $arrayProperty;
                 }
             }
+            $stored = $this->ensureIdFirst($stored);
             $this->entityProperties = [
                 'stored' => $stored,
                 'unStored' => $unStored
             ];
         }
         return $this->entityProperties;
+    }
+
+    protected function ensureIdFirst(array $array): array
+    {
+        if (!array_key_exists('id', $array)) {
+            return $array;
+        }
+
+        return ['id' => $array['id']] + array_diff_key($array, ['id' => null]);
     }
 
     // Entity: $firstName
