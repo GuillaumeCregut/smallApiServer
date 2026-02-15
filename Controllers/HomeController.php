@@ -18,14 +18,14 @@ class HomeController extends AbstractController
     public function getDatas(): ResponseInterface
     {
         //check if we want only one data or all datas
-        if($this->request->getData('id')) {
+        if ($this->request->getData('id')) {
             //get one data from DB
             $datas = '';
         } else {
-           //Get all datas from DB
+            //Get all datas from DB
             $datas = [];
         }
-        return $this->returnJson($datas,200);
+        return $this->returnJson($datas, 200);
     }
 
     public function addData(): ResponseInterface
@@ -38,7 +38,7 @@ class HomeController extends AbstractController
             return new ClientErrorResponse(404);
         } else {
             //Add entity to DB
-            $newData= [];
+            $newData = [];
             return $this->returnJson($newData, 201);
         }
     }
@@ -61,7 +61,7 @@ class HomeController extends AbstractController
         //example of authentication check
         if (!$this->isUserAuth()) {
             return $this->returnError(401);
-        } 
+        }
         //Do something that delete entity from database
         $response = new JsonResponse(204);
         return $response;
