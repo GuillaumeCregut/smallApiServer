@@ -62,7 +62,7 @@ class MySQLConnector implements ConnectorInterface
             }
             return (int) $this->pdo->lastInsertId();
         } catch (Exception $e) {
-            throw new DatabaseException($e->getMessage(), $e->getCode());
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
     public function fetchQuery(string $sql, array $params = []): array
@@ -72,7 +72,7 @@ class MySQLConnector implements ConnectorInterface
             $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            throw new DatabaseException($e->getMessage(), $e->getCode());
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -84,7 +84,7 @@ class MySQLConnector implements ConnectorInterface
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return $row ?: null;
         } catch (Exception $e) {
-            throw new DatabaseException($e->getMessage(), $e->getCode());
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
 
