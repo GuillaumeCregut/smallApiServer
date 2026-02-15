@@ -27,6 +27,7 @@ class QueryBuilder
     public function selectJoin(array $columns): self
     {
         $this->verb = 'SELECTJOIN';
+        $this->reset();
         foreach ($columns as $key => $value) {
             if (is_string($key)) {
                 $convertedField = $this->convertPropertyName2Fieldname($key);
@@ -59,6 +60,8 @@ class QueryBuilder
 
     public function select(array $columns): self
     {
+        $this->verb = 'SELECT';
+        $this->reset();
         foreach ($columns as $key => $value) {
             if (is_string($key)) {
                 $newKey = $this->convertPropertyName2Fieldname($key);
@@ -74,6 +77,7 @@ class QueryBuilder
 
     public function insert(array $columns): self
     {
+        $this->reset();
         $this->verb = 'INSERT';
         foreach ($columns as $value) {
             $this->columns[] = $this->convertPropertyName2Fieldname($value);
@@ -83,6 +87,7 @@ class QueryBuilder
 
     public function update(array $values): self
     {
+        $this->reset();
         $this->verb = "UPDATE";
         foreach ($values as $key => $value) {
             if (!is_string($key)) {
@@ -96,6 +101,7 @@ class QueryBuilder
 
     public function delete(int $id): self
     {
+        $this->reset();
         $this->verb = 'DELETE';
         return $this;
     }
@@ -199,6 +205,17 @@ class QueryBuilder
         return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
     }
 
+    public function reset(): void
+    {
+        $this->wheres = [];
+        $this->params = [];
+        $this->columns = [];
+        $this->on = [];
+        $this->insertParam = [];
+        $this->orderBy = null;
+        $this->limit = null;
+    }
+
     private function makeJoin(string $joinVerb, string $table, array $columns, array $join): string
     {
         if (count($join) > 2) {
@@ -235,7 +252,7 @@ class QueryBuilder
 
     private function insertParam(mixed $param): void
     {
-        if(is_array($param)) {
+        if (is_array($param)) {
             $value = json_encode($param);
         } else {
             $value = $param;
