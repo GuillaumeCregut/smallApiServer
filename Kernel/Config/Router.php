@@ -8,6 +8,7 @@
 namespace App\Kernel\Config;
 
 use App\Controllers\HomeController;
+use App\Controllers\UserController;
 
 class Router
 {
@@ -36,7 +37,14 @@ class Router
                 'POST' => [HomeController::class,'addData'],
                 'PUT' => [HomeController::class,'changeData'],
                 'PATCH' => [HomeController::class,'changeData'],
-                'DELETE' => [HomeController::class,'deleteData']
+                'DELETE' => [HomeController::class,'deleteData'],
+            ],
+            'user'=>[
+                'GET' => [UserController::class, 'get'],
+                'POST' => [UserController::class, 'add'],
+                'PUT' => [UserController::class, 'update'],
+                'PATCH' =>[UserController::class, 'update'],
+                'DELETE' => [UserController::class, 'delete'],
             ],
         ];
     }
