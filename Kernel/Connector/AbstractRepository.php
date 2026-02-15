@@ -55,6 +55,7 @@ abstract class AbstractRepository implements RepositoryInterface
             throw new DatabaseException('Many results are found');
         }
         $entity = $this->makeEntity($result[0]);
+        $this->qb->reset();
         return $entity;
     }
 
@@ -80,6 +81,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $returnArray[] = $entity;
         }
         return $returnArray;
+        $this->qb->reset();
         return [];
     }
 
@@ -96,6 +98,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $entity = $this->makeEntity($values);
             $returnArray[] = $entity;
         }
+        $this->qb->reset();
         return $returnArray;
     }
 
@@ -108,6 +111,7 @@ abstract class AbstractRepository implements RepositoryInterface
             ->toSql();
         $this->sql = $query;
         $params = $this->qb->getParams();
+        $this->qb->reset();
         return $this->sendQuery(false, $query, $params);
     }
 
@@ -194,6 +198,7 @@ abstract class AbstractRepository implements RepositoryInterface
             return null;
         }
         $entity->setId($result);
+        $this->qb->reset();
         return $entity;
     }
 
@@ -210,7 +215,8 @@ abstract class AbstractRepository implements RepositoryInterface
         $params = $this->qb->getParams();
         $this->sql = $query;
         $result = $this->sendQuery(false, $query, $params);
-        if (!$result) {
+        $this->qb->reset();
+        if (false === $result) {
             return false;
         }
         return $entity;
