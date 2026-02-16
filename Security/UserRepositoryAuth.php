@@ -41,12 +41,12 @@ final class UserRepositoryAuth extends AbstractRepository
         * @var User $user
         */ 
        $user = $result[0];
-       //Check password
+       
         $dbPass = $user->getPassword();
         if(!password_verify($password, $dbPass)) {
             return null;
         }
-       //return new User
+       
        return $user;
     }
 }

@@ -38,7 +38,7 @@ class UserController extends AbstractController
             return $this->returnError(422);
         }
         $user = Hydrator::hydrate(new User(), $userDatas);
-        /**G
+        /**
          * @var User $user
          */
         $user->addRole('USER');
