@@ -34,11 +34,11 @@ class UserController extends AbstractController
     {
         $userDatas = $this->request->getAllDatas();
         $userDatas = $this->checkDatas($userDatas);
-        if(!$userDatas) {
+        if (!$userDatas) {
             return $this->returnError(422);
         }
         $user = Hydrator::hydrate(new User(), $userDatas);
-        /**
+        /**G
          * @var User $user
          */
         $user->addRole('USER');
@@ -48,7 +48,7 @@ class UserController extends AbstractController
          * @var User $savedUser
          */
         $savedUser = $this->repo->save($user);
-        if(!$savedUser) {
+        if (!$savedUser) {
             if (null === $savedUser) {
                 throw new DatabaseException("User is null");
             } else {
@@ -67,8 +67,25 @@ class UserController extends AbstractController
 
     public function update(): ResponseInterface
     {
-
-        return $this->returnJson();
+        $id = $this->request->getData('id') ?? 0;
+        $userDatas = $this->request->getAllDatas();
+        $userDatas = $this->checkDatas($userDatas);
+        if (!$userDatas) {
+            return $this->returnError(422);
+        }
+        $user = $this->repo->find($id);
+        //Fill user with new Values
+        $user = $this->updateUser($user, $userDatas);
+        $result = $this->repo->save($user);
+        if ($result) {
+            return $this->returnJson(null,204);
+        } else {
+            if (null === $result) {
+                throw new DatabaseException("User is null");
+            } else {
+                return $this->returnError(500);
+            }
+        }
     }
 
     public function delete(): ResponseInterface
@@ -100,10 +117,10 @@ class UserController extends AbstractController
     }
 
     private function getAll(): ResponseInterface
-    { 
+    {
         $result = $this->repo->findAll();
         $returnArray = [];
-        foreach($result as $user) {
+        foreach ($result as $user) {
             /**
              * @var User $user 
              */
@@ -114,7 +131,7 @@ class UserController extends AbstractController
                 'role' => $user->getRoles(),
             ];
             $returnArray[] = $arrayUser;
-        } 
+        }
         return $this->returnJson($returnArray);
     }
 
@@ -122,8 +139,23 @@ class UserController extends AbstractController
     {
         //Here, check if datas are OK
         return $datas;
-        if(false) {
+        if (false) {
             return false;
         }
+    }
+
+    private function updateUser(User $user, array $datas): User
+    {
+        foreach ($datas as $key => $value) {
+            if ($key === 'id') {
+                continue;
+            }
+            if ($key === 'password') {
+                $newFunction = 'setNewPassword';
+            }
+            $newFunction = 'set' . ucfirst($key);
+            $user->$newFunction($value);
+        }
+        return $user;
     }
 }

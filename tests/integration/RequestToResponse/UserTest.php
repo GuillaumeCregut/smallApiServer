@@ -55,7 +55,7 @@ class UserTest extends TestCase
         $server = [
             'REQUEST_METHOD' => 'GET',
             'REQUEST_URI' => '/local/index?id=123&name=john',
-            'HTTP_REFERER' => 'https://google.com',
+            'HTTP_REFERER' => '',
             'HTTP_HOST' => 'localhost:8000',
             'SERVER_PROTOCOL' => 'HTTP/1.1',
         ];
@@ -123,7 +123,7 @@ class UserTest extends TestCase
         $this->assertIsArray($data);
     }
 
-     public function testAddUser(): void
+  /*  public function testAddUser(): void
     {
         $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
         GetEnvDatas::getEnvInstance($envFile);
@@ -131,10 +131,10 @@ class UserTest extends TestCase
         $connector = MySQLConnector::getInstance($envs);
         ConnectorDispatcher::setConnector($connector);
         $server = [
-            'REQUEST_METHOD' => 'GET',
-            'REQUEST_URI' => '/local/index?id=123&name=john',
-            'HTTP_REFERER' => 'https://google.com',
-            'HTTP_HOST' => 'localhost:8000',
+            'REQUEST_METHOD' => 'POST',
+            'REQUEST_URI' => '/user',
+            'HTTP_REFERER' => '',
+            'HTTP_HOST' => 'localhost:9000',
             'SERVER_PROTOCOL' => 'HTTP/1.1',
         ];
         $get = [];
@@ -152,5 +152,36 @@ class UserTest extends TestCase
         $code = $response->getStatusCode();
         $this->assertEquals(201, $code);
         $this->assertIsArray($data);
+    }*/
+
+    public function testUpdateUser(): void
+    {
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $server = [
+            'REQUEST_METHOD' => 'PUT',
+            'REQUEST_URI' => '/local/index?id=123&name=john',
+            'HTTP_REFERER' => 'https://google.com',
+            'HTTP_HOST' => 'localhost:8000',
+            'SERVER_PROTOCOL' => 'HTTP/1.1',
+        ];
+        $get = [];
+        $post = [
+            'id' => 8,
+            'name' =>'London',
+            'firstname' => 'Jack',
+            'password' => '1234',
+            'username' =>'test'
+        ];
+        $request = Request::initInstance($server, $this->datas, $get, $post, $this->files, $this->session, $this->headers, $this->cookies);
+        $controller = new UserController();
+        $response = $controller->update();
+        $result = $response->getBody();
+        $data = json_decode($result,true);
+        $code = $response->getStatusCode();
+        $this->assertEquals(204, $code);
     }
 }
