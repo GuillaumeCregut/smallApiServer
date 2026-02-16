@@ -9,6 +9,7 @@ class Request2EntityTest extends TestCase
 {
     public function testEntityFromRequest(): void
     {
+        Request::resetInstance();
         $post = [
             'name' => 'Doe',
             'firstname' => 'John',

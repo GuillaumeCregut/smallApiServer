@@ -183,6 +183,12 @@ class Request
         } else {
             $referer = parse_url($server['HTTP_REFERER']) ?? '';
             $host = parse_url($server['HTTP_HOST']) ?? '';
+            if('' === $referer || '' === $host) {
+                return false;
+            }
+            if (!isset($referer['host']) || !isset($host['host']) || !isset($referer['port']) || !isset($host['port'])){
+                return false;
+            }
             $ok = (($referer['host'] === $host['host']) && ($referer['port'] === $host['port']));
             $this->refererValid = $ok;
         }

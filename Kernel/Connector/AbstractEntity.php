@@ -12,7 +12,6 @@ use App\Kernel\Interfaces\Databases\EntityInterface;
 abstract class AbstractEntity implements EntityInterface
 {
     protected ?int $id = null;
-    protected string $repositoryClass;
 
     public function __construct()
     {

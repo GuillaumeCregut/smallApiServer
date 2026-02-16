@@ -59,7 +59,7 @@ class AbstractRepositoryTest extends TestCase
         $repository = new class extends AbstractRepository {
             protected ?string $entity = User::class;
         };
-        $this->assertEquals('user', $repository->getTableName());
+        $this->assertEquals('users', $repository->getTableName());
     }
 
     public function testCreateSqlCreateTable(): void
@@ -69,7 +69,7 @@ class AbstractRepositoryTest extends TestCase
         $repository = new class extends AbstractRepository {
             protected ?string $entity = EntityToCreate::class;
         };
-        $sql = 'CREATE TABLE entity_to_create (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(255) NOT NULL, first_name VARCHAR(255) NOT NULL, age INT NULL, PRIMARY KEY (id))';
+        $sql = 'CREATE TABLE entity_to_creates (id INT NOT NULL AUTO_INCREMENT, name VARCHAR(255) NOT NULL, first_name VARCHAR(255) NOT NULL, age INT NULL, PRIMARY KEY (id))';
         $this->assertEquals($sql, $repository->createSqlTable());
     }
 
@@ -80,7 +80,7 @@ class AbstractRepositoryTest extends TestCase
         $repository = new class extends AbstractRepository {
             protected ?string $entity = EntityToCreate::class;
         };
-        $sql = 'SELECT * FROM entity_to_create';
+        $sql = 'SELECT * FROM entity_to_creates';
         $test = $repository->findAll();
         $this->assertEquals($sql, $repository->sql);
     }
@@ -151,7 +151,7 @@ class AbstractRepositoryTest extends TestCase
         $repository = new class extends AbstractRepository {
             protected ?string $entity = EntityToCreate::class;
         };
-        $sql = 'SELECT * FROM entity_to_create WHERE id = ?';
+        $sql = 'SELECT * FROM entity_to_creates WHERE id = ?';
         $test = $repository->find(1);
         $this->assertEquals($sql, $repository->sql);
     }
@@ -245,7 +245,7 @@ class AbstractRepositoryTest extends TestCase
             'firstName' => 'John'
         ];
         $results = $repository->findBy($search);
-        $query = 'SELECT * FROM entity_to_create WHERE first_name = ?';
+        $query = 'SELECT * FROM entity_to_creates WHERE first_name = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(1, count($results));
         /**
@@ -281,7 +281,7 @@ class AbstractRepositoryTest extends TestCase
             'name' => 'Doe'
         ];
         $results = $repository->findBy($search);
-        $query = 'SELECT * FROM entity_to_create WHERE first_name = ? AND name = ?';
+        $query = 'SELECT * FROM entity_to_creates WHERE first_name = ? AND name = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(1, count($results));
         /**
@@ -308,7 +308,7 @@ class AbstractRepositoryTest extends TestCase
         $entity->setName('Doe')
             ->setFirstName('John');
         $result = $repository->save($entity);
-        $query = 'INSERT INTO entity_to_create (name, first_name) VALUES (?, ?)';
+        $query = 'INSERT INTO entity_to_creates (name, first_name) VALUES (?, ?)';
         $this->assertEquals($query, $repository->sql);
         $this->assertNull($result);
     }
@@ -326,7 +326,7 @@ class AbstractRepositoryTest extends TestCase
         $entity->setName('Doe')
             ->setFirstName('John');
         $result = $repository->save($entity);
-        $query = 'INSERT INTO entity_to_create (name, first_name) VALUES (?, ?)';
+        $query = 'INSERT INTO entity_to_creates (name, first_name) VALUES (?, ?)';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(20, $result->getId());
     }
@@ -345,7 +345,7 @@ class AbstractRepositoryTest extends TestCase
             ->setid(2)
             ->setFirstName('John');
         $result = $repository->save($entity);
-        $query = 'UPDATE entity_to_create SET name = ?, first_name = ?, age = ? WHERE id = ?';
+        $query = 'UPDATE entity_to_creates SET name = ?, first_name = ?, age = ? WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertFalse($result);
     }
@@ -367,7 +367,7 @@ class AbstractRepositoryTest extends TestCase
          * @var EntityTocreate $result 
          */
         $result = $repository->save($entity);
-        $query = 'UPDATE entity_to_update SET name = ?, first_name = ?, age = ? WHERE id = ?';
+        $query = 'UPDATE entity_to_updates SET name = ?, first_name = ?, age = ? WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(2, $result->getId());
         $this->assertEquals('Doe', $result->getName());
@@ -388,7 +388,7 @@ class AbstractRepositoryTest extends TestCase
             ->setid(1)
             ->setFirstName('John');
         $result = $repository->delete($entity);
-        $query = 'DELETE FROM entity_to_create WHERE id = ?';
+        $query = 'DELETE FROM entity_to_creates WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertFalse($result);
     }
@@ -407,7 +407,7 @@ class AbstractRepositoryTest extends TestCase
             ->setid(1)
             ->setFirstName('John');
         $result = $repository->delete($entity);
-        $query = 'DELETE FROM entity_to_create WHERE id = ?';
+        $query = 'DELETE FROM entity_to_creates WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertTrue($result);
     }

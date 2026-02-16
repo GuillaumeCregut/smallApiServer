@@ -12,7 +12,6 @@ use App\Kernel\Request;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Interfaces\AuthenticationInterface;
 use App\Kernel\Interfaces\Databases\RepositoryInterface;
-use App\Security\UserRepository;
 
 class AuthHttpMiddleware implements AuthenticationInterface
 {

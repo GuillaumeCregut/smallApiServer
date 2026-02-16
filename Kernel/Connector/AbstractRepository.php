@@ -55,6 +55,7 @@ abstract class AbstractRepository implements RepositoryInterface
             throw new DatabaseException('Many results are found');
         }
         $entity = $this->makeEntity($result[0]);
+        $this->qb->reset();
         return $entity;
     }
 
@@ -73,13 +74,14 @@ abstract class AbstractRepository implements RepositoryInterface
         }
         $returnArray = [];
         foreach ($result as $values) {
-            if(!is_array($values)) {
+            if (!is_array($values)) {
                 throw new DatabaseException('missformed query result');
             }
             $entity = $this->makeEntity($values);
             $returnArray[] = $entity;
         }
         return $returnArray;
+        $this->qb->reset();
         return [];
     }
 
@@ -96,6 +98,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $entity = $this->makeEntity($values);
             $returnArray[] = $entity;
         }
+        $this->qb->reset();
         return $returnArray;
     }
 
@@ -108,6 +111,7 @@ abstract class AbstractRepository implements RepositoryInterface
             ->toSql();
         $this->sql = $query;
         $params = $this->qb->getParams();
+        $this->qb->reset();
         return $this->sendQuery(false, $query, $params);
     }
 
@@ -142,7 +146,7 @@ abstract class AbstractRepository implements RepositoryInterface
         }
         foreach ($properties as $name => $config) {
             if ('id' === $name) {
-                $partSql = "{$name} INT NOT NULL AUTO_INCREMENT, ";
+                $partSql = "{$name} INT NOT NULL AUTO_INCREMENT ";
                 $pk = "PRIMARY KEY (id)";
             } else {
                 $isNull = $config['nullable'] ? 'NULL' : 'NOT NULL';
@@ -152,6 +156,7 @@ abstract class AbstractRepository implements RepositoryInterface
             }
             $sql .= $partSql . ", ";
         }
+
         $sql .= "{$pk})";
         return $sql;
     }
@@ -166,7 +171,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $newName = preg_replace('/entity$/i', '', $tableName);
             $this->entityName = $newName;
             $tableName = $this->propertyToColumn($newName);
-            $this->entityTableName = $tableName;
+            $this->entityTableName = $tableName . 's';
         }
         return $this->entityTableName;
     }
@@ -193,6 +198,7 @@ abstract class AbstractRepository implements RepositoryInterface
             return null;
         }
         $entity->setId($result);
+        $this->qb->reset();
         return $entity;
     }
 
@@ -209,7 +215,8 @@ abstract class AbstractRepository implements RepositoryInterface
         $params = $this->qb->getParams();
         $this->sql = $query;
         $result = $this->sendQuery(false, $query, $params);
-        if (!$result) {
+        $this->qb->reset();
+        if (false === $result) {
             return false;
         }
         return $entity;
@@ -286,7 +293,6 @@ abstract class AbstractRepository implements RepositoryInterface
                     'type' => $typeProperty,
                     'nullable' => $nullable
                 ];
-
                 if (null !== $attribute && count($attribute) > 0) {
                     //Unstored value
                     $unStored[$nameProperty] = $arrayProperty;
@@ -295,12 +301,22 @@ abstract class AbstractRepository implements RepositoryInterface
                     $stored[$nameProperty] = $arrayProperty;
                 }
             }
+            $stored = $this->ensureIdFirst($stored);
             $this->entityProperties = [
                 'stored' => $stored,
                 'unStored' => $unStored
             ];
         }
         return $this->entityProperties;
+    }
+
+    protected function ensureIdFirst(array $array): array
+    {
+        if (!array_key_exists('id', $array)) {
+            return $array;
+        }
+
+        return ['id' => $array['id']] + array_diff_key($array, ['id' => null]);
     }
 
     // Entity: $firstName

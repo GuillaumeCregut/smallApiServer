@@ -56,13 +56,18 @@ class MySQLConnector implements ConnectorInterface
     {
         try {
             $stmt = $this->pdo->prepare($sql);
-            $result = $stmt->execute($params);
-            if (!$result) {
-                return $result;
+            $stmt->execute($params);
+            if (stripos(trim($sql), 'INSERT') === 0) {
+                return (int) $this->pdo->lastInsertId();
             }
-            return (int) $this->pdo->lastInsertId();
+            $affectedRows = $stmt->rowCount();
+            if ($affectedRows > 0) {
+                return true;
+            } else {
+                return false;
+            }
         } catch (Exception $e) {
-            throw new DatabaseException($e->getMessage(), $e->getCode());
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
     public function fetchQuery(string $sql, array $params = []): array
@@ -72,7 +77,7 @@ class MySQLConnector implements ConnectorInterface
             $stmt->execute($params);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
-            throw new DatabaseException($e->getMessage(), $e->getCode());
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -84,7 +89,7 @@ class MySQLConnector implements ConnectorInterface
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             return $row ?: null;
         } catch (Exception $e) {
-            throw new DatabaseException($e->getMessage(), $e->getCode());
+            throw new DatabaseException($e->getMessage(), (int)$e->getCode());
         }
     }
 
@@ -108,7 +113,7 @@ class MySQLConnector implements ConnectorInterface
             'db' => $envs['db'],
             'user' => $envs['user'],
             'pass' => $envs['pass'],
-            'port' =>$envs['port'] ?? 3306
+            'port' => $envs['port'] ?? 3306
         ];
         $this->connect();
     }
@@ -129,42 +134,44 @@ class MySQLConnector implements ConnectorInterface
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
             \PDO::ATTR_EMULATE_PREPARES   => false,
         ];
-        while($attempt < self::MAX_RETRIES) {
-            try{
+        while ($attempt < self::MAX_RETRIES) {
+            try {
                 $this->pdo = new \PDO($dsn, $user, $pass, $options);
                 return;
-            } catch(PDOException$e) {
+            } catch (PDOException $e) {
                 $lastException = $e;
                 $attempt++;
                 $stopConnexion = $this->stopCode($e);
-                if($stopConnexion) {
-                    throw new DatabaseException($e->getMessage(),$e->getCode());
+                if ($stopConnexion) {
+                    throw new DatabaseException($e->getMessage(), $e->getCode());
                 }
                 if ($attempt < self::MAX_RETRIES) {
                     $delayMs = self::RETRY_DELAY_MS * pow(2, $attempt - 1);
-                    usleep($delayMs * 1000); 
+                    usleep($delayMs * 1000);
                 }
             }
         }
-        throw new DatabaseException(sprintf(
+        throw new DatabaseException(
+            sprintf(
                 'Failed to connect to database after %d attempts. Last error: %s',
                 self::MAX_RETRIES,
                 $lastException->getMessage()
             ),
-            (int)$lastException->getCode());
+            (int)$lastException->getCode()
+        );
     }
 
-     private function stopCode(PDOException $e): bool
+    private function stopCode(PDOException $e): bool
     {
         $codes = [
             1044, //Access denied for user to database
             1045, // Access denied for user 'username'@'hostname' (using password: YES)
             1049, //DB inconnue
-          //  2002, //Can't connect to local MySQL server through socket
+            //  2002, //Can't connect to local MySQL server through socket
             1130, // Host is not allowed to connect
-         //   2003, //Can't connect to MySQL server on '[host]'
+            //   2003, //Can't connect to MySQL server on '[host]'
         ];
-        if(in_array($e->getCode(),$codes)) {
+        if (in_array($e->getCode(), $codes)) {
             return true;
         }
         return false;

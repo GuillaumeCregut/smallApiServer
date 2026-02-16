@@ -12,8 +12,9 @@ use App\Security\User;
 use App\Kernel\Request;
 use App\Kernel\GetEnvDatas;
 use App\Kernel\Security\JwtToken;
+use App\Security\UserRepositoryAuth;
 use App\Kernel\Interfaces\AuthenticationInterface;
-use App\Security\UserRepository;
+use App\Kernel\Interfaces\Databases\RepositoryInterface;
 
 class AuthBearerMiddleware implements AuthenticationInterface
 {
@@ -22,7 +23,7 @@ class AuthBearerMiddleware implements AuthenticationInterface
     private JwtToken $jwtToken;
     private ?string $token = null;
 
-    public function __construct(private UserRepository $repo)
+    public function __construct(private RepositoryInterface $repo)
     {
         $envs = GetEnvDatas::getEnvInstance();
         $this->secret = $envs->get('secret');
