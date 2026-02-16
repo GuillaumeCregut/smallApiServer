@@ -74,7 +74,9 @@ class UserController extends AbstractController
             return $this->returnError(422);
         }
         $user = $this->repo->find($id);
-        //Fill user with new Values
+        if(null === $user) {
+            return $this->returnError(404);
+        }
         $user = $this->updateUser($user, $userDatas);
         $result = $this->repo->save($user);
         if ($result) {
@@ -90,8 +92,16 @@ class UserController extends AbstractController
 
     public function delete(): ResponseInterface
     {
-
-        return $this->returnJson();
+        $id = $this->request->getData('id') ?? 0;
+        $user = $this->repo->find($id);
+        if(null === $user) {
+            return $this->returnError(404);
+        }
+        $result = $this->repo->delete($user);
+        if(!$result) {
+            throw new DatabaseException('User not remove');
+        }
+        return $this->returnJson(null, 204);
     }
 
     private function getOne($id): ResponseInterface
