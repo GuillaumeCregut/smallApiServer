@@ -45,9 +45,9 @@ class GetEnvDatasTest extends TestCase
         GetEnvDatas::resetInstance();
         $filename = __DIR__ . DIRECTORY_SEPARATOR . '.env.sample';
         $env = GetEnvDatas::getEnvInstance($filename);
-        $this->assertEquals('your_secret', $env->get('secret'));
+        $this->assertEquals('your_secret', $env->get('JWT_SECRET'));
         $env2 = GetEnvDatas::getEnvInstance();
-        $this->assertEquals('your_secret', $env2->get('secret'));
+        $this->assertEquals('your_secret', $env2->get('JWT_SECRET'));
     }
 
     public function testLoadDBCredentials(): void
@@ -55,10 +55,10 @@ class GetEnvDatasTest extends TestCase
         GetEnvDatas::resetInstance();
         $filename = __DIR__ . DIRECTORY_SEPARATOR . '.env.sample';
         $env = GetEnvDatas::getEnvInstance($filename)->getDdCredentials();
-        $this->assertArrayHasKey('host',$env);
-        $this->assertArrayHasKey('db',$env);
-        $this->assertArrayHasKey('user',$env);
-        $this->assertArrayHasKey('pass',$env);
+        $this->assertArrayHasKey('DB_HOST',$env);
+        $this->assertArrayHasKey('DB_NAME',$env);
+        $this->assertArrayHasKey('DB_USER',$env);
+        $this->assertArrayHasKey('DB_PASS',$env);
 
     }
 }
