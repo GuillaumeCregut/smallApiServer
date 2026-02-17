@@ -22,9 +22,9 @@ class Route extends AbstractConsole
         $arrayDisplay = [];
         foreach ($routes as $route => $params) {
             $routeLines = $this->makeLines($route, $params);
-            $arrayDisplay = array_merge($arrayDisplay,$routeLines);
+            $arrayDisplay = array_merge($arrayDisplay, $routeLines);
         }
-        
+
         $this->displayArray($headers, $arrayDisplay);
     }
 
@@ -32,12 +32,11 @@ class Route extends AbstractConsole
     {
         echo "\nHere are routes used by SmallApiServer : \n\n";
         $widths = $this->calculateSize($headers, $rows);
-      //  var_dump($widths);
         $separator = $this->makeSeparator($widths);
         echo $separator;
         echo $this->displayLines($headers, $widths);
         echo $separator;
-        foreach($rows as $row){
+        foreach ($rows as $row) {
             echo $this->displayLines($row, $widths);
         }
         echo $separator;
@@ -63,7 +62,7 @@ class Route extends AbstractConsole
     private function makeLines(string $route, array $routeParam): array
     {
         foreach ($routeParam as $key => $value) {
-            $controller = basename(str_replace('\\','/',$value[0])); 
+            $controller = basename(str_replace('\\', '/', $value[0]));
             $line = [
                 $route . '/',
                 $key,
@@ -80,7 +79,7 @@ class Route extends AbstractConsole
         $widths = array_map('strlen', $header);
         foreach ($lines as $line) {
             foreach ($line as $i => $cell) {
-                $widths[$i]= max($widths[$i], strlen((string)$cell));
+                $widths[$i] = max($widths[$i], strlen((string)$cell));
             }
         }
         return  $widths;
@@ -89,17 +88,17 @@ class Route extends AbstractConsole
     private function makeSeparator(array $widths): string
     {
         $line = '+';
-        foreach($widths as $width){
-            $line .= str_repeat('-',$width+1) . '+';
+        foreach ($widths as $width) {
+            $line .= str_repeat('-', $width + 1) . '+';
         }
-        return $line ."\n";
+        return $line . "\n";
     }
 
     private function displayLines(array $row, array $widths): string
     {
         $line = '|';
-        foreach($row as $i => $cell) {
-            $line .=' ' . str_pad((string) $cell, $widths[$i]) . '|';
+        foreach ($row as $i => $cell) {
+            $line .= ' ' . str_pad((string) $cell, $widths[$i]) . '|';
         }
         return $line . "\n";
     }
