@@ -1,366 +1,489 @@
-# Documentation Summary
+# SmallMVC Documentation
 
-Welcome to the SmallMVC Framework documentation. This directory contains comprehensive guides for understanding and working with the core components of the framework.
+Welcome to the complete SmallMVC framework documentation. This directory contains comprehensive guides for all framework components, organized by topic for easy navigation.
 
 ## Quick Navigation
 
-### Core Kernel Components
-
-#### [RouterObject Documentation](./RouterObject.md)
-The central routing dispatcher that handles HTTP request routing and controller dispatching.
-
-**Key Topics:**
-- Route configuration and management
-- Request dispatching to controllers
-- Error handling (404, 500)
-- Middleware integration
-- Best practices for routing
-
-**When to use:** Understanding how requests are routed to controllers, adding new routes, debugging routing issues.
+- [📚 Getting Started](#getting-started)
+- [🎯 Core Framework](#core-framework)
+- [💾 Data Layer](#data-layer)
+- [🌐 HTTP & Requests](#http--requests)
+- [🔒 Security & Authentication](#security--authentication)
+- [⚙️ Console & Commands](#console--commands)
+- [🔧 Advanced Topics](#advanced-topics)
+- [📋 Configuration & Setup](#configuration--setup)
 
 ---
 
-#### [RequestObject Documentation](./RequestObject.md)
-A singleton class that encapsulates all HTTP request data and provides unified access to request information.
+## Getting Started
 
-**Key Topics:**
-- HTTP method handling (GET, POST, PUT, PATCH, DELETE)
-- Data extraction from multiple sources
-- File upload handling
-- Session management
-- Authorization header parsing
+New to SmallMVC? Start here:
 
-**When to use:** Accessing request data in controllers, handling file uploads, managing sessions, extracting authentication tokens.
+1. **[Kernel Documentation](./kernel.md)** - Understand the application lifecycle and core engine
+2. **[Router Documentation](./router.md)** - Learn how to define application routes
+3. **[Controller Documentation](./controller.md)** - Build your first controllers
+4. **[Request Documentation](./request.md)** - Handle HTTP requests
+5. **[Response Documentation](./response.md)** - Generate HTTP responses
 
 ---
 
-#### [AbstractController Documentation](./AbstractController.md)
-Abstract base class providing foundation for all controllers with built-in request handling and authentication.
+## Core Framework
 
-**Key Topics:**
-- Controller initialization and setup
-- Authentication checking
-- Error response handling
-- Request data access
-- RESTful CRUD patterns
+### Fundamental Components
 
-**When to use:** Creating new controllers, implementing authentication checks, handling HTTP methods, returning responses.
+### [Kernel](./kernel.md)
+The main application engine that orchestrates the entire request lifecycle.
+- **Topics**: Request routing, event dispatching, controller invocation, error handling
+- **Use when**: Understanding how the application processes requests
+- **Key Classes**: `Kernel`, event system, lifecycle events
 
----
+### [Router](./router.md)
+Configuration for URL routing and HTTP method mapping.
+- **Topics**: Route definition, REST patterns, ID extraction, HTTP methods
+- **Use when**: Setting up new API endpoints or modifying routes
+- **Key Classes**: `Router`, route configuration
 
-#### [AbstractResponse Documentation](./AbstractResponse.md)
-Abstract base class for HTTP response objects with status code, header, and body management.
+### [Controller](./controller.md)
+Base class for building application controllers.
+- **Topics**: Request handling, response generation, data validation, error responses
+- **Use when**: Creating new controller classes
+- **Key Classes**: `AbstractController`, response types
 
-**Key Topics:**
-- Status code management
-- HTTP header handling
-- Response body formatting
-- Response sending
-- Built-in response classes
+### [Request](./request.md)
+Singleton encapsulating all HTTP request data.
+- **Topics**: GET/POST data access, file uploads, headers, cookies, sessions, user data
+- **Use when**: Accessing request parameters and user information in controllers
+- **Key Classes**: `Request`, data access methods
 
-**When to use:** Understanding response handling, creating custom response types, managing HTTP headers and status codes.
-
----
-
-#### [FileUpload Documentation](./FileUpload.md)
-Class for handling file uploads with validation, security checks, and file movement operations.
-
-**Key Topics:**
-- File validation (size, MIME type)
-- Secure file movement
-- Error handling
-- File information access
-- Security best practices
-
-**When to use:** Processing file uploads, validating file types and sizes, moving files to storage directories.
+### [Response](./response.md)
+Building and sending HTTP responses.
+- **Topics**: JSON responses, error responses, status codes, content types
+- **Use when**: Formatting responses to send to clients
+- **Key Classes**: `ResponseInterface`, response implementations
 
 ---
 
-## Framework Architecture Overview
+## Data Layer
 
-```
-HTTP Request
-    ↓
-public/index.php (Entry Point)
-    ↓
-RouterObject (Route Dispatcher)
-    ├─ Uses RequestObject (Get request data)
-    ├─ Instantiates AuthBearerMiddleware
-    └─ Calls appropriate Controller
-    ↓
-Controller (Business Logic)
-    ├─ Uses RequestObject (Access request data)
-    ├─ Uses Models (Database operations)
-    └─ Returns ResponseInterface
-    ↓
-Response (JSON/Error)
-    ↓
-HTTP Response
-```
+### Working with Databases and Entities
 
-## Documentation Structure
+### [Repository](./repository.md)
+The Repository pattern for data access and persistence.
+- **Topics**: CRUD operations, entity management, query building, data persistence
+- **Use when**: Creating repositories for data access
+- **Key Classes**: `AbstractRepository`, `RepositoryInterface`
+- **Related**: [Query Builder](./queryBuilder.md), [Hydrator](./hydrator.md)
 
-### By Component Type
+### [Hydrator](./hydrator.md)
+Automatic entity population from arrays.
+- **Topics**: Property mapping, entity instantiation, data conversion
+- **Use when**: Converting request data into entity objects
+- **Key Classes**: `Hydrator`, entity conversion
 
-**Kernel Components:**
-- [RouterObject](./RouterObject.md) - Request routing and dispatching
-- [RequestObject](./RequestObject.md) - HTTP request data handling
-- [AbstractController](./AbstractController.md) - Base controller class
-- [AbstractResponse](./AbstractResponse.md) - Base response class
-- [FileUpload](./FileUpload.md) - File upload handling
+### [Query Builder](./queryBuilder.md)
+Building SQL queries programmatically.
+- **Topics**: SELECT, INSERT, UPDATE, DELETE, WHERE clauses, parameter binding
+- **Use when**: Constructing complex database queries
+- **Key Classes**: `QueryBuilder`, query methods
 
-**Controllers:**
-- See `Controllers/` directory in main project
+---
 
-**Models:**
-- See `Models/` directory in main project
+## HTTP & Requests
 
-**Services:**
-- See `Services/` directory in main project
+### Request and Response Handling
 
-**Middleware:**
-- See `middleware/` directory in main project
+### [Request Documentation](./request.md)
+Complete HTTP request handling.
+- **Topics**: Data access, file uploads, sessions, cookies, user authentication
+- **Use when**: Working with incoming HTTP requests
+- **Key Methods**: `getData()`, `getFile()`, `getAllDatas()`
+
+### [Response Documentation](./response.md)
+Generating HTTP responses.
+- **Topics**: JSON responses, status codes, headers, error handling
+- **Use when**: Creating and sending responses to clients
+- **Key Methods**: `returnJson()`, `returnError()`
+
+### [File Upload](./fileUpload.md)
+Handling file uploads from client requests.
+- **Topics**: File validation, storage, security, file operations
+- **Use when**: Processing uploaded files
+- **Key Classes**: `FileUpload`, file handling methods
+
+### [API Client](./apiClient.md)
+Making HTTP requests to external APIs.
+- **Topics**: HTTP requests, API integration, external services
+- **Use when**: Integrating with third-party APIs
+- **Key Methods**: HTTP client methods
+
+---
+
+## Security & Authentication
+
+### User Authentication and Authorization
+
+### [Authentication](./autentication.md)
+User authentication system.
+- **Topics**: Login, user validation, session management, user entity
+- **Use when**: Implementing user login and session handling
+- **Key Classes**: `User`, `UserRepository`, authentication methods
+
+### [JWT Tokens](./jwtToken.md)
+JWT token implementation for stateless authentication.
+- **Topics**: Token creation, validation, claims, expiration
+- **Use when**: Building token-based APIs
+- **Key Methods**: Token generation, validation
+
+### [Create JWT Token](./createJwtToken.md)
+Detailed guide for creating JWT tokens.
+- **Topics**: Token structure, signing, encoding, best practices
+- **Use when**: Setting up token authentication
+- **Code Examples**: Complete token creation examples
+
+### [Get Environment Data](./getEnv.md)
+Environmental configuration and credentials management.
+- **Topics**: .env file usage, configuration loading, secrets management
+- **Use when**: Accessing application configuration
+- **Key Classes**: `GetEnvDatas`
+
+---
+
+## Console & Commands
+
+### Command-Line Tools and Automation
+
+### [Console System](./console.md)
+Building and executing console commands.
+- **Topics**: Command creation, argument handling, sub-commands, output formatting
+- **Use when**: Creating CLI tools and automation scripts
+- **Key Classes**: `AbstractConsole`, `ConsoleInterface`, `ConsoleHelper`
+- **Example**: Debug commands, migrations, seeding
+
+---
+
+## Advanced Topics
+
+### In-Depth Framework Features
+
+### [Event System](./event.md)
+PSR-14 compliant event system for middleware and hooks.
+- **Topics**: Event listeners, event dispatching, lifecycle events, custom events
+- **Use when**: Creating event listeners or handling application events
+- **Key Classes**: `EventDispatcher`, event classes
+
+### [Mailer Service](./mailer.md)
+Email service integration and sending.
+- **Topics**: Email composition, sending, SMTP configuration, templates
+- **Use when**: Implementing email functionality
+- **Key Classes**: `Mailer`, email methods
+
+### [Home Controller](./homecontroller.md)
+Example implementation of the home page controller.
+- **Topics**: Controller examples, response generation, page rendering
+- **Use when**: Understanding controller patterns
+- **Use as**: Reference implementation
+
+---
+
+## Configuration & Setup
+
+### Application Configuration
+
+### [Get Environment Data](./getEnv.md)
+Managing application configuration from environment files.
+- **Topics**: .env configuration, credentials, environment-specific settings
+- **Use when**: Setting up application configuration
+- **File Format**: `.env` file structure
+
+---
+
+## Documentation Map
+
+### By Topic
+
+| Topic | Files |
+|-------|-------|
+| **Core Framework** | Kernel, Router, Controller |
+| **Data Access** | Repository, Hydrator, QueryBuilder |
+| **HTTP Handling** | Request, Response, FileUpload, ApiClient |
+| **Security** | Authentication, JWT Tokens |
+| **Automation** | Console System |
+| **Advanced** | Event System, Mailer |
+| **Configuration** | GetEnv |
 
 ### By Use Case
 
-**I want to...**
+**Building a REST API endpoint:**
+1. [Router](./router.md) - Define the route
+2. [Controller](./controller.md) - Create the controller
+3. [Request](./request.md) - Access request data
+4. [Repository](./repository.md) - Query the database
+5. [Response](./response.md) - Send the response
 
-- **Add a new API endpoint**
-  1. Read [RouterObject Documentation](./RouterObject.md) - Route Configuration section
-  2. Create a new Controller
-  3. Add route to RouterObject
+**Adding user authentication:**
+1. [Authentication](./autentication.md) - User login
+2. [JWT Tokens](./jwtToken.md) - Token-based auth
+3. [Get Environment Data](./getEnv.md) - Store secrets
 
-- **Access request data in my controller**
-  1. Read [RequestObject Documentation](./RequestObject.md) - Usage Examples section
-  2. Use `RequestObject::getRequestInstance()`
-  3. Call appropriate getter methods
+**Uploading and processing files:**
+1. [Request](./request.md) - Receive file upload
+2. [File Upload](./fileUpload.md) - Handle the file
+3. [Response](./response.md) - Return result
 
-- **Handle file uploads**
-  1. Read [RequestObject Documentation](./RequestObject.md) - Working with Files section
-  2. Use `$request->getFile()` or `$request->getFiles()`
-
-- **Implement authentication**
-  1. Read [RequestObject Documentation](./RequestObject.md) - Authentication section
-  2. Use `$request->getAuthUser()` to extract Bearer token
-  3. Validate token in middleware
-
-- **Debug routing issues**
-  1. Read [RouterObject Documentation](./RouterObject.md) - Error Handling section
-  2. Check route configuration
-  3. Verify controller exists and method is callable
-
-- **Manage session data**
-  1. Read [RequestObject Documentation](./RequestObject.md) - Session Management section
-  2. Use `$request->getSessionValue()` and `$request->setSessionValue()`
-
-- **Create a new controller**
-  1. Read [AbstractController Documentation](./AbstractController.md) - Creating a Concrete Controller section
-  2. Extend AbstractController
-  3. Implement index() method
-  4. Add route to RouterObject
-
-- **Handle HTTP responses**
-  1. Read [AbstractResponse Documentation](./AbstractResponse.md) - Usage Examples section
-  2. Create response object (JsonResponse, ErrorResponse, etc.)
-  3. Set status code and headers
-  4. Set response body
-  5. Return from controller
-
-- **Process file uploads**
-  1. Read [FileUpload Documentation](./FileUpload.md) - Usage Examples section
-  2. Get files from request: `$request->getFile('field_name')`
-  3. Validate files: `$file->isValid($maxSize, $allowedTypes)`
-  4. Move files: `$file->move($directory, $name)`
-  5. Handle exceptions
-
-## Key Concepts
-
-### Singleton Pattern
-Both RouterObject and RequestObject use the singleton pattern to ensure only one instance exists throughout the application lifecycle.
-
-**Benefits:**
-- Single source of truth
-- Memory efficient
-- Consistent data access
-
-### Request Data Merging
-RequestObject intelligently merges data from multiple sources:
-- Query parameters (`$_GET`)
-- Form data (`$_POST`)
-- JSON body
-- URL path parameters (extracted as `id`)
-
-**Merge Priority (for POST):**
-1. `$_POST` (highest)
-2. JSON body
-3. `$_GET` (lowest)
-
-### Middleware Integration
-RouterObject automatically instantiates and injects `AuthBearerMiddleware` into controllers for authentication handling.
-
-### Error Handling
-The framework uses standardized HTTP status codes:
-- **404** - Route not found
-- **500** - Internal server error
-- **401** - Unauthorized
-- **422** - Unprocessable entity
-
-## Common Tasks
-
-### Adding a New Route
-
-1. Open `Kernel/RouterObject.php`
-2. Add entry to `$routes` array:
-   ```php
-   'users' => ['\App\Controllers\UserController', 'index'],
-   ```
-3. Create corresponding controller in `Controllers/`
-4. Implement `index()` method returning `ResponseInterface`
-
-See [RouterObject Documentation](./RouterObject.md#adding-new-routes) for details.
-
-### Accessing Request Data
-
-```php
-$request = RequestObject::getRequestInstance();
-
-// Get HTTP method
-$method = $request->getMethod();
-
-// Get all data
-$data = $request->getAllDatas();
-
-// Get specific value
-$id = $data['id'] ?? null;
-```
-
-See [RequestObject Documentation](./RequestObject.md#usage-examples) for more examples.
-
-### Handling File Uploads
-
-```php
-$request = RequestObject::getRequestInstance();
-
-$files = $request->getFile('upload');
-if ($files) {
-    foreach ($files as $file) {
-        // $file is a FileUpload object
-    }
-}
-```
-
-See [RequestObject Documentation](./RequestObject.md#working-with-files) for details.
-
-### Extracting Authentication Token
-
-```php
-$request = RequestObject::getRequestInstance();
-
-$auth = $request->getAuthUser();
-if ($auth && $auth[0] === 'Bearer') {
-    $token = $auth[1];
-    // Validate token
-}
-```
-
-See [RequestObject Documentation](./RequestObject.md#authentication) for details.
-
-## Best Practices
-
-### 1. Always Use Singleton Pattern
-```php
-// Good
-$request = RequestObject::getRequestInstance();
-
-// Avoid
-$request = new RequestObject();
-```
-
-### 2. Validate Request Data
-```php
-$data = $request->getAllDatas();
-$id = $data['id'] ?? null;
-
-if ($id === null || !is_numeric($id)) {
-    return new ClientErrorResponse(400);
-}
-```
-
-### 3. Handle Errors Gracefully
-```php
-try {
-    // Business logic
-} catch (\Exception $e) {
-    return new ErrorResponse(500);
-}
-```
-
-### 4. Use Type Hints
-```php
-public function handleRequest(RequestObject $request): ResponseInterface
-{
-    // Implementation
-}
-```
-
-### 5. Organize Routes Logically
-```php
-private array $routes = [
-    '' => ['\App\Controllers\HomeController', 'index'],
-    'api/users' => ['\App\Controllers\UserController', 'index'],
-    'api/products' => ['\App\Controllers\ProductController', 'index'],
-];
-```
-
-## Related Files
-
-- **Main README:** See `../README.md` for project overview and setup instructions
-- **Project Structure:** See `../` for complete project layout
-- **Source Code:** See `../Kernel/` for actual implementation
-
-## Troubleshooting
-
-### 404 Error on Valid Route
-- Check route is registered in RouterObject
-- Verify controller class name and namespace
-- Ensure controller file exists
-
-### Request Data Not Found
-- Check HTTP method (GET, POST, PUT, etc.)
-- Verify data is being sent correctly
-- Use `$request->getAllDatas()` to see all available data
-
-### File Upload Not Working
-- Check `maxsize` in `.env` configuration
-- Verify form has `enctype="multipart/form-data"`
-- Use `$request->getFile('field_name')` to access files
-
-### Authentication Issues
-- Verify Authorization header is being sent
-- Check token format: `Authorization: Bearer <token>`
-- Use `$request->getAuthUser()` to extract token
-
-## Contributing to Documentation
-
-When adding new documentation:
-1. Follow the existing format and structure
-2. Include code examples where applicable
-3. Add links to related documentation
-4. Update this README with new sections
-5. Keep documentation in sync with code changes
-
-## Version Information
-
-- **Framework Version:** 1.0
-- **Documentation Version:** 1.0
-- **Last Updated:** 2024
-
-## Additional Resources
-
-- [Main Project README](../README.md) - Project overview and setup
-- [Project Structure](../) - Complete directory layout
-- [Source Code](../Kernel/) - Implementation details
+**Creating automation tools:**
+1. [Console System](./console.md) - Build command
+2. [Get Environment Data](./getEnv.md) - Access config
 
 ---
 
-**Need help?** Refer to the specific component documentation or check the troubleshooting section above.
+## File Organization
+
+```
+docs/
+├── README.md                    # This file
+├── kernel.md                    # Core application engine
+├── router.md                    # Route configuration
+├── controller.md                # Controller base class
+├── request.md                   # HTTP request handling
+├── response.md                  # HTTP response generation
+├── repository.md                # Data repository pattern
+├── hydrator.md                  # Entity hydration
+├── queryBuilder.md              # SQL query builder
+├── fileUpload.md                # File upload handling
+├── apiClient.md                 # External API client
+├── autentication.md             # User authentication
+├── jwtToken.md                  # JWT token system
+├── createJwtToken.md            # JWT creation guide
+├── event.md                     # Event system
+├── mailer.md                    # Email service
+├── getEnv.md                    # Configuration management
+├── console.md                   # Console commands
+└── homecontroller.md            # Example controller
+```
+
+---
+
+## Learning Paths
+
+### Path 1: REST API Development (Recommended for most developers)
+
+1. Start: [Router](./router.md) - Learn route definition
+2. Continue: [Controller](./controller.md) - Build your first controller
+3. Deep dive: [Request](./request.md) - Master request handling
+4. Add data: [Repository](./repository.md) - Connect to database
+5. Format output: [Response](./response.md) - Send responses
+6. Secure it: [Authentication](./autentication.md) - Add user auth
+
+**Time estimate**: 1-2 days
+
+### Path 2: Full Application Development
+
+1. Foundation: [Kernel](./kernel.md) - Understand the system
+2. Routes: [Router](./router.md) - Define API routes
+3. Controllers: [Controller](./controller.md) - Build logic
+4. Data: [Repository](./repository.md) → [Hydrator](./hydrator.md) → [QueryBuilder](./queryBuilder.md)
+5. Requests: [Request](./request.md) - Handle input
+6. Responses: [Response](./response.md) - Send output
+7. Files: [FileUpload](./fileUpload.md) - Handle uploads
+8. Users: [Authentication](./autentication.md) + [JWT Tokens](./jwtToken.md)
+9. Advanced: [Event System](./event.md) - Add middleware
+10. Tools: [Console System](./console.md) - Automation
+
+**Time estimate**: 1 week
+
+### Path 3: API Integration
+
+1. Quick start: [Request](./request.md) - Understand requests
+2. External APIs: [API Client](./apiClient.md) - Call external services
+3. Responses: [Response](./response.md) - Format responses
+4. Auth: [JWT Tokens](./jwtToken.md) - Secure your API
+5. Config: [Get Environment Data](./getEnv.md) - Manage credentials
+
+**Time estimate**: 1 day
+
+### Path 4: Advanced Framework Customization
+
+1. Core: [Kernel](./kernel.md) - Understand the engine
+2. Events: [Event System](./event.md) - Add custom listeners
+3. Services: [Mailer](./mailer.md) - Extend services
+4. Tools: [Console System](./console.md) - Create commands
+5. Configuration: [Get Environment Data](./getEnv.md) - Manage settings
+
+**Time estimate**: 2-3 days
+
+---
+
+## Quick Reference
+
+### Controllers - Return Responses
+
+```php
+$this->returnJson($data, 200);       // JSON response
+$this->returnError(404);              // Error response
+```
+
+See: [Response](./response.md), [Controller](./controller.md)
+
+### Requests - Access Data
+
+```php
+$this->request->getData('id');        // Single value
+$this->request->getAllDatas();        // All data
+$this->request->getFile('upload');    // File upload
+```
+
+See: [Request](./request.md)
+
+### Database - CRUD Operations
+
+```php
+$repo->find($id);                     // Read
+$repo->save($entity);                 // Create/Update
+$repo->delete($entity);               // Delete
+$repo->findAll();                     // List all
+```
+
+See: [Repository](./repository.md)
+
+### Authentication
+
+```php
+$user = $this->request->getUser();    // Get user
+if ($this->request->isConnected()) {} // Check auth
+```
+
+See: [Authentication](./autentication.md)
+
+### Tokens
+
+```php
+$token = JwtToken::create($claims);   // Create
+JwtToken::verify($token);             // Verify
+```
+
+See: [JWT Tokens](./jwtToken.md)
+
+### Console Commands
+
+```bash
+php ./bin/console.php command:subcommand arg1 arg2
+```
+
+See: [Console System](./console.md)
+
+---
+
+## Tips and Best Practices
+
+### ✅ Do's
+
+- ✅ Use Repository pattern for data access
+- ✅ Use Hydrator to populate entities
+- ✅ Validate request data before using
+- ✅ Use JWT for stateless authentication
+- ✅ Store secrets in environment variables
+- ✅ Check user authentication before operations
+- ✅ Use proper HTTP status codes
+- ✅ Return consistent JSON responses
+
+### ❌ Don'ts
+
+- ❌ Don't access database directly in controllers
+- ❌ Don't expose sensitive information in responses
+- ❌ Don't hardcode configuration values
+- ❌ Don't skip input validation
+- ❌ Don't use global variables
+- ❌ Don't ignore error handling
+- ❌ Don't skip authentication checks
+- ❌ Don't commit secrets to version control
+
+---
+
+## Troubleshooting
+
+### Can't find documentation on...
+
+| Topic | Try this document |
+|-------|-------------------|
+| How routes work | [Router](./router.md) |
+| Building controllers | [Controller](./controller.md) |
+| Getting request data | [Request](./request.md) |
+| Sending responses | [Response](./response.md) |
+| Database operations | [Repository](./repository.md) |
+| User login | [Authentication](./autentication.md) |
+| API tokens | [JWT Tokens](./jwtToken.md) |
+| File uploads | [FileUpload](./fileUpload.md) |
+| Automation tasks | [Console System](./console.md) |
+| Custom hooks | [Event System](./event.md) |
+
+---
+
+## Additional Resources
+
+### In Repository
+
+- **README.md** - Project overview and quick start
+- **Tests** - See `tests/` directory for usage examples
+- **Controllers** - See `Controllers/` directory for examples
+- **Kernel** - See `Kernel/` directory for implementation
+
+### External Resources
+
+- PHP Official: https://www.php.net/
+- PSR Standards: https://www.php-fig.org/psr/
+- REST API Best Practices: https://restfulapi.net/
+- JWT Documentation: https://jwt.io/
+
+---
+
+## Document Status
+
+| Document | Status | Last Updated |
+|----------|--------|--------------|
+| kernel.md | ✅ Complete | 2026-02-17 |
+| router.md | ✅ Complete | 2026-02-17 |
+| controller.md | ✅ Complete | 2026-02-17 |
+| request.md | ✅ Complete | 2026-02-17 |
+| response.md | ✅ Complete | 2026-02-17 |
+| repository.md | ✅ Complete | 2026-02-17 |
+| hydrator.md | ✅ Complete | 2026-02-17 |
+| queryBuilder.md | ✅ Complete | 2026-02-17 |
+| fileUpload.md | ✅ Complete | 2026-02-17 |
+| apiClient.md | ✅ Complete | 2026-02-17 |
+| autentication.md | ✅ Complete | 2026-02-17 |
+| jwtToken.md | ✅ Complete | 2026-02-17 |
+| createJwtToken.md | ✅ Complete | 2026-02-17 |
+| console.md | ✅ Complete | 2026-02-17 |
+| event.md | ✅ Complete | 2026-02-17 |
+| mailer.md | ✅ Complete | 2026-02-17 |
+| getEnv.md | ✅ Complete | 2026-02-17 |
+| homecontroller.md | ✅ Complete | 2026-02-17 |
+
+---
+
+## Contributing to Documentation
+
+To improve or add documentation:
+
+1. Create a Markdown file in this directory
+2. Follow the structure of existing documents
+3. Include code examples with proper syntax highlighting
+4. Add a link to this README
+5. Update the file organization section
+
+---
+
+## Quick Links
+
+- 🏠 Main README: [../README.md](../README.md)
+- 🔧 Source Code: [../Kernel](../Kernel)
+- 📋 Tests: [../tests](../tests)
+- 📝 Configuration: [../.env.sample](../.env.sample)
+- 🚀 Console: [../bin](../bin)
+
+---
+
+**Last Updated**: February 17, 2026
+
+For questions or improvements, please refer to the repository's issue tracker.
+
