@@ -759,7 +759,7 @@ class SecureTokenValidator
         // 2. Verify signature
         $jwt = new JwtToken();
         $filename = ''; //path to your env file
-        $env = new GetEnvDatas()::getInstance($filename);
+        $env = GetEnvDatas()::getInstance($filename);
         $secret = $env->get('JWT_SECRET');
 
         if (!$jwt->checkToken($token, $secret)) {
