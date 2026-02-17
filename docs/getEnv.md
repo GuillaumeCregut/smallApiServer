@@ -84,7 +84,7 @@ $env = GetEnvDatas::getEnvInstance();
 
 $apiKey = $env->get('api_key');
 $timeout = $env->get('request_timeout', 30); // Returns 30 if not set
-$debug = $env->get('debug_mode', false);
+$debug = $env->get('DEBUG_MODE', false);
 ```
 
 ---
@@ -194,15 +194,16 @@ The INI file should follow standard PHP INI syntax:
 
 ```ini
 # Database Configuration
-host=localhost
-db=myapp_database
-user=db_user
-pass=db_password
+DB_HOST=localhost
+DB_NAME=myapp_database
+DB_USER=db_user
+DB_PASS=db_password
+DB_PORT=3306
 
 # Application Settings
-secret=your_secret
+JWT_SECRET=your_secret
 api_key=your_api_key
-debug_mode=true
+DEBUG_MODE=true
 request_timeout=30
 ```
 
@@ -273,11 +274,11 @@ class GetEnvDatasTest extends TestCase
         $env = GetEnvDatas::getEnvInstance($filename);
         
         // Verify loaded value
-        $this->assertEquals('your_secret', $env->get('secret'));
+        $this->assertEquals('your_secret', $env->get('JWT_SECRET'));
         
         // Verify singleton works - same instance returned
         $env2 = GetEnvDatas::getEnvInstance();
-        $this->assertEquals('your_secret', $env2->get('secret'));
+        $this->assertEquals('your_secret', $env2->get('JWT_SECRET'));
     }
 }
 ```
@@ -297,7 +298,7 @@ class GetEnvDatasTest extends TestCase
 ```php
 try {
     $env = GetEnvDatas::getEnvInstance($envFile);
-    $secret = $env->get('secret');
+    $secret = $env->get('JWT_SECRET');
 } catch (KernelException $e) {
     error_log('Config error: ' . $e->getMessage());
     // Fallback to defaults or fail gracefully
@@ -331,7 +332,7 @@ use App\Kernel\GetEnvDatas;
 $env = GetEnvDatas::getEnvInstance(__DIR__ . '/.env');
 
 // 2. Access individual values
-$debug = $env->get('debug_mode', false);
+$debug = $env->get('DEBUG_MODE', false);
 $apiKey = $env->get('api_key');
 
 // 3. Get all configuration

@@ -387,7 +387,7 @@ abstract protected function displayDump(): void
 - Only called when debug mode is enabled
 
 **Debug Mode Detection**:
-- Reads from environment via `GetEnvDatas::getEnvInstance()->get('debug_mode')`
+- Reads from environment via `GetEnvDatas::getEnvInstance()->get('DEBUG_MODE')`
 - Only displays if debug mode is `true`
 - Protected by try-catch for missing `Dumper` class
 
@@ -465,7 +465,7 @@ class UserController extends AbstractController
 
 ```php
 // .env
-debug_mode=true
+DEBUG_MODE=true
 
 // Response automatically displays dumps when enabled
 $response->send(); // Will show Dumper output if debug_mode=true
@@ -550,7 +550,7 @@ class UserController extends AbstractController
 | `dd()` exits without output | Output buffering issue | Check for `ob_clean()` before `dd()` |
 | JSON has `[Circular Reference]` | Object references itself | Expected behavior, handled safely |
 | `convert_to_serializable()` deep recursion | Deeply nested objects/arrays | Check for circular references or reduce nesting |
-| Debug output not displaying | Debug mode not enabled | Set `debug_mode=true` in `.env` |
+| Debug output not displaying | Debug mode not enabled | Set `DEBUG_MODE=true` in `.env` |
 
 ## See Also
 

@@ -363,7 +363,7 @@ $mailer->sendEmail(
 Files are validated before attachment:
 - Must exist and be readable
 - Must not exceed maximum size limit
-- Total size must not exceed `max_attachment` limit
+- Total size must not exceed `MAX_ATTACHMENT` limit
 
 ```php
 <?php
@@ -385,11 +385,11 @@ $success = $mailer->sendEmail(
 
 ### Size Validation
 
-The maximum attachment size is controlled by the `max_attachment` environment variable (in MB):
+The maximum attachment size is controlled by the `MAX_ATTACHMENT` environment variable (in MB):
 
 ```bash
 # .env file
-max_attachment=10  # Maximum 10 MB per message
+MAX_ATTACHMENT=10  # Maximum 10 MB per message
 ```
 
 The total size of all attachments must not exceed this limit, or an exception is thrown.
@@ -899,13 +899,13 @@ class BulkMailerService
 
 ```bash
 # .env file
-smtp_host=smtp.gmail.com
-smtp_port=587
-smtp_user=your-email@gmail.com
-smtp_pass=your-app-password
-from_email=noreply@example.com
-from_name=My Application
-max_attachment=10
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+FROM_EMAIL=noreply@example.com
+FROM_NAME=My Application
+MAX_ATTACHMENT=10
 ```
 
 ### Loading from Environment

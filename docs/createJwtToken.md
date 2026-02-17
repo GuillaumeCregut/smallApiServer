@@ -98,7 +98,7 @@ The secret key is automatically loaded from the application's environment variab
 
 ```bash
 # .env file
-secret=your-secret-key-here
+JWT_SECRET=your-secret-key-here
 ```
 
 The secret must be set in environment variables or the method will throw an exception.
@@ -268,8 +268,9 @@ class AuthenticationService
 
     public function __construct()
     {
-        $env = new \App\Kernel\GetEnvDatas();
-        $this->secret = $env->get('secret');
+        $filename =''; //your path to env file
+        $env = \App\Kernel\GetEnvDatas::getEnvInstance($filename);
+        $this->secret = $env->get('JWT_SECRET');
     }
 
     public function authenticateUser(string $email, string $password): ?array
@@ -348,8 +349,9 @@ class AuthenticationMiddleware
 
     public function __construct()
     {
-        $env = new \App\Kernel\GetEnvDatas();
-        $this->secret = $env->get('secret');
+        $filename = ''; //Your env path
+        $env = \App\Kernel\GetEnvDatas()::getEnvInstance($filename);
+        $this->secret = $env->get('JWT_SECRET');
     }
 
     public function handle(Request $request): ?array
@@ -404,8 +406,9 @@ class TokenRefreshService
 
     public function __construct()
     {
-        $env = new \App\Kernel\GetEnvDatas();
-        $this->secret = $env->get('secret');
+        $filename = ''; //Your env path
+        $env = \App\Kernel\GetEnvDatas()::getEnvInstance($filename);
+        $this->secret = $env->get('JWT_SECRET');
     }
 
     public function refreshToken(string $expiredToken): ?string
@@ -589,8 +592,10 @@ $token = CreateJwtAuth::createToken(123, ['user'], 'John', 'Doe');
 
 // Later, validate the token
 $jwt = new JwtToken();
-$env = new GetEnvDatas();
-$secret = $env->get('secret');
+ $filename = ''; //Your env path
+$env = \App\Kernel\GetEnvDatas()::getEnvInstance($filename);
+$secret = $env->get('JWT_SECRET');
+
 
 // 1. Check format
 if (!JwtToken::checkFormat($token)) {
@@ -702,7 +707,7 @@ token_validity=86400
 <?php
 
 // ✓ GOOD: Load from environment
-$secret = getenv('secret');
+$secret = getenv('JWT_SECRET');
 
 // ✓ GOOD: Use long, random secrets
 // secret=kR9@mL#xY2pQ8$vW5nJ7&tU3fG1bH4sZ
@@ -753,8 +758,9 @@ class SecureTokenValidator
 
         // 2. Verify signature
         $jwt = new JwtToken();
-        $env = new GetEnvDatas();
-        $secret = $env->get('secret');
+        $filename = ''; //path to your env file
+        $env = new GetEnvDatas()::getInstance($filename);
+        $secret = $env->get('JWT_SECRET');
 
         if (!$jwt->checkToken($token, $secret)) {
             \App\Kernel\Logger::warning("Token tampering detected");
@@ -864,8 +870,8 @@ $token = request.headers.get('Authorization').replace('Bearer ', '');
 
 // Validate token
 $jwt = new JwtToken();
-$env = new GetEnvDatas();
-$secret = $env->get('secret');
+$env = GetEnvDatas()::getInstance();
+$secret = $env->get('JWT_SECRET');
 
 if (!JwtToken::checkFormat($token)) {
     return ['error' => 'Invalid token'];
@@ -922,7 +928,7 @@ return ['token' => $newToken];
 
 ```bash
 # .env
-secret=your-secret-key
+JWT_SECRET=your-secret-key
 ```
 
 ### Issue: Token Validation Fails
@@ -935,8 +941,8 @@ secret=your-secret-key
 <?php
 
 // Use the same secret for both creation and validation
-$env = new GetEnvDatas();
-$secret = $env->get('secret');
+$env = GetEnvDatas()::getInstance();
+$secret = $env->get('JWT_SECRET');
 
 // CreateJwtAuth::createToken() also uses this secret internally
 $token = CreateJwtAuth::createToken($userId, $roles, $firstName, $lastName);

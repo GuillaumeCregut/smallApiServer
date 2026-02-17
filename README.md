@@ -1,4 +1,4 @@
-# SmallMVC - Lightweight PHP MVC Framework
+# SmallApiServer - Lightweight PHP MVC Framework
 
 A modern, lightweight PHP MVC framework designed for building RESTful APIs and web applications. Built with clean architecture principles, extensive testing support, and comprehensive documentation.
 
@@ -726,22 +726,22 @@ The `.env` file contains application configuration:
 
 ```ini
 # Database
-host=localhost
-port=3306
-db=smallmvc
-user=root
-pass=
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=smallmvc
+DB_USER=root
+DB_PASS=
 
 
 # Security
-secret=your-secret-key-here
+JWT_SECRET=your-secret-key-here
 API_KEY=your-api-key
 
 # Email
-smtp_host=smtp.mailtrap.io
-smtp_port=465
-smtp_user=your-username
-smtp_pass=your-password
+SMTP_HOST=smtp.mailtrap.io
+SMTP_PORT=465
+SMTP_USER=your-username
+SMTP_PASS=your-password
 ```
 
 ---
@@ -804,7 +804,7 @@ chmod -R 755 vendor/
 
 ### Production Checklist
 
-- [ ] Set `debug_mode=false` in `.env`
+- [ ] Set `DEBUG_MODE=false` in `.env`
 - [ ] Use production-grade database server
 - [ ] Set up log rotation
 - [ ] Configure proper error handling
