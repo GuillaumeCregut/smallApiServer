@@ -17,21 +17,27 @@ abstract class AbstractConsole implements ConsoleInterface
     public function __construct(array $args, int $count)
     {
         if ($this->minArgs > $count) {
-            $this->displayError('Too few arguments',0);
+            $this->displayError('Too few arguments', 0);
         }
         $this->args = $args;
     }
 
     abstract public function execute(): void;
 
-    protected function help(): void
+    protected function help(?bool $displayCmd = true): void
     {
         echo $this->helpText;
-        $cmds = ConsoleHelper::getCommands($this->spaceName, $this->directory);
-        echo "\n";
-        foreach ($cmds as $cmd) {
-            echo "- {$cmd}\n";
+        if ($displayCmd) {
+            $cmds = ConsoleHelper::getCommands($this->spaceName, $this->directory);
+            echo "\n";
+            if (0 === count($cmds)) {
+                echo "- No commands found";
+            }
+            foreach ($cmds as $cmd) {
+                echo "- {$cmd}\n";
+            }
         }
+
         die();
     }
 
