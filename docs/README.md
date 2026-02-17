@@ -86,6 +86,13 @@ Building SQL queries programmatically.
 - **Use when**: Constructing complex database queries
 - **Key Classes**: `QueryBuilder`, query methods
 
+### [MySQL Connector](./mysqlConnector.md)
+Database connection management and query execution.
+- **Topics**: Connection pooling, PDO integration, transaction management, prepared statements
+- **Use when**: Understanding database connectivity and SQL execution
+- **Key Classes**: `MySQLConnector`, `ConnectorInterface`
+- **Related**: [Repository](./repository.md)
+
 ---
 
 ## HTTP & Requests
@@ -204,7 +211,7 @@ Managing application configuration from environment files.
 | Topic | Files |
 |-------|-------|
 | **Core Framework** | Kernel, Router, Controller |
-| **Data Access** | Repository, Hydrator, QueryBuilder |
+| **Data Access** | Repository, Hydrator, QueryBuilder, MySQLConnector |
 | **HTTP Handling** | Request, Response, FileUpload, ApiClient |
 | **Security** | Authentication, JWT Tokens |
 | **Automation** | Console System |
@@ -257,6 +264,7 @@ docs/
 ├── event.md                     # Event system
 ├── mailer.md                    # Email service
 ├── getEnv.md                    # Configuration management
+├── mysqlConnector.md            # MySQL database connector
 ├── console.md                   # Console commands
 └── homecontroller.md            # Example controller
 ```
@@ -281,7 +289,7 @@ docs/
 1. Foundation: [Kernel](./kernel.md) - Understand the system
 2. Routes: [Router](./router.md) - Define API routes
 3. Controllers: [Controller](./controller.md) - Build logic
-4. Data: [Repository](./repository.md) → [Hydrator](./hydrator.md) → [QueryBuilder](./queryBuilder.md)
+4. Data: [Repository](./repository.md) → [Hydrator](./hydrator.md) → [QueryBuilder](./queryBuilder.md) → [MySQL Connector](./mysqlConnector.md)
 5. Requests: [Request](./request.md) - Handle input
 6. Responses: [Response](./response.md) - Send output
 7. Files: [FileUpload](./fileUpload.md) - Handle uploads
@@ -410,6 +418,8 @@ See: [Console System](./console.md)
 | Getting request data | [Request](./request.md) |
 | Sending responses | [Response](./response.md) |
 | Database operations | [Repository](./repository.md) |
+| Database connection | [MySQL Connector](./mysqlConnector.md) |
+| Query building | [Query Builder](./queryBuilder.md) |
 | User login | [Authentication](./autentication.md) |
 | API tokens | [JWT Tokens](./jwtToken.md) |
 | File uploads | [FileUpload](./fileUpload.md) |
@@ -448,6 +458,7 @@ See: [Console System](./console.md)
 | repository.md | ✅ Complete | 2026-02-17 |
 | hydrator.md | ✅ Complete | 2026-02-17 |
 | queryBuilder.md | ✅ Complete | 2026-02-17 |
+| mysqlConnector.md | ✅ Complete | 2026-02-17 |
 | fileUpload.md | ✅ Complete | 2026-02-17 |
 | apiClient.md | ✅ Complete | 2026-02-17 |
 | autentication.md | ✅ Complete | 2026-02-17 |
