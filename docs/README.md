@@ -11,7 +11,8 @@ Welcome to the complete SmallMVC framework documentation. This directory contain
 - [🔒 Security & Authentication](#security--authentication)
 - [⚙️ Console & Commands](#console--commands)
 - [🔧 Advanced Topics](#advanced-topics)
-- [📋 Configuration & Setup](#configuration--setup)
+- [�️ Tools & Utilities](#tools--utilities)
+- [�📋 Configuration & Setup](#configuration--setup)
 
 ---
 
@@ -192,6 +193,19 @@ Example implementation of the home page controller.
 
 ---
 
+## Tools & Utilities
+
+### Development and Debugging Tools
+
+### [Tools & Utilities](./tools.md)
+Debugging, dumping, and response helper utilities.
+- **Topics**: Variable dumping, debug output, serialization, response management
+- **Use when**: Debugging in development or building response objects
+- **Key Classes**: `Dumper`, `DumpLine`, `AbstractResponse`
+- **Key Functions**: `dump()`, `dd()`, `ddjson()`, `convert_to_serializable()`
+
+---
+
 ## Configuration & Setup
 
 ### Application Configuration
@@ -216,6 +230,7 @@ Managing application configuration from environment files.
 | **Security** | Authentication, JWT Tokens |
 | **Automation** | Console System |
 | **Advanced** | Event System, Mailer |
+| **Utilities** | Tools (Helpers, Dumper, Response) |
 | **Configuration** | GetEnv |
 
 ### By Use Case
@@ -266,6 +281,7 @@ docs/
 ├── getEnv.md                    # Configuration management
 ├── mysqlConnector.md            # MySQL database connector
 ├── console.md                   # Console commands
+├── tools.md                     # Helper utilities and debugging
 └── homecontroller.md            # Example controller
 ```
 
@@ -425,6 +441,8 @@ See: [Console System](./console.md)
 | File uploads | [FileUpload](./fileUpload.md) |
 | Automation tasks | [Console System](./console.md) |
 | Custom hooks | [Event System](./event.md) |
+| Debugging variables | [Tools & Utilities](./tools.md) |
+
 
 ---
 
@@ -469,6 +487,7 @@ See: [Console System](./console.md)
 | mailer.md | ✅ Complete | 2026-02-17 |
 | getEnv.md | ✅ Complete | 2026-02-17 |
 | homecontroller.md | ✅ Complete | 2026-02-17 |
+| tools.md | ✅ Complete | 2026-02-17 |
 
 ---
 
