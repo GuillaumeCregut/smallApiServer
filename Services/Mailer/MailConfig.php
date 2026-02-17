@@ -24,12 +24,12 @@ class MailConfig
         $config = new MailConfig();
         // Vous pouvez ajuster ces valeurs selon vos besoins
         $env = GetEnvDatas::getEnvInstance();
-        $config->smtpHost = $env->get('smtp_host');
-        $config->smtpPort = (int)$env->get('smtp_port', 587);
-        $config->smtpUser = $env->get('smtp_user');
-        $config->smtpPass = $env->get('smtp_pass');
-        $config->fromEmail = $env->get('from_email');
-        $config->fromName = $env->get('from_name');   
+        $config->smtpHost = $env->get('SMTP_HOST');
+        $config->smtpPort = (int)$env->get('SMTP_PORT', 587);
+        $config->smtpUser = $env->get('SMTP_USER');
+        $config->smtpPass = $env->get('SMTP_PASS');
+        $config->fromEmail = $env->get('FROM_EMAIL');
+        $config->fromName = $env->get('FROM_NAME');   
         return $config;
     }
 }

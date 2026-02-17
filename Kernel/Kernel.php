@@ -105,7 +105,7 @@ class Kernel
             return $page;
         } catch (Exception $e) {
             // if an exception is thrown during controller execution
-            $debug = GetEnvDatas::getEnvInstance()->get('debug_mode');
+            $debug = GetEnvDatas::getEnvInstance()->get('DEBUG_MODE');
             $response = new ErrorResponse(500, $debug, $e);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;

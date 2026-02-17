@@ -26,7 +26,7 @@ class AuthBearerMiddleware implements AuthenticationInterface
     public function __construct(private RepositoryInterface $repo)
     {
         $envs = GetEnvDatas::getEnvInstance();
-        $this->secret = $envs->get('secret');
+        $this->secret = $envs->get('JWT_SECRET');
         $this->jwtToken = new JwtToken();
         $request =Request::getRequestInstance();
         $authHeader = $request->getHeaders('Authorization');

@@ -114,7 +114,7 @@ class UserController extends AbstractController
             return $this->returnError(404);
         }
         if (!($user instanceof User)) {
-            $response = new ErrorResponse(500, GetEnvDatas::getEnvInstance()->get('debug_mode'));
+            $response = new ErrorResponse(500, GetEnvDatas::getEnvInstance()->get('DEBUG_MODE'));
             return $response;
         }
         $returnArray = [

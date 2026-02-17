@@ -20,10 +20,10 @@ class MysqlConnectorTest extends TestCase
         parent::setUp();
         MySQLConnector::resetInstance();
         $this->validEnv = [
-            'host' => 'localhost', //Change to your settings
-            'db' => 'your_db', //Change to your settings
-            'user' => 'your_login',  //Change to your settings
-            'pass' => 'your_pass' //Change to your settings
+            'DB_HOST' => 'localhost', //Change to your settings
+            'DB_NAME' => 'your_db', //Change to your settings
+            'DB_USER' => 'your_login',  //Change to your settings
+            'DB_PASS' => 'your_pass' //Change to your settings
         ];
     }
 
@@ -56,10 +56,10 @@ class MysqlConnectorTest extends TestCase
     public function testGetInstanceThrowsExceptionWhenFalseEnv(): void
     {
         $env = [
-            'host' => 'localhost',
-            'db' => 'test_database',
-            'user' => 'test_user',
-            'pass' => 'test_password'
+            'DB_HOST' => 'localhost',
+            'DB_NAME' => 'test_database',
+            'DB_USER' => 'test_user',
+            'DB_PASS' => 'test_password'
         ];
         $this->expectException(DatabaseException::class);
         $this->expectExceptionCode(1045);
@@ -69,10 +69,10 @@ class MysqlConnectorTest extends TestCase
     public function testGetInstanceThrowsExceptionWhenBadHost(): void
     {
         $env = [
-            'host' => '192.168.1.111',
-            'db' => 'test_database',
-            'user' => 'test_user',
-            'pass' => 'test_password'
+            'DB_HOST' => '192.168.1.111',
+            'DB_NAME' => 'test_database',
+            'DB_USER' => 'test_user',
+            'DB_PASS' => 'test_password'
         ];
         $this->expectException(DatabaseException::class);
         $this->expectExceptionMessageMatches("/Failed to connect to database after/");

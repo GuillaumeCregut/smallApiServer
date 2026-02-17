@@ -101,19 +101,19 @@ class MySQLConnector implements ConnectorInterface
     private function __construct($envs)
     {
         if (
-            !array_key_exists('host', $envs) ||
-            !array_key_exists('db', $envs) ||
-            !array_key_exists('user', $envs) ||
-            !array_key_exists('pass', $envs)
+            !array_key_exists('DB_HOST', $envs) ||
+            !array_key_exists('DB_NAME', $envs) ||
+            !array_key_exists('DB_USER', $envs) ||
+            !array_key_exists('DB_PASS', $envs)
         ) {
             throw new KernelException('Env datas does not exist');
         }
         $this->credentials = [
-            'host' => $envs['host'],
-            'db' => $envs['db'],
-            'user' => $envs['user'],
-            'pass' => $envs['pass'],
-            'port' => $envs['port'] ?? 3306
+            'host' => $envs['DB_HOST'],
+            'db' => $envs['DB_NAME'],
+            'user' => $envs['DB_USER'],
+            'pass' => $envs['DB_PASS'],
+            'port' => $envs['DB_PORT'] ?? 3306
         ];
         $this->connect();
     }

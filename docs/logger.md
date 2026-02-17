@@ -42,10 +42,10 @@ Logger configuration comes from environment variables via `GetEnvDatas`:
 
 | Variable | Purpose | Example | Default |
 |----------|---------|---------|---------|
-| `error_log_path` | Path to error log file | `logs/error` | Empty (system log) |
-| `warning_log_path` | Path to warning log file | `logs/warning` | Empty (system log) |
-| `info_log_path` | Path to info log file | `logs/info` | Empty (system log) |
-| `debug_mode` | Enable/disable debug logging | `true` or `false` | false |
+| `ERROR_LOG_PATH` | Path to error log file | `logs/error` | Empty (system log) |
+| `WARNING_LOG_PATH` | Path to warning log file | `logs/warning` | Empty (system log) |
+| `INFO_LOG_PATH` | Path to info log file | `logs/info` | Empty (system log) |
+| `DEBUG_MODE` | Enable/disable debug logging | `true` or `false` | false |
 
 **Example .env**:
 ```env
@@ -199,7 +199,7 @@ private static function getEnvValues(string $path): array
 ```
 
 **Parameters**:
-- `$path` (string): Environment variable name (e.g., 'error_log_path')
+- `$path` (string): Environment variable name (e.g., 'ERROR_LOG_PATH')
 
 **Returns**: Array with keys:
 - `debugMode` (bool): Whether debug mode is enabled
