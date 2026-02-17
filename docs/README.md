@@ -11,7 +11,8 @@ Welcome to the complete SmallMVC framework documentation. This directory contain
 - [🔒 Security & Authentication](#security--authentication)
 - [⚙️ Console & Commands](#console--commands)
 - [🔧 Advanced Topics](#advanced-topics)
-- [�️ Tools & Utilities](#tools--utilities)
+- [📊 Monitoring & Logging](#monitoring--logging)
+- [🛠️ Tools & Utilities](#tools--utilities)
 - [�📋 Configuration & Setup](#configuration--setup)
 
 ---
@@ -193,6 +194,19 @@ Example implementation of the home page controller.
 
 ---
 
+## Monitoring & Logging
+
+### Application Monitoring and Event Logging
+
+### [Logger](./logger.md)
+Centralized logging system for application events and errors.
+- **Topics**: Error logging, warning logs, info logs, debug mode, log files, file creation
+- **Use when**: Recording application events, debugging, error tracking
+- **Key Classes**: `Logger` (static utility)
+- **Log Levels**: ERROR, WARNING, INFO
+
+---
+
 ## Tools & Utilities
 
 ### Development and Debugging Tools
@@ -230,6 +244,7 @@ Managing application configuration from environment files.
 | **Security** | Authentication, JWT Tokens |
 | **Automation** | Console System |
 | **Advanced** | Event System, Mailer |
+| **Monitoring** | Logger |
 | **Utilities** | Tools (Helpers, Dumper, Response) |
 | **Configuration** | GetEnv |
 
@@ -281,6 +296,7 @@ docs/
 ├── getEnv.md                    # Configuration management
 ├── mysqlConnector.md            # MySQL database connector
 ├── console.md                   # Console commands
+├── logger.md                    # Application logging system
 ├── tools.md                     # Helper utilities and debugging
 └── homecontroller.md            # Example controller
 ```
@@ -310,8 +326,9 @@ docs/
 6. Responses: [Response](./response.md) - Send output
 7. Files: [FileUpload](./fileUpload.md) - Handle uploads
 8. Users: [Authentication](./autentication.md) + [JWT Tokens](./jwtToken.md)
-9. Advanced: [Event System](./event.md) - Add middleware
-10. Tools: [Console System](./console.md) - Automation
+9. Logging: [Logger](./logger.md) - Track events
+10. Advanced: [Event System](./event.md) - Add middleware
+11. Tools: [Console System](./console.md) - Automation
 
 **Time estimate**: 1 week
 
@@ -441,6 +458,7 @@ See: [Console System](./console.md)
 | File uploads | [FileUpload](./fileUpload.md) |
 | Automation tasks | [Console System](./console.md) |
 | Custom hooks | [Event System](./event.md) |
+| Logging events | [Logger](./logger.md) |
 | Debugging variables | [Tools & Utilities](./tools.md) |
 
 
@@ -487,6 +505,7 @@ See: [Console System](./console.md)
 | mailer.md | ✅ Complete | 2026-02-17 |
 | getEnv.md | ✅ Complete | 2026-02-17 |
 | homecontroller.md | ✅ Complete | 2026-02-17 |
+| logger.md | ✅ Complete | 2026-02-17 |
 | tools.md | ✅ Complete | 2026-02-17 |
 
 ---
