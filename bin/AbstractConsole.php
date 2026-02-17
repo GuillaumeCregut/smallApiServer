@@ -17,7 +17,7 @@ abstract class AbstractConsole implements ConsoleInterface
     public function __construct(array $args, int $count)
     {
         if ($this->minArgs > $count) {
-            //Too few args
+            $this->displayError('Too few arguments',0);
         }
         $this->args = $args;
     }
@@ -46,7 +46,7 @@ abstract class AbstractConsole implements ConsoleInterface
     {
         $first = strtolower($command);
         if ('help' === $first) {
-            help();
+            $this->help();
         }
         $class = ucfirst($first) ?? null;
         $fullname = $this->spaceName . $class;
