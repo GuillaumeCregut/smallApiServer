@@ -41,7 +41,7 @@ class ConsoleHelper
                 require_once $command;
             }
             if (!class_exists($fullName)) {
-                continue; //Voir s'il faut forcer le chargement avec un require_once, si oui, refaire un if identique après
+                continue; 
             }
             $reflection = new ReflectionClass($fullName);
             if (!$reflection->isInstantiable()) {
