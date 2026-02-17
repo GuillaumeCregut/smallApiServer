@@ -87,7 +87,7 @@ abstract class AbstractResponse implements ResponseInterface
     private function DisplayDebugMode(): void
     {
         try {
-            $isDebug = GetEnvDatas::getEnvInstance()->get('debug_mode', false);
+            $isDebug = GetEnvDatas::getEnvInstance()->get('DEBUG_MODE', false);
             if ($isDebug && class_exists(Dumper::class)) {
                 $this->displayDump();
             }

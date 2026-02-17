@@ -32,10 +32,11 @@ class GetEnvDatas
     public function getDdCredentials(): array
     {
         return [
-            'host' => $this->envVar['host'],
-            'db' =>  $this->envVar['db'],
-            'user' =>  $this->envVar['user'],
-            'pass' =>  $this->envVar['pass'],
+            'DB_HOST' => $this->envVar['DB_HOST'],
+            'DB_NAME' =>  $this->envVar['DB_NAME'],
+            'DB_USER' =>  $this->envVar['DB_USER'],
+            'DB_PASS' =>  $this->envVar['DB_PASS'],
+            'DB_PORT' => $this->envVar['DB_PORT'],
         ];
     }
 

@@ -14,7 +14,7 @@ class Logger
     {
         $senderName = self::getCallerName($sender);
         $messageToPost = self::createMessage($senderName, $message, 'ERROR');
-        $envs = self::getEnvValues('error_log_path');
+        $envs = self::getEnvValues('ERROR_LOG_PATH');
         if ($debugOnly && !$envs['debugMode']) {
             return;
         }
@@ -39,7 +39,7 @@ class Logger
     {
         $senderName = self::getCallerName($sender);
         $messageToPost = self::createMessage($senderName, $message, 'WARNING');
-        $envs = self::getEnvValues('warning_log_path');
+        $envs = self::getEnvValues('WARNING_LOG_PATH');
         if ($debugOnly && !$envs['debugMode']) {
             return;
         }
@@ -64,7 +64,7 @@ class Logger
     {
         $senderName = self::getCallerName($sender);
         $messageToPost = self::createMessage($senderName, $message, 'INFO');
-        $envs = self::getEnvValues('info_log_path');
+        $envs = self::getEnvValues('INFO_LOG_PATH');
         if ($debugOnly && !$envs['debugMode']) {
             return;
         }
@@ -88,7 +88,7 @@ class Logger
     private static function getEnvValues(string $path): array
     {
         $returnArray = [];
-        $envMode = GetEnvDatas::getEnvInstance()->get('debug_mode', 'false');
+        $envMode = GetEnvDatas::getEnvInstance()->get('DEBUG_MODE', 'false');
         $returnArray['debugMode'] = filter_var($envMode, FILTER_VALIDATE_BOOLEAN);
         $returnArray['path'] = GetEnvDatas::getEnvInstance()->get($path, '');
         $returnArray['appPath'] = GetEnvDatas::getAppPath();
