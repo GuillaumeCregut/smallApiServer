@@ -222,4 +222,8 @@ Method returns ResponseInterface (JsonResponse or ClientErrorResponse)
     ↓
 Response sent to client
 ```
+### SEE ALSO
+- `Controller`: [The controller class](./controller.md)
+- `Response`: [The response system](./response.md)
+- `Request`: [How woks Request in smallApiServer](./request.md)
 

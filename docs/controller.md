@@ -554,8 +554,8 @@ return $this->returnError(422);  // Validation failed
 ## Related Documentation
 
 - [Authentication System](autentication.md)
-- [Response System](Response.md)
-- [Request Object](RequestObject.md)
+- [Response System](response.md)
+- [Request](request.md)
 - [Kernel](kernel.md)
 - [Router](router.md)
 - [Controller example (HomeController)](homecontroller.md)

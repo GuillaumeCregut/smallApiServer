@@ -356,10 +356,10 @@ echo $response;
 
 ## Related Classes
 
-- `Kernel` - Uses GetEnvDatas for configuration initialization
+- `Kernel` - [Uses GetEnvDatas for configuration initialization](./kernel.md)
 - `DatabaseConnector` - Uses database credentials from GetEnvDatas
 - `KernelException` - Exception thrown by GetEnvDatas
-- `Router` - May access environment for routing configuration
+- `Router` - [May access environment for routing configuration](./router.md)
 
 ## Changelog
 

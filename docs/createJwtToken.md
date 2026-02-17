@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `CreateJwtAuth` class is a simplified wrapper around the `JwtToken` class that provides an easy, minimal-configuration way to create authentication tokens for logged-in users. It abstracts away the complexity of JWT token creation and automatically uses the application's secret key from environment configuration.
+The `CreateJwtAuth` class is a simplified wrapper around the [`JwtToken`](./jwtToken.md) class that provides an easy, minimal-configuration way to create authentication tokens for logged-in users. It abstracts away the complexity of JWT token creation and automatically uses the application's secret key from environment configuration.
 
 ## Purpose
 

@@ -843,16 +843,16 @@ public function logout()
 ## Related Classes and Interfaces
 
 - `User`: User entity class
-- `UserRepository`: User data persistence
-- `Request`: Request object with user storage
+- `UserRepository`: [User data persistence](./repository.md)
+- `Request`: [Request object with user storage](./request.md)
 - `AuthenticationInterface`: Base contract for auth strategies
 - `JwtToken`: JWT token handling
-- `CreateJwtAuth`: JWT creation helper
+- `CreateJwtAuth`: [JWT creation helper](./createJwtToken.md)
 
 ---
 
 ## Related Documentation
 
-- [Response System Documentation](Response.md)
-- [Request Object Documentation](RequestObject.md)
-- [User Entity Documentation](User.md)
+- [Response System Documentation](response.md)
+- [Request Object Documentation](request.md)
+
