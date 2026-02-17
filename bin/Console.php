@@ -58,7 +58,11 @@ function help(?string $error = null): void
     Available commands :
     PHP;
     echo $template . "\n";
-    foreach(ConsoleHelper::getCommands( "App\\bin\\", __DIR__) as $cmd){
+    $cmds = ConsoleHelper::getCommands( "App\\bin\\", __DIR__);
+    if(0 === count($cmds)) {
+            echo "- No commands found";
+        } else
+    foreach($cmds as $cmd){
         echo "- {$cmd}\n";
     }
     die();
