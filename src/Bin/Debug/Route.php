@@ -1,8 +1,13 @@
 <?php
 
-namespace App\bin\Debug;
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
 
-use App\bin\AbstractConsole;
+namespace App\Bin\Debug;
+
+use App\Bin\AbstractConsole;
 use App\Kernel\Config\Router;
 
 class Route extends AbstractConsole

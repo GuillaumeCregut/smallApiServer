@@ -1,8 +1,8 @@
 <?php
 
-namespace App\bin;
+namespace App\Bin;
 
-use App\bin\ConsoleHelper;
+use App\Bin\ConsoleHelper;
 use Error;
 use Exception;
 

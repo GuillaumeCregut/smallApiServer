@@ -1,5 +1,5 @@
 <?php
-namespace App\bin;
+namespace App\Bin;
 
 interface ConsoleInterface
 {

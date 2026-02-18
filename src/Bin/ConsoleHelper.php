@@ -1,6 +1,6 @@
 <?php
 
-namespace App\bin;
+namespace App\Bin;
 
 use ReflectionClass;
 

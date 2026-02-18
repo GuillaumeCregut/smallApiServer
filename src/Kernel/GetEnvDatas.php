@@ -56,7 +56,7 @@ class GetEnvDatas
 
     public static function getAppPath(): string
     {
-        $appPath =  dirname(__DIR__, 1);
+        $appPath =  dirname(__DIR__, 2);
         return rtrim($appPath, '/\\') . DIRECTORY_SEPARATOR;
     }
 

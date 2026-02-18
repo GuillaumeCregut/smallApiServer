@@ -36,7 +36,7 @@ class Kernel
     public function __construct()
     {
         //Get env values
-        $iniFile = dirname(__DIR__, 1) . DIRECTORY_SEPARATOR . '.env';
+        $iniFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.env';
         try {
             GetEnvDatas::getEnvInstance($iniFile);
         } catch (KernelException $e) {
