@@ -12,7 +12,7 @@ spl_autoload_register(function ($class) {
     // For App namespace classes in project root
     // Example: App\Mailer -> ../Mailer.php
     if (str_starts_with($class, 'App\\')) {
-        $classFile = __DIR__ . '/../' . substr($class, 4) . '.php';
+        $classFile = __DIR__ . '/../src/' . substr($class, 4) . '.php';
         if (file_exists($classFile)) {
             require_once $classFile;
             return;

@@ -5,7 +5,7 @@ session_set_cookie_params([
 session_start();
 
 require_once '../vendor/Autoload.php';
-require_once '../Kernel/utils/Helpers.php';
+require_once '../src/Kernel/utils/Helpers.php';
 use App\Kernel\Kernel;
 
 App\Vendor\Autoload::register();

@@ -1,15 +1,16 @@
 #!/usr/bin/env php
 <?php
 
-use App\bin\ConsoleHelper;
-use App\bin\ConsoleInterface;
+use App\Bin\ConsoleHelper;
+use App\Bin\ConsoleInterface;
+use App\Kernel\GetEnvDatas;
 
 $filePath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR;
 require_once $filePath . 'Autoload.php';
 
 App\Vendor\Autoload::register();
 
-$space = "App\\bin\\";
+$space = "App\\Bin\\";
 
 if (2 > $argc) {
     displayError('too few arguments', 0);
@@ -48,6 +49,7 @@ try {
 
 function help(?string $error = null): void
 {
+    $appPath = GetEnvDatas::getAppPath() . 'src' . DIRECTORY_SEPARATOR . 'Bin';
     $template = <<<PHP
     Console usage :
     php ./bin/console.php command value1 value2
@@ -58,7 +60,7 @@ function help(?string $error = null): void
     Available commands :
     PHP;
     echo $template . "\n";
-    $cmds = ConsoleHelper::getCommands( "App\\bin\\", __DIR__);
+    $cmds = ConsoleHelper::getCommands( "App\\Bin\\", $appPath);
     if(0 === count($cmds)) {
             echo "- No commands found";
         } else
