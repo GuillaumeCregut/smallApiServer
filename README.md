@@ -75,8 +75,6 @@ A modern, lightweight PHP MVC framework designed for building RESTful APIs and w
 git clone <repository-url>
 cd smallMVC
 
-# Install dependencies
-composer install
 
 # Copy environment file
 cp .env.sample .env
