@@ -1,6 +1,6 @@
 # FileUpload Documentation
 
-## Overview
+## Overview 
 
 `FileUpload` is a secure file upload handler class that extends PHP's `SplFileInfo` class. It provides comprehensive validation, MIME type detection, security checks, and file movement functionality for handling user-uploaded files.
 
