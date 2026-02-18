@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Kernel\Psr14\Events;
 
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
