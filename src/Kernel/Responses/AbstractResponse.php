@@ -47,6 +47,7 @@ abstract class AbstractResponse implements ResponseInterface
         foreach ($this->headers as $name => $value) {
             header("$name: $value");
         }
+        header("x-powered-by:");
         $this->sendCookies();
         $this->DisplayDebugMode();
         // Send body
