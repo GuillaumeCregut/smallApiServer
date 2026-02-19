@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Bin;
 
 use ReflectionClass;
@@ -26,7 +31,7 @@ class ConsoleHelper
         ];
         $codeColor = $colors[$color] ?? 37;
         $codeFont = $fonts[$font] ?? 0;
-        $newString = "\033[{$codeFont};{$codeColor}m{$text}\033[0m ";
+        $newString = "\033[{$codeFont};{$codeColor}m{$text}\033[0m";
         return $newString;
     }
 
