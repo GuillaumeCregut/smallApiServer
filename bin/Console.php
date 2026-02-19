@@ -30,6 +30,8 @@ $fullname = $space . $class;
 if (! class_exists($fullname)) {
     displayError("Command {$first} does not exists", 0);
 }
+$path = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+GetEnvDatas::getEnvInstance($path);
 
 $args = array_slice($argv, 2);
 try{
