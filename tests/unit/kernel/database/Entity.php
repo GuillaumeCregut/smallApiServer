@@ -7,15 +7,19 @@ class Entity implements EntityInterface
     private ?string $name = null;
     private ?string $firstname = null;
     private ?int $age = null;
-    private int $id=0;
+    private int $id = 0;
 
     public function getId(): int
     {
         return 1;
     }
-
-    public function setId(int $id): self {
-        $this->id= $id;
+    public function getRepository(): ?string
+    {
+        return null;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
         return $this;
     }
     /**

@@ -70,4 +70,9 @@ class Entity2 implements EntityInterface
 
         return $this;
     }
+
+    public function getRepository(): ?string
+    {
+        return null;
+    }
 }

@@ -78,4 +78,9 @@ class EntityToCreate implements EntityInterface
 
         return $this;
     }
+
+    public function getRepository(): ?string
+    {
+        return null;
+    }
 }
