@@ -9,9 +9,7 @@ namespace App\Bin\Database;
 
 use App\Bin\ConsoleHelper;
 use App\Bin\AbstractConsole;
-use App\Kernel\Interfaces\Databases\EntityInterface;
-use App\Kernel\Interfaces\Databases\RepositoryInterface;
-use DateException;
+use App\Bin\ConsoleException;
 
 class Create extends AbstractConsole
 {
@@ -57,47 +55,18 @@ class Create extends AbstractConsole
     {
         $start = ConsoleHelper::makeSpecial('Error :', 'red', 'bold');
         echo "{$start} {$error} \n";
-        if($displayHelp){
+        if ($displayHelp) {
             $this->help(false);
         }
         die();
     }
     private function sql(string $arg): void
     {
-        $entityNS = 'App\\Entities\\';
-        $class = ucfirst($arg);
-        if ('user' === $arg) {
-            $classname = 'App\\Security\\User';
-        } else {
-            $classname = $entityNS . $class;
-        }
-        if (!class_exists($classname)) {
-            $this->error("Entity '{$classname}' does not exists", false);
-        }
+        $creator = new CreateSql();
         try {
-            $entity = new $classname();
-            if (!$entity instanceof EntityInterface) {
-                $this->error("Entity '{$classname}' is not an Entity Class (must implements EntityInterface", false);
-            }
-            /**
-             * @var EntityInterface $entity
-             */
-            $repoName = $entity->getRepository();
-            if(null === $repoName) {
-                $this->error("Entity {$classname} has no repository set, please set it before with NotStored attribute", false);
-            }
-            $repo = new $repoName();
-            /**
-             * @var RepositoryInterface $repo
-             */
-            if (!$repo instanceof RepositoryInterface) {
-                $this->error("Repository '{$repoName}' is not implementing RepositoryInterace", false);
-            }
-            echo "SQL for creating table for entity {$class} \n";
-            echo $repo->createSqlTable();
-        } catch (DateException $e) {
-            echo $e->getMessage();
-            die();
+            $creator->execute($arg);
+        } catch(ConsoleException $e){
+             $this->error($e->getMessage(), false);
         }
     }
 }
