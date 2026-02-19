@@ -45,4 +45,6 @@ interface RepositoryInterface
      */ 
     public function delete(EntityInterface $entity): bool;
 
+     public function createSqlTable(): string;
+
 }
