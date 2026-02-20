@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Bin;
 
 use App\Bin\ConsoleHelper;
@@ -16,8 +21,11 @@ abstract class AbstractConsole implements ConsoleInterface
 
     public function __construct(array $args, int $count)
     {
-        if ($this->minArgs > $count) {
+        if (($this->minArgs > $count) && ($args[0]??'' !=='help')) {
             $this->displayError('Too few arguments', 0);
+        }
+        if($args[0] ==='help') {
+            $this->help(true);
         }
         $this->args = $args;
     }
@@ -37,7 +45,6 @@ abstract class AbstractConsole implements ConsoleInterface
                 echo "- {$cmd}\n";
             }
         }
-
         die();
     }
 
@@ -48,7 +55,7 @@ abstract class AbstractConsole implements ConsoleInterface
         $this->help();
     }
 
-    protected function isCommandValid(string $command): ConsoleInterface | false
+    protected function isCommandValid(string $command, ?bool $remove = true): ConsoleInterface | false
     {
         $first = strtolower($command);
         if ('help' === $first) {
@@ -59,8 +66,11 @@ abstract class AbstractConsole implements ConsoleInterface
         if (! class_exists($fullname)) {
             $this->displayError("Command {$first} does not exists", 0);
         }
-
-        $args = array_slice($this->args, 1);
+        if($remove){
+            $args = array_slice($this->args, 1);
+        } else{
+            $args = $this->args;
+        }
         $count = count($args);
         try {
             $console = new $fullname($args, $count);

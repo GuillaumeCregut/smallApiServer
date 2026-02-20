@@ -12,7 +12,11 @@ class Entity3 implements EntityInterface
     {
         return 1;
     }
-
+    public function getRepository(): ?string
+    {
+        return null;
+    }
+    
     public function setid(int $id): self
     {
         return $this;

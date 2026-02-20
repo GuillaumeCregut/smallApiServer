@@ -20,6 +20,11 @@ class Entity4 implements EntityInterface
         $this->id = $id;
         return $this;
     }
+
+    public function getRepository(): ?string
+    {
+        return null;
+    }
     /**
      * Get the value of name
      */
