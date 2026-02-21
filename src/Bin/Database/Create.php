@@ -26,16 +26,18 @@ class Create extends AbstractConsole
         for help type php ./bin/console database create:help
 
         List of available commands :
+        - create:help - Display this message
         - create:sql entity - Display Create Table for entity (all for all entities)
+        - create:entity entity - Create a new entity whit name Entity and Repository (ex: create:entity product will create Product entity)
 
         TEXT;
         if (($this->minArgs > $count) || ('' === $args[0])) {
-            $this->error('Too few arguments');
-        } {
             if ('help' === $args[0]) {
                 $this->help(false);
             }
+            $this->error('Too few arguments');
         }
+
         $this->args = $args;
     }
 
@@ -47,8 +49,14 @@ class Create extends AbstractConsole
             case 'sql':
                 $this->sql($arg);
                 break;
+            case 'entity':
+                $this->entity($arg);
+                break;
+            case 'help':
+                $this->help(false);
+                break;
             default:
-                $this->error('Command does not exist');
+                $this->error("Command {$cmd} does not exist");
         }
     }
     private function error(string $error, ?bool $displayHelp = true): void
@@ -65,8 +73,17 @@ class Create extends AbstractConsole
         $creator = new CreateSql();
         try {
             $creator->execute($arg);
-        } catch(ConsoleException $e){
-             $this->error($e->getMessage(), false);
+        } catch (ConsoleException $e) {
+            $this->error($e->getMessage(), false);
         }
+    }
+    private function entity(string $arg): void
+    {
+       $creator = new CreateEntity();
+       try {
+            $creator->execute($arg);
+       } catch(ConsoleException $e){
+        $this->error($e->getMessage(), false);
+       }
     }
 }

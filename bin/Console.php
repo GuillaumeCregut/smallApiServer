@@ -32,7 +32,6 @@ if (! class_exists($fullname)) {
 }
 $path = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
 GetEnvDatas::getEnvInstance($path);
-
 $args = array_slice($argv, 2);
 try{
     $console = new $fullname($args, $argc - 2);

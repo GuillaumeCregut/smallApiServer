@@ -28,7 +28,7 @@ class CreateSql
             //do somehing different
             $entities = $this->getAllEntities();
         } else {
-            $entityNS = 'App\\Entities\\';
+            $entityNS = 'App\\Entity\\';
             $class = ucfirst($arg);
             if ('user' === $arg) {
                 $classname = 'App\\Security\\User';
@@ -120,8 +120,8 @@ class CreateSql
 
     private function getAllEntities(): array
     {
-        $namespace = 'App\\Entities\\';
-        $folder = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Entities' . DIRECTORY_SEPARATOR;
+        $namespace = 'App\\Entity\\';
+        $folder = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Entity' . DIRECTORY_SEPARATOR;
         $entities = [];
         $entities['User'] = 'App\\Security\\User';
         $files = glob($folder . "*.php");
