@@ -250,74 +250,9 @@ curl -X POST http://localhost:9000/api/users \
 
 ```
 smallMVC/
-├── bin/                          # Console commands
-│   ├── console.php              # CLI entry point
-│   ├── Console.php              # Main dispatcher
-│   ├── AbstractConsole.php      # Base console class
-│   └── Debug/
-│       └── Route.php            # Debug routes command
-│
-├── Controllers/                  # Controllers
-│   ├── HomeController.php
-│   ├── UserController.php
-│   └── ...
-│
-├── Kernel/                       # Core framework
-│   ├── Kernel.php              # Main engine
-│   ├── Request.php             # HTTP request handler
-│   ├── AbstractController.php   # Controller base class
-│   ├── Config/
-│   │   ├── Router.php          # Route definitions
-│   │   ├── DatabaseConnector.php
-│   │   ├── Events.php          # Event configuration
-│   │   └── ...
-│   ├── Connector/
-│   │   ├── AbstractEntity.php  # Entity base class
-│   │   ├── AbstractRepository.php # Repository base class
-│   │   ├── QueryBuilder.php    # Query building
-│   │   ├── Hydrator.php        # Entity population
-│   │   └── ...
-│   ├── Responses/              # Response types
-│   │   ├── JsonResponse.php
-│   │   ├── ClientErrorResponse.php
-│   │   └── ...
-│   ├── Psr14/                  # Event system
-│   │   ├── Dispatcher/
-│   │   ├── Listener/
-│   │   └── Events/
-│   └── ...
-│
-├── Security/                     # Authentication
-│   ├── User.php                # User entity
-│   ├── UserRepository.php      # User data access
-│   └── UserEntityInterface.php
-│
-├── Entities/                     # Business entities
-│   └── ...
-│
-├── Repository/                   # Data repositories
-│   └── ...
-│
-├── Services/                     # Business logic
-│   ├── Api/
-│   ├── Mailer/
-│   └── ...
-│
-├── public/                       # Web root
-│   ├── index.php               # Entry point
-│   └── .htaccess               # Apache routing
-│
-├── tests/                        # Test suite
-│   ├── bootstrap.php
-│   ├── integration/
-│   │   ├── RequestToResponse/
-│   │   │   └── UserTest.php
-│   │   └── kernel/
-│   │       ├── RequestTest.php
-│   │       └── database/
-│   │           └── Request2EntityTest.php
-│   └── unit/
-│
+├── bin/                         # Console commands
+│   └── console.php              # CLI entry point
+|
 ├── docs/                       # Documentation
 │   ├── console.md              # Console system docs
 │   ├── controller.md           # Controller guide
@@ -328,15 +263,95 @@ smallMVC/
 │   ├── kernel.md               # Kernel documentation
 │   └── ...
 │
-├── logs/                         # Application logs
+├── public/                      # Web root
+│   ├── index.php                # Entry point
+│   └── .htaccess                # Apache routing
+|
+|── src/
+|   ├──Bin/
+│   |   ├── AbstractConsole.php      
+│   |   ├── ConsoleException.php      
+│   |   ├── ConsoleInterface.php  
+│   |   ├── Datababase.php        # Console for DB management 
+│   |   ├── Debug.php             # Console for Debug  
+│   |   ├── Debug/
+│   |   |   └── Route.php         # Debug routes command
+│   |   └── Datababase/        
+│   |       └── Create.php        # Database create commands
+│   |       └── CreateEntity.php  # Entity create command
+│   |       └── CreateSql.php     # Create Entity table command
+│   |
+|   ├── Controllers/                  # Controllers
+│   |   ├── HomeController.php
+│   |   ├── UserController.php
+│   |   └── ...
+│   |
+|   ├── Entity/                     # Business entities
+│   |   └── ...
+|   |
+|   ├── Interfaces/
+│   |   └── ...
+|   |
+|   ├── Kernel/                     # Core framework
+|   │   ├── Kernel.php              # Main engine
+|   │   ├── Request.php             # HTTP request handler
+|   │   ├── AbstractController.php  # Controller base class
+|   │   ├── Config/
+|   │   │   ├── Router.php          # Route definitions
+|   │   │   ├── DatabaseConnector.php
+|   │   │   ├── Events.php          # Event configuration
+|   │   │   └── ...
+|   │   ├── Connector/
+|   │   │   ├── AbstractEntity.php  # Entity base class
+|   │   │   ├── AbstractRepository.php # Repository base class
+|   │   │   ├── QueryBuilder.php    # Query building
+|   │   │   ├── Hydrator.php        # Entity population
+|   │   │   └── ...
+|   │   ├── Responses/              # Response types
+|   │   │   ├── JsonResponse.php
+|   │   │   ├── ClientErrorResponse.php
+|   │   │   └── ...
+|   │   ├── Psr14/                  # Event system
+|   │   │   ├── Dispatcher/
+|   │   │   ├── Listener/
+|   │   │   └── Events/
+|   │   └── ...
+│   |
+|   ├── Repository/                 # Data repositories
+│   |    └── ...
+│   |
+|   ├── Security/                   # Authentication
+|   │   ├── User.php                # User entity
+|   │   ├── UserRepository.php      # User data access
+|   │   └── UserEntityInterface.php
+|   │
+|   |
+|   └── Services/                   # Business logic
+│       ├── Api/
+│       ├── Mailer/
+│       └── ...
+│
+├── tests/                      # Test suite
+│   ├── bootstrap.php
+│   ├── integration/
+│   │   ├── RequestToResponse/
+│   │   │   └── UserTest.php
+│   │   └── kernel/
+│   │       ├── RequestTest.php
+│   │       └── database/
+│   │           └── Request2EntityTest.php
+│   └── unit/
+|       └── ...
+│
+├── logs/                       # Application logs
 │   ├── error
 │   └── warning
 │
 ├── vendor/                       
 │   └── Autoload.php            # Custom autoloader
 │
-├── .env                          # Environment config
-├── .env.sample                   # Example env
+├── .env                        # Environment config
+├── .env.sample                 # Example env
 └── README.md                   # This file
 ```
 
@@ -441,8 +456,8 @@ Comprehensive documentation for all framework components:
 **Step 2: Create Entity**
 
 ```php
-// Entities/Product.php
-namespace App\Entities;
+// Entity/Product.php
+namespace App\Entity;
 
 use App\Kernel\Connector\AbstractEntity;
 
@@ -469,7 +484,7 @@ class Product extends AbstractEntity
 namespace App\Repository;
 
 use App\Kernel\Connector\AbstractRepository;
-use App\Entities\Product;
+use App\Entity\Product;
 
 class ProductRepository extends AbstractRepository
 {
@@ -490,7 +505,7 @@ namespace App\Controllers;
 
 use App\Kernel\AbstractController;
 use App\Kernel\Connector\Hydrator;
-use App\Entities\Product;
+use App\Entity\Product;
 use App\Repository\ProductRepository;
 
 class ProductController extends AbstractController
