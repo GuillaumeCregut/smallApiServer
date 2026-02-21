@@ -28,6 +28,7 @@ class Create extends AbstractConsole
         List of available commands :
         - create:help - Display this message
         - create:sql entity - Display Create Table for entity (all for all entities)
+        - create:entity entity - Create a new entity whit name Entity and Repository (ex: create:entity product will create Product entity)
 
         TEXT;
         if (($this->minArgs > $count) || ('' === $args[0])) {
@@ -47,6 +48,9 @@ class Create extends AbstractConsole
         switch ($cmd) {
             case 'sql':
                 $this->sql($arg);
+                break;
+            case 'entity':
+                $this->entity($arg);
                 break;
             case 'help':
                 $this->help(false);
@@ -72,5 +76,14 @@ class Create extends AbstractConsole
         } catch (ConsoleException $e) {
             $this->error($e->getMessage(), false);
         }
+    }
+    private function entity(string $arg): void
+    {
+       $creator = new CreateEntity();
+       try {
+            $creator->execute($arg);
+       } catch(ConsoleException $e){
+        $this->error($e->getMessage(), false);
+       }
     }
 }
