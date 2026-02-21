@@ -69,7 +69,7 @@ class ConsoleHelper
             mkdir($path);
         }
         if (file_exists($fullPath)) {
-            $name = basename($filename, '.sql');
+            $name = basename($filename);
             rename($fullPath, $path . DIRECTORY_SEPARATOR . $name . '.old');
         }
         //put content in file
