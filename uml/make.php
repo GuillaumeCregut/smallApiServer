@@ -34,7 +34,6 @@ function saveTofile(array $data, ?bool $explode = false)
 
 function browse(): array
 {
-    //Scan le répertoire et renvi une liste de classes
     $path = GetEnvDatas::getAppPath() . "src" . DIRECTORY_SEPARATOR;
     $fileArray = [];
     $iterator = new RecursiveIteratorIterator(
@@ -88,9 +87,7 @@ function getClassDetails(string $classname): array
         'protectedFunction' => [],
     ];
     $reflection = new ReflectionClass($classname);
-    // Propriétés
     foreach ($reflection->getProperties() as $property) {
-        $type = $property->getType();
         $info = [
             'name' => $property->getName(),
             'type' => resolveType($property->getType()),
@@ -107,11 +104,8 @@ function getClassDetails(string $classname): array
 
     // Méthodes
     foreach ($reflection->getMethods() as $method) {
-        $returnType = $method->getReturnType();
         $params = [];
-
         foreach ($method->getParameters() as $param) {
-            $paramType = $param->getType();
             $params[] = [
                 'name' => $param->getName(),
                 'type' => resolveType($param->getType()),
