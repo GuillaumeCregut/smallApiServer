@@ -11,3 +11,6 @@ vendor-stubs/
 /tests/AuthManagerMiddlewareTest.php
 ControllerTest.php
 /migrations
+uml/abstract/
+uml/implement/
+uml/docs/
