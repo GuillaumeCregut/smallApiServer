@@ -61,9 +61,11 @@ abstract class AbstractRepository implements RepositoryInterface
 
     public function findBy(array $fields): array
     {
+        $key= array_key_first($fields);
+        $query = $this->qb->where($key, '=', $fields[$key]);
+        $fields = array_slice($fields, 1);
         foreach ($fields as $key => $value) {
-
-            $query = $this->qb->where($key, '=', $value);
+        $query = $this->qb->andWhere($key, '=', $value);
         }
         $query = $this->qb->toSql();
         $params = $this->qb->getParams();
@@ -80,9 +82,8 @@ abstract class AbstractRepository implements RepositoryInterface
             $entity = $this->makeEntity($values);
             $returnArray[] = $entity;
         }
-        return $returnArray;
         $this->qb->reset();
-        return [];
+        return $returnArray;
     }
 
     public function findAll(): array
