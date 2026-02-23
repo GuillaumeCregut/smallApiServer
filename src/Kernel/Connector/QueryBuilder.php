@@ -248,15 +248,13 @@ class QueryBuilder
             $parts[] = $cond;
         }
 
-        // Déterminer les indices à grouper
-        // On cherche les blocs OR consécutifs et leurs voisins AND
+
         $n = count($parts);
         $groupStart = -1;
         $groupEnd = -1;
 
         for ($i = 1; $i < $n; $i++) {
             if ($parts[$i][0] === 'OR') {
-                // Trouver le début du bloc OR (condition précédente)
                 if ($groupStart === -1) {
                     $groupStart = $i - 1;
                 }
@@ -264,7 +262,6 @@ class QueryBuilder
             }
         }
 
-        // Construire la string en respectant l'ordre
         $result = '';
         for ($i = 0; $i < $n; $i++) {
             $op  = $parts[$i][0];
