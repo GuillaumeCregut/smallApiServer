@@ -11,13 +11,15 @@ class QueryBuilder
 {
     private string $table;
     private $columns = [];
-    private array $wheres = [];
+    private string $wheres = '';
+    private array $andOrWheres = [];
     private array $params = [];
     private array $insertParam = [];
     private ?string $orderBy = null;
     private ?int $limit = null;
     private string $verb = 'SELECT';
     private array $on = [];
+    private int $whereOrder = 0;
 
     public function __construct(string $table)
     {
@@ -120,7 +122,7 @@ class QueryBuilder
     public function where(string $column, string $operator, mixed $value): self
     {
         $column = $this->convertPropertyName2Fieldname($column);
-        $this->wheres[] = "$column $operator ?";
+        $this->wheres = "$column $operator ?";
         $this->insertParam($value);
         return $this;
     }
@@ -129,8 +131,31 @@ class QueryBuilder
     {
         $column = $this->convertPropertyName2Fieldname($column);
         $placeholders = implode(',', array_fill(0, count($values), '?'));
-        $this->wheres[] = "$column IN ($placeholders)";
+        $this->wheres = "$column IN ($placeholders)";
         $this->params = array_merge($this->params, $values);
+        return $this;
+    }
+
+    public function andWhere(string $column, string $operator, mixed $value): self
+    {
+        if ('' === $this->wheres) {
+            throw new DatabaseException("Can't use andWhere without where first");
+        }
+        $this->andOrWheres[$this->whereOrder] = ['AND', "$column $operator ?"];
+        $this->whereOrder++;
+        $this->insertParam($value);
+        return $this;
+    }
+
+
+    public function orWhere(string $column, string $operator, mixed $value): self
+    {
+        if ('' === $this->wheres) {
+            throw new DatabaseException("Can't use andWhere without where first");
+        }
+        $this->andOrWheres[$this->whereOrder] = ['OR', "$column $operator ?"];
+        $this->whereOrder++;
+        $this->insertParam($value);
         return $this;
     }
 
@@ -160,8 +185,8 @@ class QueryBuilder
                 } else {
                     $sql = "SELECT " . implode(', ', $this->columns) . " FROM {$this->table}";
                 }
-                if (!empty($this->wheres)) {
-                    $sql .= " WHERE " . implode(' AND ', $this->wheres);
+                if ('' !== $this->wheres) {
+                    $sql .= $this->getWheres();
                 }
                 if ($this->orderBy) {
                     $sql .= " ORDER BY {$this->orderBy}";
@@ -182,14 +207,14 @@ class QueryBuilder
                 }
                 //remove 2 last caracters
                 $sql  = substr($sql, 0, -2);
-                if (!empty($this->wheres)) {
-                    $sql .= " WHERE " . implode(' AND ', $this->wheres);
+                if ('' !== $this->wheres) {
+                    $sql .= $this->getWheres();
                 }
                 break;
             case 'DELETE':
-                $sql = "DELETE FROM {$this->table} ";
-                if (!empty($this->wheres)) {
-                    $sql .= "WHERE " . implode(' AND ', $this->wheres);
+                $sql = "DELETE FROM {$this->table}";
+                if ('' !== $this->wheres) {
+                    $sql .= $this->getWheres();
                 }
         }
         return $sql;
@@ -200,20 +225,69 @@ class QueryBuilder
         return $this->params;
     }
 
-    private function convertPropertyName2Fieldname(string $name): string
-    {
-        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
-    }
-
     public function reset(): void
     {
-        $this->wheres = [];
+        $this->wheres = '';
         $this->params = [];
         $this->columns = [];
         $this->on = [];
         $this->insertParam = [];
         $this->orderBy = null;
         $this->limit = null;
+    }
+
+    private function getWheres(): string
+    {
+        if (empty($this->andOrWheres)) {
+            return ' WHERE ' . $this->wheres;
+        }
+
+        $conditions = array_values($this->andOrWheres);
+        $parts = [['BASE', $this->wheres]];
+        foreach ($conditions as $cond) {
+            $parts[] = $cond;
+        }
+
+        // Déterminer les indices à grouper
+        // On cherche les blocs OR consécutifs et leurs voisins AND
+        $n = count($parts);
+        $groupStart = -1;
+        $groupEnd = -1;
+
+        for ($i = 1; $i < $n; $i++) {
+            if ($parts[$i][0] === 'OR') {
+                // Trouver le début du bloc OR (condition précédente)
+                if ($groupStart === -1) {
+                    $groupStart = $i - 1;
+                }
+                $groupEnd = $i;
+            }
+        }
+
+        // Construire la string en respectant l'ordre
+        $result = '';
+        for ($i = 0; $i < $n; $i++) {
+            $op  = $parts[$i][0];
+            $con = $parts[$i][1];
+
+            if ($i === $groupStart) {
+                $result .= ($i === 0 ? '' : ' ' . $op . ' ') . '(' . $con;
+            } elseif ($i === $groupEnd) {
+                $result .= ' OR ' . $con . ')';
+            } else {
+                if ($i === 0) {
+                    $result .= $con;
+                } else {
+                    $result .= ' ' . $op . ' ' . $con;
+                }
+            }
+        }
+        return ' WHERE ' . $result;
+    }
+
+    private function convertPropertyName2Fieldname(string $name): string
+    {
+        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $name));
     }
 
     private function makeJoin(string $joinVerb, string $table, array $columns, array $join): string
