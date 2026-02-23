@@ -98,20 +98,124 @@ SELECT user_name AS name, created_at AS created FROM myTable
 
 #### WHERE Clauses
 
+Simple WHERE clause:
+
+```php
+$qb->where('status', '=', 'active');
+```
+
+```sql
+WHERE status = ?
+```
+
+Parameters: `['active']`
+
+---
+
+#### AND WHERE Clauses
+
+Chain multiple AND conditions using `andWhere()`:
+
 ```php
 $qb->where('status', '=', 'active')
-   ->where('age', '>', 18);
+   ->andWhere('age', '>', 18);
 ```
 
 ```sql
 WHERE status = ? AND age > ?
 ```
 
-Parameters:
+Parameters: `['active', 18]`
+
+Multiple AND conditions:
 
 ```php
-['active', 18]
+$qb->where('status', '=', 'active')
+   ->andWhere('role', '=', 'admin')
+   ->andWhere('verified', '=', true);
 ```
+
+```sql
+WHERE status = ? AND role = ? AND verified = ?
+```
+
+---
+
+#### OR WHERE Clauses
+
+Chain OR conditions using `orWhere()`. Note: `orWhere()` requires a `where()` clause first and automatically adds parentheses:
+
+```php
+$qb->where('status', '=', 'active')
+   ->orWhere('status', '=', 'pending');
+```
+
+```sql
+WHERE (status = ? OR status = ?)
+```
+
+Parameters: `['active', 'pending']`
+
+Multiple OR conditions:
+
+```php
+$qb->where('role', '=', 'admin')
+   ->orWhere('role', '=', 'moderator')
+   ->orWhere('role', '=', 'superadmin');
+```
+
+```sql
+WHERE (role = ? OR role = ? OR role = ?)
+```
+
+---
+
+#### Mixed AND / OR Conditions
+
+Combine AND and OR conditions. The QueryBuilder intelligently groups OR conditions:
+
+**AND then OR** (groups OR in parentheses):
+
+```php
+$qb->where('status', '=', 'active')
+   ->andWhere('name', '=', 'John')
+   ->orWhere('name', '=', 'Jane');
+```
+
+```sql
+WHERE status = ? AND (name = ? OR name = ?)
+```
+
+Parameters: `['active', 'John', 'Jane']`
+
+**OR then AND** (groups OR in parentheses):
+
+```php
+$qb->where('status', '=', 'active')
+   ->orWhere('status', '=', 'pending')
+   ->andWhere('verified', '=', true);
+```
+
+```sql
+WHERE (status = ? OR status = ?) AND verified = ?
+```
+
+Parameters: `['active', 'pending', true]`
+
+**Complex mixed conditions**:
+
+```php
+$qb->where('status', '=', 'active')
+   ->orWhere('role', '=', 'admin')
+   ->andWhere('name', '=', 'John')
+   ->orWhere('age', '=', 25);
+```
+
+```sql
+WHERE (status = ? OR role = ? AND name = ? OR age = ?)
+```
+
+Parameters: `['active', 'admin', 'John', 25]`
 
 ---
 
@@ -218,10 +322,68 @@ $params = $qb->getParams();
 - No query execution
 - No GROUP BY / HAVING
 - No subqueries
-- AND-only WHERE conditions
+- `orWhere()` cannot be called without a preceding `where()` clause
 
 ---
 
-## Summary
+## Error Handling
+
+### orWhere() Without where()
+
+Calling `orWhere()` without first calling `where()` throws a `DatabaseException`:
+
+```php
+$qb = new QueryBuilder('myTable');
+$qb->orWhere('status', '=', 'active'); // ❌ Throws DatabaseException
+```
+
+**Error Message**: `"Can't use andWhere without where first"`
+
+**Solution**: Always call `where()` first:
+
+```php
+$qb->where('status', '=', 'active')
+   ->orWhere('role', '=', 'admin'); // ✓ Correct
+```
+
+### Invalid WHERE Grouping
+
+The QueryBuilder automatically handles proper parentheses grouping. OR conditions are grouped together when they appear consecutively or when surrounded by AND clauses. No manual grouping is required.
+
+---
+
+## OR Clause Grouping Logic
+
+OR conditions are automatically wrapped in parentheses for proper SQL precedence:
+
+**Single OR** → Parentheses around the OR block:
+```php
+where() -> orWhere() -> orWhere()
+// (cond1 OR cond2 OR cond3)
+```
+
+**OR surrounded by AND** → Groups only the OR conditions:
+```php
+where() -> andWhere() -> orWhere() -> andWhere()
+// cond1 AND (cond2 OR cond3) AND cond4
+```
+
+This ensures correct SQL precedence without requiring manual parentheses.
+
+---
 
 `QueryBuilder` provides a concise and predictable way to generate parameterized SQL queries in PHP without the overhead of a full ORM.
+
+**Key Features:**
+- Fluent, chainable API
+- Prepared statement parameters (?)
+- Automatic camelCase to snake_case conversion
+- Support for SELECT, INSERT, UPDATE, DELETE
+- JOIN operations (INNER, LEFT, RIGHT)
+- Complex WHERE conditions with AND/OR logic
+- Automatic intelligent parenthesization for OR groups
+
+**Recent Enhancements (v1.1.0):**
+- `andWhere()` - Explicitly chain AND conditions
+- `orWhere()` - Chain OR conditions with automatic smart grouping
+- Intelligent OR grouping to maintain SQL precedence without manual parentheses

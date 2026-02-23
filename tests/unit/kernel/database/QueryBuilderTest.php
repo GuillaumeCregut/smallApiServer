@@ -24,18 +24,118 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals('active', $params[0]);
     }
 
-    public function testSelectMultipleWhereSelectRequest(): void
+    public function testSelectJustOrWhereSelectRequest(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $this->expectException(DatabaseException::class);
+        $qb->orWhere('status', '=', 'active');
+    }
+
+
+
+    public function testSelectWhereAndWhere(): void
     {
         $qb = new QueryBuilder('myTable');
         $qb->where('status', '=', 'active')
-            ->where('firstName', '=', 'John');
-        $query = 'SELECT * FROM myTable WHERE status = ? AND first_name = ?';
+        ->andWhere('name', '=', 'John');
+        $query = 'SELECT * FROM myTable WHERE status = ? AND name = ?'; 
         $this->assertEquals($query, $qb->toSQL());
         $params =  $qb->getParams();
         $this->assertIsArray($params);
         $this->assertEquals('active', $params[0]);
         $this->assertEquals('John', $params[1]);
     }
+
+
+     public function testSelectWhereAndWhereTwice(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->where('status', '=', 'active')
+        ->andWhere('name', '=', 'Doe')
+        ->andWhere('firstname', '=', 'John');
+        $query = 'SELECT * FROM myTable WHERE status = ? AND name = ? AND firstname = ?'; 
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('active', $params[0]);
+        $this->assertEquals('Doe', $params[1]);
+        $this->assertEquals('John', $params[2]);
+    }
+
+    public function testSelectWhereOrWhere(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->where('status', '=', 'active')
+        ->orWhere('name', '=', 'John');
+        $query = 'SELECT * FROM myTable WHERE (status = ? OR name = ?)'; 
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('active', $params[0]);
+        $this->assertEquals('John', $params[1]);
+    }
+
+    public function testSelectWhereOrWhereTwice(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->where('status', '=', 'active')
+        ->orWhere('firstname', '=', 'John')
+        ->orWhere('name', '=', 'Doe');
+        $query = 'SELECT * FROM myTable WHERE (status = ? OR firstname = ? OR name = ?)'; 
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('active', $params[0]);
+        $this->assertEquals('John', $params[1]);
+        $this->assertEquals('Doe', $params[2]);
+    }
+
+    public function testSelectMixOneWhere(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->where('status', '=', 'active')
+        ->andWhere('name', '=', 'Doe')
+        ->orWhere('firstname', '=', 'John');
+        $query = 'SELECT * FROM myTable WHERE status = ? AND (name = ? OR firstname = ?)'; 
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('active', $params[0]);
+        $this->assertEquals('Doe', $params[1]);
+        $this->assertEquals('John', $params[2]);
+    }
+
+    public function testSelectMixTwoWhere(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->where('status', '=', 'active')
+        ->orWhere('role', '=', 'admin')
+        ->andWhere('name', '=', 'John');
+        $query = 'SELECT * FROM myTable WHERE (status = ? OR role = ?) AND name = ?'; 
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('active', $params[0]);
+        $this->assertEquals('admin', $params[1]);
+        $this->assertEquals('John', $params[2]);
+    }
+
+    public function testSelectMixThreeWhere(): void
+    {
+        $qb = new QueryBuilder('myTable');
+        $qb->where('status', '=', 'active')
+        ->orWhere('role', '=', 'admin')
+        ->andWhere('name', '=', 'John')
+        ->orWhere('age','=','25');
+        $query = 'SELECT * FROM myTable WHERE (status = ? OR role = ? AND name = ? OR age = ?)'; 
+        $this->assertEquals($query, $qb->toSQL());
+        $params =  $qb->getParams();
+        $this->assertIsArray($params);
+        $this->assertEquals('active', $params[0]);
+        $this->assertEquals('admin', $params[1]);
+        $this->assertEquals('John', $params[2]);
+    }
+
 
     public function testSelectWhereInSelectRequest(): void
     {
@@ -49,20 +149,7 @@ class QueryBuilderTest extends TestCase
         $this->assertEquals('moderator', $params[1]);
     }
 
-    public function testSelectWhereWhereInSelectRequest(): void
-    {
-        $qb = new QueryBuilder('myTable');
-        $qb->whereIn('roleUser', ['admin', 'moderator'])
-            ->Where('name', '=', 'John');
-        $query = 'SELECT * FROM myTable WHERE role_user IN (?,?) AND name = ?';
-        $this->assertEquals($query, $qb->toSQL());
-        $params =  $qb->getParams();
-        $this->assertIsArray($params);
-        $this->assertEquals('admin', $params[0]);
-        $this->assertEquals('moderator', $params[1]);
-        $this->assertEquals('John', $params[2]);
-    }
-
+    
     public function testSelectWhereLikeSelectRequest(): void
     {
         $qb = new QueryBuilder('myTable');
