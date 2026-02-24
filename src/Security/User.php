@@ -9,7 +9,7 @@ use App\Kernel\Connector\Attributes\Nullable;
 class User extends AbstractEntity implements UserEntityInterface
 {
     #[NotStored]
-    protected ?string $repo = UserRepository::class;
+    protected static ?string $repo = UserRepository::class;
     private array $roles = [];
     private ?string $name = null;
     private ?string $firstname = null;

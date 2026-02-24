@@ -14,7 +14,7 @@ abstract class AbstractEntity implements EntityInterface
 {
     protected ?int $id = null;
     #[NotStored]
-    protected ?string $repo = null;
+    protected static ?string $repo = null;
     public function __construct()
     {
     }
@@ -32,8 +32,8 @@ abstract class AbstractEntity implements EntityInterface
         return $this;
     }
 
-    public function getRepository(): ?string
+    public static function getRepository(): ?string
     {
-        return $this->repo;
+        return static::$repo;
     }
 }
