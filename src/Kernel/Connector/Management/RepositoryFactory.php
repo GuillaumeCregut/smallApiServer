@@ -1,11 +1,15 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Kernel\Connector\Management;
 
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
-use App\Security\UserRepository;
 
 class RepositoryFactory
 {
@@ -14,7 +18,6 @@ class RepositoryFactory
         if(!is_subclass_of($entityClass,EntityInterface::class)) {
             throw new DatabaseException('Entity must implements EntityInterface');
         }
-        //$class = new $entityClass;
         $repo = $entityClass::getRepository();
         if(null === $repo) {
             throw new DatabaseException('Entity must have valid Repository');
