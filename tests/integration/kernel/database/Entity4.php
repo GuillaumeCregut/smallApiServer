@@ -21,7 +21,7 @@ class Entity4 implements EntityInterface
         return $this;
     }
 
-    public function getRepository(): ?string
+    public static function getRepository(): ?string
     {
         return null;
     }

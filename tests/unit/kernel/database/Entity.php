@@ -13,7 +13,7 @@ class Entity implements EntityInterface
     {
         return 1;
     }
-    public function getRepository(): ?string
+    public static function getRepository(): ?string
     {
         return null;
     }

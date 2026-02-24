@@ -170,7 +170,7 @@ class CreateEntity
         $repoName = "{$name}Repository";
         $entityName = "{$name}Entity";
         $properties = "    #[NotStored]\n";
-        $properties .= "    protected ?string \$repo = {$repoName}::class;\n";
+        $properties .= "    protected static ?string \$repo = {$repoName}::class;\n";
         $gettersSetters = "";
         $uses['repo'] = "use App\\Repository\\{$repoName};\n";
         $uses['stored'] = "use App\\Kernel\\Connector\\Attributes\\NotStored;\n";
