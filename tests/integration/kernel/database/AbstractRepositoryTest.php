@@ -6,7 +6,7 @@ use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\AbstractRepository;
 
 use App\Kernel\Connector\ConnectorDispatcher;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 
 include 'EntityToCreate.php';

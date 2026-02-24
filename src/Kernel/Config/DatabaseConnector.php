@@ -10,7 +10,7 @@ namespace App\Kernel\Config;
 
 use App\Kernel\Connector\MySQLConnector;
 use App\Kernel\GetEnvDatas;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 class DatabaseConnector
 {

@@ -2,7 +2,7 @@
 
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
-use App\Kernel\Interfaces\Databases\EntityInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 class EntityToCreate implements EntityInterface
 {

@@ -11,7 +11,7 @@ use App\Kernel\Exceptions\KernelException;
 use PDO;
 use Exception;
 use PDOException;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\DatabaseException;
 
 class MySQLConnector implements ConnectorInterface

@@ -1,6 +1,6 @@
 <?php
 
-use App\Kernel\Interfaces\Databases\EntityInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 class Entity3 implements EntityInterface
 {

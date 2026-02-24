@@ -8,7 +8,7 @@
 namespace App\Kernel\Connector;
 
 use App\Kernel\Connector\Attributes\NotStored;
-use App\Kernel\Interfaces\Databases\EntityInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 abstract class AbstractEntity implements EntityInterface
 {

@@ -14,7 +14,7 @@ use App\Kernel\GetEnvDatas;
 use App\Kernel\Security\JwtToken;
 use App\Security\UserRepositoryAuth;
 use App\Kernel\Interfaces\AuthenticationInterface;
-use App\Kernel\Interfaces\Databases\RepositoryInterface;
+use App\Kernel\Connector\Interfaces\RepositoryInterface;
 
 class AuthBearerMiddleware implements AuthenticationInterface
 {

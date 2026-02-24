@@ -13,9 +13,9 @@ use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\Hydrator;
 use App\Kernel\Connector\QueryBuilder;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
-use App\Kernel\Interfaces\Databases\EntityInterface;
-use App\Kernel\Interfaces\Databases\RepositoryInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use ReflectionClass;
 
 abstract class AbstractRepository implements RepositoryInterface

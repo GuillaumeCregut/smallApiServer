@@ -8,7 +8,7 @@ use App\Kernel\Security\JwtToken;
 use App\Security\UserRepositoryAuth;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\ConnectorDispatcher;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Middleware\Security\AuthBearerMiddleware;
 
 class AuthBearerMiddlewareTest extends TestCase
