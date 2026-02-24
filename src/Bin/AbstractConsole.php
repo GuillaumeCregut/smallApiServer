@@ -24,7 +24,7 @@ abstract class AbstractConsole implements ConsoleInterface
         if (($this->minArgs > $count) && ($args[0]??'' !=='help')) {
             $this->displayError('Too few arguments', 0);
         }
-        if($args[0] ==='help') {
+        if(isset($args[0]) &&($args[0] ==='help')) {
             $this->help(true);
         }
         $this->args = $args;
