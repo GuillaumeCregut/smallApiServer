@@ -7,10 +7,13 @@
 
 namespace App\Kernel\Connector;
 
+use App\Kernel\Connector\Attributes\ManyToOne;
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
+use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\DatabaseException;
+use App\Kernel\Connector\Datas\LazyBag;
 use App\Kernel\Connector\Hydrator;
 use App\Kernel\Connector\QueryBuilder;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
@@ -61,11 +64,11 @@ abstract class AbstractRepository implements RepositoryInterface
 
     public function findBy(array $fields): array
     {
-        $key= array_key_first($fields);
+        $key = array_key_first($fields);
         $query = $this->qb->where($key, '=', $fields[$key]);
         $fields = array_slice($fields, 1);
         foreach ($fields as $key => $value) {
-        $query = $this->qb->andWhere($key, '=', $value);
+            $query = $this->qb->andWhere($key, '=', $value);
         }
         $query = $this->qb->toSql();
         $params = $this->qb->getParams();
@@ -244,7 +247,26 @@ abstract class AbstractRepository implements RepositoryInterface
             $newValue = $this->checkIncomingValue($key, $value);
             $newRow[$key] = $newValue;
         }
-        return Hydrator::hydrate(new $this->entity(), $newRow);
+        $entity = Hydrator::hydrate(new $this->entity(), $newRow);
+        $relations = $this->entityProperties['unStored'];
+        foreach ($relations as $propertyName => $config) {
+            if ('relation' !== $config['type']) {
+                continue;
+            }
+            $relation = $config['relation'];
+            /**@var OneToMany $relation */
+            $targetEntity = $relation->targetEntity;
+            /**@var EntityInterface $entity */
+            $targetRepoName = $targetEntity::getRepository();
+            $targetRepo = new $targetRepoName();
+            $items = $targetRepo->findBy([
+                $relation->mappedBy . '_id' => $entity->getId()
+            ]);
+            $bag = new LazyBag($items);
+            $setter = 'set' . ucfirst($propertyName);
+            $entity->$setter($bag);
+        }
+        return $entity;
     }
 
     protected function  checkIncomingValue(string $name, mixed $value): mixed
@@ -283,6 +305,8 @@ abstract class AbstractRepository implements RepositoryInterface
             foreach ($listProperties as $property) {
                 $attribute = $property->getAttributes(NotStored::class);
                 $nullable = $property->getAttributes(Nullable::class);
+                $oneToMany = $property->getAttributes(OneToMany::class);
+                $manyToOne = $property->getAttributes(ManyToOne::class);
                 $typeProperty = $property->getType()->getName();
                 $nameProperty = $property->getName();
                 if (null !== $nullable && count($nullable) > 0) {
@@ -294,14 +318,23 @@ abstract class AbstractRepository implements RepositoryInterface
                     'type' => $typeProperty,
                     'nullable' => $nullable
                 ];
-                if (null !== $attribute && count($attribute) > 0) {
+
+                if ((null !== $attribute && count($attribute) > 0) || (null !== $oneToMany && count($oneToMany) > 0)) {
                     //Unstored value
+                    if (!empty($oneToMany)) {
+                        $arrayProperty['relation'] = $oneToMany[0]->newInstance();
+                        $arrayProperty['type'] = 'relation';
+                    }
                     $unStored[$nameProperty] = $arrayProperty;
                 } else {
                     //Stored value
+                    if ((null !== $manyToOne) && (!empty($manyToOne))) {
+                        $arrayProperty['relation'] = $manyToOne[0]->newInstance();
+                    }
                     $stored[$nameProperty] = $arrayProperty;
                 }
             }
+
             $stored = $this->ensureIdFirst($stored);
             $this->entityProperties = [
                 'stored' => $stored,
@@ -352,7 +385,7 @@ abstract class AbstractRepository implements RepositoryInterface
             'DateTime' => 'DATETIME',
             'float' => 'FLOAT',
             'bool' => 'BOOLEAN',
-            'array' => 'JSON'
+            'array' => 'JSON',
         ];
         if (array_key_exists($type, $types)) {
             return $types[$type];
