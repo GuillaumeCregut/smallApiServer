@@ -26,6 +26,7 @@ use ReflectionClass;
 abstract class AbstractRepository implements RepositoryInterface
 {
     public string $sql = ''; //This is intented for tests.
+    public array $params = []; //This is intented for tests.
     protected ConnectorInterface $connector;
     protected ?string $entity = null;
     protected ?string $entityTableName = null;
@@ -199,6 +200,12 @@ abstract class AbstractRepository implements RepositoryInterface
             ->toSql();
         $params = $this->qb->getParams();
         $this->sql = $query;
+        foreach ($params as $key => $param) {
+            if ($param instanceof EntityInterface) {
+                $params[$key] = $param->getId();
+            }
+        }
+        $this->params = $params;
         $result = $this->sendQuery(false, $query, $params);
         if (!$result) {
             return null;
@@ -219,6 +226,12 @@ abstract class AbstractRepository implements RepositoryInterface
             ->where('id', '=', $id)
             ->toSql();
         $params = $this->qb->getParams();
+        foreach ($params as $key => $param) {
+            if ($param instanceof EntityInterface) {
+                $params[$key] = $param->getId();
+            }
+        }
+        $this->params = $params;
         $this->sql = $query;
         $result = $this->sendQuery(false, $query, $params);
         $this->qb->reset();

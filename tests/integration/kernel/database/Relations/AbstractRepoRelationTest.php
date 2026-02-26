@@ -116,6 +116,12 @@ class AbstractRepoRelationTest extends TestCase
         $query = 'INSERT INTO entity_two_relations (user_id, title, content) VALUES (?, ?, ?)';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(20, $result->getId());
+        $params = [
+            0 => 15,
+            1 => 'MyTitle',
+            2 => 'John'
+        ];
+        $this->assertEquals($params, $repository->params);
     }
 
     public function testUpdateEntity(): void
@@ -136,5 +142,12 @@ class AbstractRepoRelationTest extends TestCase
         $query = 'UPDATE entity_two_relations SET user_id = ?, title = ?, content = ? WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(10, $result->getId());
+         $params = [
+            0 => 15,
+            1 => 'MyTitle',
+            2 => 'John',
+            3 => 10
+        ];
+        $this->assertEquals($params, $repository->params);
     }
 }
