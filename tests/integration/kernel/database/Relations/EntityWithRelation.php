@@ -11,7 +11,7 @@ class EntityWithRelation extends AbstractEntity
     #[NotStored]
     protected static ?string $repo = RepoWithRelation::class;
 
-    #[OneToMany(targetEntity: EntityTwoRelation::class, mappedBy: 'userId')]
+    #[OneToMany(targetEntity: EntityTwoRelation::class, mappedBy: 'user')]
     private ?LazyBag $posts = null;
     private ?string $name = null;
     private ?string $firstName = null;

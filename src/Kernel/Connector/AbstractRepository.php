@@ -19,6 +19,8 @@ use App\Kernel\Connector\QueryBuilder;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
+use Error;
+use Exception;
 use ReflectionClass;
 
 abstract class AbstractRepository implements RepositoryInterface
@@ -231,9 +233,29 @@ abstract class AbstractRepository implements RepositoryInterface
         $storedValues = $this->entityProperties['stored'];
         $returnArray = [];
         foreach ($storedValues as $column => $type) {
-            $getFunction = 'get' . ucfirst($column);
+            $columnName = $column;
+            if (isset($type['relation'])) {
+                if (str_ends_with($column, 'Id')) {
+                    $columnName = substr($column, 0, -2);
+                } else {
+                    throw new DatabaseException("Error finding column name {$column} in {$this->entityName}");
+                }
+            }
+            $getFunction = 'get' . ucfirst($columnName);
             $value = $entity->$getFunction();
             $returnArray[$column] = $value;
+        }
+        return $returnArray;
+    }
+
+    protected function getRelationInDb(): array
+    {
+        $properties = $this->entityProperties['stored'];
+        $returnArray = [];
+        foreach ($properties as $key => $property) {
+            if (isset($property['relation'])) {
+                $returnArray[$key] = $property['relation'];
+            }
         }
         return $returnArray;
     }
@@ -248,6 +270,41 @@ abstract class AbstractRepository implements RepositoryInterface
             $newRow[$key] = $newValue;
         }
         $entity = Hydrator::hydrate(new $this->entity(), $newRow);
+        //Getting Stored relation
+        $relations = $this->getRelationInDb();
+        try {
+            foreach ($relations as $name => $params) {
+                //récupère la valeur dans newRow
+                if (!isset($newRow[$name])) {
+                    throw new DatabaseException("Error finding in {$this->entityName} relation called {$name}");
+                }
+                $idRelation = $newRow[$name];
+                //récupère le targetEntity
+                $targetEntity = $params->targetEntity;
+                //enleve le id
+                $newName = substr($name, 0, -2);
+                if (!str_ends_with($name, 'Id')) {
+                    throw new DatabaseException("Error in {$this->entityName} finding name for {$newName}");
+                }
+                //retourne un objet initialisé
+                $entityRepo = $targetEntity::getRepository();
+                $newRepoRelation = new $entityRepo();
+                $newEntityRelation = $newRepoRelation->find($idRelation);
+                //Set value in entity
+                $setter = 'set' . ucfirst($newName);
+                if (!method_exists($entity, $setter)) {
+                    throw new DatabaseException("No setter found for {$newName} in {$this->entityName}");
+                }
+                $entity->$setter($newEntityRelation);
+            }
+        } catch (Exception $e) {
+            throw new DatabaseException($e->getMessage());
+        } catch (Error $e) {
+            throw new DatabaseException($e->getMessage());
+        }
+
+
+        //Getting relations not stored
         $relations = $this->entityProperties['unStored'];
         foreach ($relations as $propertyName => $config) {
             if ('relation' !== $config['type']) {
@@ -258,11 +315,13 @@ abstract class AbstractRepository implements RepositoryInterface
             $targetEntity = $relation->targetEntity;
             /**@var EntityInterface $entity */
             $targetRepoName = $targetEntity::getRepository();
-            $targetRepo = new $targetRepoName();
-            $items = $targetRepo->findBy([
-                $relation->mappedBy . '_id' => $entity->getId()
-            ]);
-            $bag = new LazyBag($items);
+            $id = $entity->getid();
+            $bag = new LazyBag(function () use ($id, $targetRepoName, $relation): array {
+                $targetRepo = new $targetRepoName();
+                return $targetRepo->findBy([
+                    $relation->mappedBy . '_id' => $id
+                ]);
+            });
             $setter = 'set' . ucfirst($propertyName);
             $entity->$setter($bag);
         }
@@ -330,6 +389,8 @@ abstract class AbstractRepository implements RepositoryInterface
                     //Stored value
                     if ((null !== $manyToOne) && (!empty($manyToOne))) {
                         $arrayProperty['relation'] = $manyToOne[0]->newInstance();
+                        $arrayProperty['type'] = 'int';
+                        $nameProperty = $nameProperty . 'Id';
                     }
                     $stored[$nameProperty] = $arrayProperty;
                 }
@@ -390,6 +451,6 @@ abstract class AbstractRepository implements RepositoryInterface
         if (array_key_exists($type, $types)) {
             return $types[$type];
         }
-        throw new DatabaseException('Type can not be converted into SQL type');
+        throw new DatabaseException("Type {$type}  can not be converted into SQL type");
     }
 }
