@@ -38,8 +38,8 @@ final class LazyBag extends Bag
 
     public function remove(mixed $element): bool
     {
-       $this->initialize(); 
-       return parent::remove($element);
+        $this->initialize();
+        return parent::remove($element);
     }
 
     public function contains(mixed $element): bool
@@ -85,10 +85,28 @@ final class LazyBag extends Bag
 
     private function initialize(): void
     {
-        if($this->initialized) {
+        if ($this->initialized) {
             return;
         }
         $this->elements = ($this->loader)();
         $this->initialized = true;
+    }
+
+    public function addWithoutInitializing(mixed $element): void
+    {
+        if (!$this->initialized) {
+            $previousLoader = $this->loader;
+            $this->loader = function () use ($previousLoader, $element): array {
+                $items = ($previousLoader)();
+                if (!in_array($element, $items, true)) {
+                    $items[] = $element;
+                }
+                return $items;
+            };
+        } else {
+            if (!in_array($element, $this->elements, true)) {
+                parent::add($element);
+            }
+        }
     }
 }
