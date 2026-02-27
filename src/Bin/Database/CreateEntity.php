@@ -9,12 +9,13 @@ namespace App\Bin\Database;
 
 use App\Bin\ConsoleException;
 use App\Bin\ConsoleHelper;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\GetEnvDatas;
-
 
 class CreateEntity
 {
     private string $appPath;
+    private bool $isNew = true;
     private array $types = [
         's' => 'string',
         'i' => 'int',
@@ -23,6 +24,16 @@ class CreateEntity
         'f' => 'float',
         'b' => 'bool',
         'a' => 'array',
+        'r' => 'relation'
+    ];
+    private array $relations = [
+        'm' => 'Many to One (this entity store field for relation)',
+    ];
+    private array $restrictions = [
+        'c' => 'cascade',
+        'r' => 'restrict',
+        'a' => 'no action',
+        'n' => 'set null'
     ];
 
     public function __construct()
@@ -37,25 +48,51 @@ class CreateEntity
         }
         $entityName = ucfirst($arg);
         $isEntityExists = $this->checkEntityExists($entityName);
-        if($isEntityExists || 'User' === $entityName){
+        if ($isEntityExists || 'User' === $entityName) {
             $special = ConsoleHelper::makeSpecial('Erreur :', 'red', 'bold');
             echo "{$special} Entity {$entityName} already exists. Make change manually.";
+            //Keep it
+            $this->isNew = false;
             return;
         }
         $properties = [];
+        $relations = [];
         $action = '';
         do {
             $propertyName = $this->askPropertyName();
             $propertyType = $this->askPropertyType();
-            $stored = $this->askYesNo('Is porperty stored in DB ? (y/n)');
-            $nullable = $this->askYesNo('Is porperty nullable ? (y/n)');
+            if ('r' === $propertyType) {
+                $propertyRelation = $this->makeRelation($propertyName);
+                $stored = true;
+            } else {
+                $yesNo = ConsoleHelper::askWhile('Is property stored in DB ? (y/n)', ['y', 'n']);
+                $stored = $yesNo === 'y';
+            }
+            $yesNo = ConsoleHelper::askWhile('Is property nullable ? (y/n)', ['y', 'n']);
+            $nullable = $yesNo === 'y';
             $displayNull = $nullable ? '' : 'not ';
             $displayStore = $stored ? '' : 'not ';
-            $display = "Poperty {$propertyName}, type {$this->types[$propertyType]} {$displayNull}null {$displayStore}stored in DB\n";
+            $display = "Property {$propertyName}, type {$this->types[$propertyType]} {$displayNull}null {$displayStore}stored in DB\n";
+            if ('r' === $propertyType) {
+                $relationKey =  $propertyRelation['type'];
+                $displayRelation = $this->relations[$relationKey];
+                $displayForeignTable = $propertyRelation['foreign'];
+                $displayForeignField = $propertyRelation['field'];
+                $displayUpdateKey = $propertyRelation['update'];
+                $displayDeleteKey = $propertyRelation['delete'];
+                $displayUpdate = $this->restrictions[$displayUpdateKey];
+                $displayDelete = $this->restrictions[$displayDeleteKey];
+                $display = "Relation {$displayRelation} with {$displayForeignTable} on {$displayForeignField} with {$displayUpdate} on update and {$displayDelete} on delete constraints\n";
+                $propertyRelation;
+            }
             echo $display;
 
-            $ok = $this->askYesNo('Is this OK ? (y/n)');
+            $yesNo = ConsoleHelper::askWhile('Is this OK ? (y/n)', ['y', 'n']);
+            $ok = $yesNo === 'y';
             if ($ok) {
+                if ('r' === $propertyType) {
+                    $relations[$propertyName] = $propertyRelation;
+                }
                 $properties[$propertyName] = [
                     'type' => $propertyType,
                     'stored' => $stored,
@@ -74,13 +111,58 @@ class CreateEntity
             $displayNull = $values['nullable'] ? '' : 'not ';
             $displayStore = $values['stored'] ? '' : 'not ';
             $type = $values['type'];
-            $display = "Poperty {$key}, type {$this->types[$type]} {$displayNull}null {$displayStore}stored in DB\n";
+            $display = "Property {$key}, type {$this->types[$type]} {$displayNull}null {$displayStore}stored in DB\n";
             echo $display;
         }
-        $answer = $this->askYesNo('Create files ? (y/n)');
+        $yesNo = ConsoleHelper::askWhile('Create files ? (y/n)', ['y', 'n']);
+        $answer = $yesNo === 'y';
         if ($answer) {
-            $this->createFiles($entityName, $properties);
+            if ($this->isNew) {
+                $this->createFiles($entityName, $properties, $relations);
+            } else {
+                $this->updateEntity($entityName, $properties, $relations);
+            }
         }
+    }
+
+    private function makeRelation(string $name): array
+    {
+        $result = [];
+        $question = "type of relation : \n";
+        $autorized = [];
+        foreach ($this->relations as $key => $value) {
+            $question .= "{$key} : {$value}\n";
+            $autorized[] = $key;
+        }
+        $reponseRelationType = ConsoleHelper::askWhile($question, $autorized);
+        $result['type'] = $reponseRelationType;
+        $question = "Name of related Entity : \n";
+        do {
+            $relation = ucfirst(ConsoleHelper::ask($question));
+            $fullName = "App\\Entity\\" . $relation;
+        } while (!ConsoleHelper::checkClassExistsAndOK($fullName, EntityInterface::class));
+        $result['foreign'] = $relation;
+        $question = 'Name of the field in foreign Entity';
+        $foreignField = ConsoleHelper::ask($question);
+        $result['field'] = $foreignField;
+        if ("m" === $reponseRelationType) {
+            $result['update'] = $this->makeConstraint("Constraints on Update ?\n");
+            $result['delete'] = $this->makeConstraint("Constraints on Delete'\n");
+        } else {
+            $result['update'] = null;
+            $result['delete'] = null;
+        }
+        return $result;
+    }
+
+    private function makeConstraint(string $question): string
+    {
+        foreach ($this->restrictions as $key => $value) {
+            $question .= "{$key} : {$value}\n";
+            $autorized[] = $key;
+        }
+        $reponseRelationType = ConsoleHelper::askWhile($question, $autorized);
+        return $reponseRelationType;
     }
 
     private function askPropertyName(): string
@@ -96,6 +178,7 @@ class CreateEntity
         $name = lcfirst($name);
         return $name;
     }
+
     private function askPropertyType(): string
     {
         $list = "Type of property :\n";
@@ -113,141 +196,39 @@ class CreateEntity
         return $type;
     }
 
-    private function askYesNo(string $question): bool
+    private function createFiles(string $name, array $propertiesArray, array $fieldRelations): void
     {
-        $responseValues = [
-            'y',
-            'n',
-            'no',
-            'yes'
-        ];
-        do {
-            $response = ConsoleHelper::ask($question);
-        } while (!in_array($response, $responseValues));
-        return (($response === 'y') || ($response === 'yes'));
-    }
-
-    private function createFiles(string $name, array $propertiesArray): void
-    {
-        $entityCreate = $this->createEntityFile($name, $propertiesArray);
-        if ($entityCreate) {
-            $ok = ConsoleHelper::makeSpecial('Entity create successfully...','green','reset');
-            echo "$ok\n";
-            echo "Create repository\n";
-            $repositoryCreate = $this->createRepositoryFile($name);
-            if ($repositoryCreate) {
-                $ok = ConsoleHelper::makeSpecial('Repository create successfully...', 'green', 'reset');
-                echo "$ok\n";
-                return;
-            }
+        $EntityCreator = new MakeEntityFile($this->appPath, $this->types, $this->relations, $this->restrictions);
+        $entityCreate = $EntityCreator->createEntityFile($name, $propertiesArray, $fieldRelations);
+        if (!$entityCreate) {
+            $error = ConsoleHelper::makeSpecial('Error', 'red', 'bold');
+            echo "{$error} : Entity not created. Aborting\n";
+            return;
+        }
+        $ok = ConsoleHelper::makeSpecial('Entity create successfully...', 'green', 'reset');
+        echo "$ok\n";
+        echo "Create repository\n";
+        $repositoryCreator = new MakeRepositoryFile($this->appPath);
+        $repositoryCreate = $repositoryCreator->createRepositoryFile($name);
+        if (!$repositoryCreate) {
             $error = ConsoleHelper::makeSpecial('Error', 'red', 'bold');
             echo "{$error} : Repository not created\n";
             return;
         }
-        $error = ConsoleHelper::makeSpecial('Error', 'red', 'bold');
-        echo "{$error} : Entity not created. Aborting\n";
+        $ok = ConsoleHelper::makeSpecial('Repository create successfully...', 'green', 'reset');
+        //here if relations upadate the existing Entity
+
+        echo "$ok\n";
         return;
-    }
-
-    private function createEntityFile(string $name, array $propertiesArray): bool
-    {
-        $content = $this->getTemplatEntity($name, $propertiesArray);
-        $folder = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Entity';
-        $filename = "{$name}Entity.php";
-        return ConsoleHelper::saveToFile($folder, $filename, $content);
-    }
-
-    private function createRepositoryFile(string $name): bool
-    {
-        $content = $this->getRepositoryTemplate($name);
-        $folder = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Repository';
-        $filename = "{$name}Repository.php";
-        return ConsoleHelper::saveToFile($folder, $filename, $content);
-    }
-
-    private function getTemplatEntity(string $name, array $propertiesArray): string
-    {
-        $repoName = "{$name}Repository";
-        $entityName = "{$name}Entity";
-        $properties = "    #[NotStored]\n";
-        $properties .= "    protected static ?string \$repo = {$repoName}::class;\n";
-        $gettersSetters = "";
-        $uses['repo'] = "use App\\Repository\\{$repoName};\n";
-        $uses['stored'] = "use App\\Kernel\\Connector\\Attributes\\NotStored;\n";
-        foreach ($propertiesArray as $key => $values) {
-            if (!$values['stored']) {
-                $properties .= "    #[NotStored]\n";
-                $uses['stored'] = "use App\\Kernel\\Connector\\Attributes\\NotStored;\n";
-            }
-            if ($values['nullable']) {
-                $properties .= "    #[Nullable]\n";
-                $uses['nullable'] = "use App\\Kernel\\Connector\\Attributes\\Nullable;\n";
-            }
-            $type = $values['type'];
-            $displayType = $this->types[$type];
-            $properties .= "    private ?{$displayType} \${$key} = null;\n";
-
-            $getterName = 'get' . ucfirst($key);
-            $gettersSetters .= "    public function {$getterName}(): {$displayType}\n";
-            $gettersSetters .= "    {\n";
-            $gettersSetters .= "        return \$this->{$key};\n";
-            $gettersSetters .= "    }\n\n";
-
-            $setterName = 'set' . ucfirst($key);
-            $gettersSetters .= "    public function {$setterName}($displayType \${$key}): self\n";
-            $gettersSetters .= "    {\n";
-            $gettersSetters .= "        \$this->{$key} = \${$key};\n";
-            $gettersSetters .= "        return \$this;\n";
-            $gettersSetters .= "    }\n\n";
-        }
-        $useDisplay = '';
-        foreach ($uses as $use) {
-            $useDisplay .= "{$use}";
-        }
-        $template = <<<PHP
-<?php
-
-namespace App\Entity;
-
-use App\Kernel\Connector\AbstractEntity;
-
-$useDisplay
-class $entityName extends AbstractEntity
-{
-
-{$properties}
-{$gettersSetters}
-}
-PHP;
-        return $template;
-    }
-
-    private function getRepositoryTemplate(string $name): string
-    {
-        $repoName = "{$name}Repository";
-        $entityName = "{$name}Entity";
-        $entityClass = "use App\\Entity\\$entityName;";
-        $template = <<<PHP
-<?php
-
-namespace App\Repository;
-
-use App\Kernel\Connector\AbstractRepository;
-$entityClass
-
-class $repoName extends AbstractRepository
-{
-    protected ?string \$entity = $entityName::class;
-}
-PHP;
-        return $template;
     }
 
     private function  checkEntityExists($name): bool
     {
         $entityName = "{$name}Entity";
-        $path = $this->appPath .'src' . DIRECTORY_SEPARATOR. 'Entity' . DIRECTORY_SEPARATOR;
+        $path = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Entity' . DIRECTORY_SEPARATOR;
         $filename = "{$path}{$entityName}.php";
         return file_exists($filename);
     }
+
+    private function updateEntity() {}
 }
