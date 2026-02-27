@@ -92,6 +92,27 @@ class ConsoleHelper
         return trim(fgets(STDIN));
     }
 
+    public static function askWhile(string $question, array $responseValues): string
+    {
+        do {
+            $response = self::ask($question);
+        } while (!in_array($response, $responseValues));
+        return $response;
+    }
+
+    public static function checkClassExistsAndOK(string $name, string $autorised): bool
+    {
+        if(!class_exists($name)) {
+            return false;
+        }
+        $reflexion = new ReflectionClass($name);
+        $ok = $reflexion->implementsInterface($autorised);
+        if(!$ok) {
+            return false;
+        }
+        return true;
+    }
+
     private static function getWindowsTimezone(): string
     {
         // Try to get timezone from Windows registry
