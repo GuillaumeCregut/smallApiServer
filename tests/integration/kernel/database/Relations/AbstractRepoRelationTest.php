@@ -156,7 +156,7 @@ class AbstractRepoRelationTest extends TestCase
         $connector = $this->createStub(ConnectorInterface::class);
         ConnectorDispatcher::setConnector($connector);
         $repository = new RepoTwoRelation();
-        $regex = '/ALTER TABLE entity_two_relations ADD CONSTRAINTS FK_[A-Z0-9]{16} FOREIGN KEY \(user_id\) REFERENCES entity_with_relations \(id\)/';
+        $regex = '/ALTER TABLE entity_two_relations ADD CONSTRAINTS FK_[A-Z0-9]{16} FOREIGN KEY \(user_id\) REFERENCES entity_with_relations \(id\) ON DELETE RESTRICT ON UPDATE RESTRICT/';
         $repository->createSqlTable();
         $relation = $repository->getRelations();
         $this->assertMatchesRegularExpression($regex, $relation[0]);

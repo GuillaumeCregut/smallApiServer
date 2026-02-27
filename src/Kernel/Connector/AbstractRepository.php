@@ -190,6 +190,8 @@ abstract class AbstractRepository implements RepositoryInterface
         foreach ($this->relations as $key => $relation) {
             $name = $this->propertyToColumn($key);
             $entity = $relation['relation']->targetEntity;
+            $onDelete = strtoupper($relation['relation']->onDelete);
+            $onUpdate = strtoupper($relation['relation']->onUpdate);
             $repoName = $entity::getRepository();
             $repo = new $repoName();
             $foreignTable = $repo->getTableName();
@@ -200,7 +202,7 @@ abstract class AbstractRepository implements RepositoryInterface
             ];
             $id = strtoupper(bin2hex(random_bytes(8)));
             $constraintName = "FK_{$id}";
-            $sql = "ALTER TABLE {$this->getTableName()} ADD CONSTRAINTS {$constraintName} FOREIGN KEY ({$name}) REFERENCES {$foreignTable} (id)";
+            $sql = "ALTER TABLE {$this->getTableName()} ADD CONSTRAINTS {$constraintName} FOREIGN KEY ({$name}) REFERENCES {$foreignTable} (id) ON DELETE {$onDelete} ON UPDATE {$onUpdate}";
             $resultArray[] =$sql;
         }
         return $resultArray;
