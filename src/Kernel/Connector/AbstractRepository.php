@@ -34,7 +34,7 @@ abstract class AbstractRepository implements RepositoryInterface
     protected ?ReflectionClass $reflectionEntity = null;
     protected ?string $entityName = null;
     protected QueryBuilder $qb;
-
+    protected array $relations = [];
     public function __construct()
     {
         $this->connector = ConnectorDispatcher::getConnector();
@@ -183,6 +183,28 @@ abstract class AbstractRepository implements RepositoryInterface
         return $this->entityTableName;
     }
 
+    public function getRelations(): array
+    {
+        $resultArray = [];
+        //Nom de la table, nom de la colonne(SQL), nom table distance
+        foreach ($this->relations as $key => $relation) {
+            $name = $this->propertyToColumn($key);
+            $entity = $relation['relation']->targetEntity;
+            $repoName = $entity::getRepository();
+            $repo = new $repoName();
+            $foreignTable = $repo->getTableName();
+            $result = [
+                $this->getTableName(),
+                $name,
+                $foreignTable
+            ];
+            $id = strtoupper(bin2hex(random_bytes(8)));
+            $constraintName = "FK_{$id}";
+            $sql = "ALTER TABLE {$this->getTableName()} ADD CONSTRAINTS {$constraintName} FOREIGN KEY ({$name}) REFERENCES {$foreignTable} (id)";
+            $resultArray[] =$sql;
+        }
+        return $resultArray;
+    }
     protected function insert(EntityInterface $entity): ?EntityInterface
     {
         $entityValues = $this->getEntityValues($entity);
@@ -316,7 +338,6 @@ abstract class AbstractRepository implements RepositoryInterface
             throw new DatabaseException($e->getMessage());
         }
 
-
         //Getting relations not stored
         $relations = $this->entityProperties['unStored'];
         foreach ($relations as $propertyName => $config) {
@@ -404,11 +425,11 @@ abstract class AbstractRepository implements RepositoryInterface
                         $arrayProperty['relation'] = $manyToOne[0]->newInstance();
                         $arrayProperty['type'] = 'int';
                         $nameProperty = $nameProperty . 'Id';
+                        $this->relations[$nameProperty] = $arrayProperty;
                     }
                     $stored[$nameProperty] = $arrayProperty;
                 }
             }
-
             $stored = $this->ensureIdFirst($stored);
             $this->entityProperties = [
                 'stored' => $stored,

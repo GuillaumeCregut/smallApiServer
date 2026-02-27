@@ -142,12 +142,23 @@ class AbstractRepoRelationTest extends TestCase
         $query = 'UPDATE entity_two_relations SET user_id = ?, title = ?, content = ? WHERE id = ?';
         $this->assertEquals($query, $repository->sql);
         $this->assertEquals(10, $result->getId());
-         $params = [
+        $params = [
             0 => 15,
             1 => 'MyTitle',
             2 => 'John',
             3 => 10
         ];
         $this->assertEquals($params, $repository->params);
+    }
+
+    public function testGetRelationSql(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new RepoTwoRelation();
+        $regex = '/ALTER TABLE entity_two_relations ADD CONSTRAINTS FK_[A-Z0-9]{16} FOREIGN KEY \(user_id\) REFERENCES entity_with_relations \(id\)/';
+        $repository->createSqlTable();
+        $relation = $repository->getRelations();
+        $this->assertMatchesRegularExpression($regex, $relation[0]);
     }
 }
