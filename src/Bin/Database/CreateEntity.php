@@ -7,10 +7,11 @@
 
 namespace App\Bin\Database;
 
-use App\Bin\ConsoleException;
+use Exception;
 use App\Bin\ConsoleHelper;
-use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\GetEnvDatas;
+use App\Bin\ConsoleException;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 class CreateEntity
 {
@@ -216,10 +217,95 @@ class CreateEntity
             return;
         }
         $ok = ConsoleHelper::makeSpecial('Repository create successfully...', 'green', 'reset');
-        //here if relations upadate the existing Entity
-
         echo "$ok\n";
+        //here if relations update the existing Entity whith OneToMany case(local fields in ManyToOne)
+        $arrayEntitiesToChange = $this->makeAdapterNewForUpdate($name, $propertiesArray, $fieldRelations);
+        foreach ($arrayEntitiesToChange as $foreignEntity => $informations) {
+            $properties = $informations['properties'];
+            $relation = $informations['relations'];
+            $fileSaved = $this->updateEntity($foreignEntity, $properties, $relation);
+            if ($fileSaved) {
+                $ok = ConsoleHelper::makeSpecial("Entity {$foreignEntity} updated successfully...", 'green', 'reset');
+                echo "$ok\n";
+            } else {
+                $error = ConsoleHelper::makeSpecial('Error', 'red', 'bold');
+                echo "{$error} : Entity {$foreignEntity} was not updated\n";
+            }
+        }
         return;
+    }
+
+    private function makeAdapterNewForUpdate(string $name, array $propertiesArray, array $fieldRelations): array
+    {
+        /*Structure du tableau : 
+        [
+            'entityName' =>[
+                'properties' =>[
+                    'realname of property' =>[
+                        'type' => string 1 car,
+                        'stored' => bool,
+                        'nullable' => bool
+                    ],
+                    'realname of property' =>[
+                        'type' => string 1 car,
+                        'stored' => bool,
+                        'nullable' => bool
+                    ],
+                ],
+                '$relations' =>[
+                    'realName of Property' =>[
+                        'type' => string 1c,
+                        'foreign' => string Class foreign,
+                        'field' => string foreign field
+                        'update' => string 1c,
+                        'delete' => string 1c
+                    ],
+                     'realName of Property' =>[
+                        'type' => string 1c,
+                        'foreign' => string Class foreign,
+                        'field' => string foreign field
+                        'update' => string 1c,
+                        'delete' => string 1c
+                    ],
+                ]
+            ],
+        ]
+        */
+        $returnArray = [];
+        //For OneToMany
+        foreach ($fieldRelations as $fieldname => $relations) {
+            $entityName = $relations['foreign'];
+            $propertyName = $relations['field'];
+            $relationType = $relations['type'];
+            if ('m' === $relationType) {
+                $foreignRelation = 'o';
+                $delete = $relations['delete'] ?? null;
+                $update = $relations['update'] ?? null;
+                $typeField = 'LazyBag';
+            }
+            if ('o' === $relationType) {
+                $foreignRelation = 'm';
+                $delete = '';
+                $update = '';
+                $typeField = "{$name}Entity";
+            }
+            $Newproperties = [
+                'type' => $typeField,
+                'stored' => true,
+                'nullable' => false
+            ];
+            $newRelations = [
+                'type' => $foreignRelation,
+                'foreign' => "{$name}Entity",
+                'field' =>  $fieldname,
+                'update' => $update,
+                'delete' => $delete
+
+            ];
+            $returnArray[$entityName]['properties'][$propertyName] = $Newproperties;
+            $returnArray[$entityName]['relations'][$propertyName] = $newRelations;
+        }
+        return $returnArray;
     }
 
     private function  checkEntityExists($name): bool
@@ -230,5 +316,61 @@ class CreateEntity
         return file_exists($filename);
     }
 
-    private function updateEntity() {}
+    private function updateEntity(string $name, array $propertiesArray, array $fieldRelations): bool
+    {
+        $fileSaved = false;
+        $EntityPath = GetEnvDatas::getAppPath() . 'src' . DIRECTORY_SEPARATOR . 'Entity' . DIRECTORY_SEPARATOR;
+        $filePath = $EntityPath . $name . '.php';
+        try {
+            foreach ($propertiesArray as $propertyName => $infos) {
+                $useStatements = [];
+                $attributes = [];
+                $propertyType = $infos['type'];
+                if ($infos['nullable']) {
+                    $useStatements[] = 'App\\Kernel\\Connector\\Attributes\\Nullable';
+                    $attributes[] = '#[Nullable]';
+                }
+                if (!$infos['stored']) {
+                    $useStatements[] = 'App\\Kernel\\Connector\\Attributes\\NoStored';
+                    $attributes[] = '#[NotStored]';
+                }
+                //Do for relations
+                if (!empty($fieldRelations)) {
+                    $relationProperty = $fieldRelations[$propertyName] ?? [];
+                    if (!empty($relationProperty)) {
+                        $relationArgs = $this->retrieveRelation($propertyName, $relationProperty);
+                        $attributes[] = $relationArgs['argument'];
+                        foreach($relationArgs['use'] as $use){
+                            $useStatements[] = $use;
+                        }
+                    }
+                }
+                return EntityModifier::addProperty($filePath, $propertyName, $propertyType, $useStatements, $attributes);
+            }
+        } catch (Exception $e) {
+            $fileSaved = false;
+        }
+        return $fileSaved;
+    }
+
+    private function retrieveRelation(string $propertyName, array $relation): array
+    {
+        $remoteClass = $relation['foreign'];
+        $remoteField = $relation['field'];
+        switch ($relation['type']) {
+            case 'o':
+                $use [] = "App\Kernel\Connector\Attributes\OneToMany";
+                $use [] = "App\Kernel\Connector\Datas\LazyBag";
+                $argument = "#[OneToMany(targetEntity: {$remoteClass}::class, mappedBy: '{$remoteField}')]";
+                break;
+            case 'm':
+                $use = "App\Kernel\Connector\Attributes\ManyToOne";
+                $argument = "#[ManyToOne(targetEntity: {$remoteClass}::class, inversedBy: '{$remoteField}', onUpdate: '{}', onDelete: '{}')]";
+                break;
+        }
+        return [
+            'argument' => $argument,
+            'use' => $use
+        ];
+    }
 }
