@@ -15,16 +15,20 @@ class MakeRepositoryFile
 
     public function createRepositoryFile(string $name): bool
     {
-        $content = $this->getRepositoryTemplate($name);
+        //remove entity from name
+        if (str_ends_with($name, 'Entity')) {
+            $shortName = substr($name,0,-6);
+        }
+        $content = $this->getRepositoryTemplate($name, $shortName);
         $folder = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Repository';
-        $filename = "{$name}Repository.php";
+        $filename = "{$shortName}Repository.php";
         return ConsoleHelper::saveToFile($folder, $filename, $content);
     }
 
-    private function getRepositoryTemplate(string $name): string
+    private function getRepositoryTemplate(string $name, string $shortname): string
     {
-        $repoName = "{$name}Repository";
-        $entityName = "{$name}Entity";
+        $repoName = "{$shortname}Repository";
+        $entityName = "{$name}";
         $entityClass = "use App\\Entity\\$entityName;";
         $template = <<<PHP
 <?php
