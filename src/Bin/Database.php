@@ -29,7 +29,6 @@ class Database extends AbstractConsole
     }
     public function execute(): void
     {
-        //Command will be like create:table, create:entity...
         $commands = explode(':', $this->args[0]);
         if (count($commands) !== 2) {
             $cmd = ConsoleHelper::makeSpecial('command', 'blue', 'bold');

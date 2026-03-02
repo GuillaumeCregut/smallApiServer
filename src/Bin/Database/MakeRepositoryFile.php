@@ -15,7 +15,6 @@ class MakeRepositoryFile
 
     public function createRepositoryFile(string $name): bool
     {
-        //remove entity from name
         if (str_ends_with($name, 'Entity')) {
             $shortName = substr($name,0,-6);
         }

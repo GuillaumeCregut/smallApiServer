@@ -186,7 +186,6 @@ abstract class AbstractRepository implements RepositoryInterface
     public function getRelations(): array
     {
         $resultArray = [];
-        //Nom de la table, nom de la colonne(SQL), nom table distance
         foreach ($this->relations as $key => $relation) {
             $name = $this->propertyToColumn($key);
             $entity = $relation['relation']->targetEntity;
@@ -302,32 +301,25 @@ abstract class AbstractRepository implements RepositoryInterface
         $newRow = [];
         foreach ($values as $attribute => $value) {
             $key = $this->columnToProperty($attribute);
-            //CheckValue for array
             $newValue = $this->checkIncomingValue($key, $value);
             $newRow[$key] = $newValue;
         }
         $entity = Hydrator::hydrate(new $this->entity(), $newRow);
-        //Getting Stored relation
         $relations = $this->getRelationInDb();
         try {
             foreach ($relations as $name => $params) {
-                //récupère la valeur dans newRow
                 if (!isset($newRow[$name])) {
                     throw new DatabaseException("Error finding in {$this->entityName} relation called {$name}");
                 }
                 $idRelation = $newRow[$name];
-                //récupère le targetEntity
                 $targetEntity = $params->targetEntity;
-                //enleve le id
                 $newName = substr($name, 0, -2);
                 if (!str_ends_with($name, 'Id')) {
                     throw new DatabaseException("Error in {$this->entityName} finding name for {$newName}");
                 }
-                //retourne un objet initialisé
                 $entityRepo = $targetEntity::getRepository();
                 $newRepoRelation = new $entityRepo();
                 $newEntityRelation = $newRepoRelation->find($idRelation);
-                //Set value in entity
                 $setter = 'set' . ucfirst($newName);
                 if (!method_exists($entity, $setter)) {
                     throw new DatabaseException("No setter found for {$newName} in {$this->entityName}");
@@ -340,7 +332,6 @@ abstract class AbstractRepository implements RepositoryInterface
             throw new DatabaseException($e->getMessage());
         }
 
-        //Getting relations not stored
         $relations = $this->entityProperties['unStored'];
         foreach ($relations as $propertyName => $config) {
             if ('relation' !== $config['type']) {
@@ -415,14 +406,12 @@ abstract class AbstractRepository implements RepositoryInterface
                 ];
 
                 if ((null !== $attribute && count($attribute) > 0) || (null !== $oneToMany && count($oneToMany) > 0)) {
-                    //Unstored value
                     if (!empty($oneToMany)) {
                         $arrayProperty['relation'] = $oneToMany[0]->newInstance();
                         $arrayProperty['type'] = 'relation';
                     }
                     $unStored[$nameProperty] = $arrayProperty;
                 } else {
-                    //Stored value
                     if ((null !== $manyToOne) && (!empty($manyToOne))) {
                         $arrayProperty['relation'] = $manyToOne[0]->newInstance();
                         $arrayProperty['type'] = 'int';

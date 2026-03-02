@@ -1,5 +1,10 @@
 <?php
 
+/**
+ * @license MIT
+ * Copyright (c) 2026 Guillaume Crégut
+ */
+
 namespace App\Bin\Database;
 
 class EntityModifier
@@ -49,12 +54,10 @@ class EntityModifier
         foreach ($tokens as $token) {
             if (!is_array($token)) continue;
 
-            // On repère la fin du namespace
             if ($token[0] === T_NAMESPACE) {
                 $namespaceEndPos = strpos($content, ';', strpos($content, $token[1])) + 1;
             }
 
-            // On repère le dernier use existant
             if ($token[0] === T_USE) {
                 $useLineEnd = strpos($content, ';', strpos($content, $token[1], $lastUsePos)) + 1;
                 $lastUsePos = $useLineEnd;
