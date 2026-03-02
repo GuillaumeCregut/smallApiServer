@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use App\Security\UserRepository;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\DatabaseException;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Middleware\Security\SessionAuthMiddleware;
 
 class SessionMiddlewareAuthTest extends TestCase

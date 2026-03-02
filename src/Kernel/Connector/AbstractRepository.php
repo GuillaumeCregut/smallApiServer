@@ -7,20 +7,26 @@
 
 namespace App\Kernel\Connector;
 
+use App\Kernel\Connector\Attributes\ManyToOne;
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
+use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\DatabaseException;
+use App\Kernel\Connector\Datas\LazyBag;
 use App\Kernel\Connector\Hydrator;
 use App\Kernel\Connector\QueryBuilder;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
-use App\Kernel\Interfaces\Databases\EntityInterface;
-use App\Kernel\Interfaces\Databases\RepositoryInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Connector\Interfaces\RepositoryInterface;
+use Error;
+use Exception;
 use ReflectionClass;
 
 abstract class AbstractRepository implements RepositoryInterface
 {
     public string $sql = ''; //This is intented for tests.
+    public array $params = []; //This is intented for tests.
     protected ConnectorInterface $connector;
     protected ?string $entity = null;
     protected ?string $entityTableName = null;
@@ -28,7 +34,7 @@ abstract class AbstractRepository implements RepositoryInterface
     protected ?ReflectionClass $reflectionEntity = null;
     protected ?string $entityName = null;
     protected QueryBuilder $qb;
-
+    protected array $relations = [];
     public function __construct()
     {
         $this->connector = ConnectorDispatcher::getConnector();
@@ -61,11 +67,11 @@ abstract class AbstractRepository implements RepositoryInterface
 
     public function findBy(array $fields): array
     {
-        $key= array_key_first($fields);
+        $key = array_key_first($fields);
         $query = $this->qb->where($key, '=', $fields[$key]);
         $fields = array_slice($fields, 1);
         foreach ($fields as $key => $value) {
-        $query = $this->qb->andWhere($key, '=', $value);
+            $query = $this->qb->andWhere($key, '=', $value);
         }
         $query = $this->qb->toSql();
         $params = $this->qb->getParams();
@@ -177,6 +183,29 @@ abstract class AbstractRepository implements RepositoryInterface
         return $this->entityTableName;
     }
 
+    public function getRelations(): array
+    {
+        $resultArray = [];
+        foreach ($this->relations as $key => $relation) {
+            $name = $this->propertyToColumn($key);
+            $entity = $relation['relation']->targetEntity;
+            $onDelete = strtoupper($relation['relation']->onDelete);
+            $onUpdate = strtoupper($relation['relation']->onUpdate);
+            $repoName = $entity::getRepository();
+            $repo = new $repoName();
+            $foreignTable = $repo->getTableName();
+            $result = [
+                $this->getTableName(),
+                $name,
+                $foreignTable
+            ];
+            $id = strtoupper(bin2hex(random_bytes(8)));
+            $constraintName = "FK_{$id}";
+            $sql = "ALTER TABLE {$this->getTableName()} ADD CONSTRAINTS {$constraintName} FOREIGN KEY ({$name}) REFERENCES {$foreignTable} (id) ON DELETE {$onDelete} ON UPDATE {$onUpdate}";
+            $resultArray[] =$sql;
+        }
+        return $resultArray;
+    }
     protected function insert(EntityInterface $entity): ?EntityInterface
     {
         $entityValues = $this->getEntityValues($entity);
@@ -194,6 +223,12 @@ abstract class AbstractRepository implements RepositoryInterface
             ->toSql();
         $params = $this->qb->getParams();
         $this->sql = $query;
+        foreach ($params as $key => $param) {
+            if ($param instanceof EntityInterface) {
+                $params[$key] = $param->getId();
+            }
+        }
+        $this->params = $params;
         $result = $this->sendQuery(false, $query, $params);
         if (!$result) {
             return null;
@@ -214,6 +249,12 @@ abstract class AbstractRepository implements RepositoryInterface
             ->where('id', '=', $id)
             ->toSql();
         $params = $this->qb->getParams();
+        foreach ($params as $key => $param) {
+            if ($param instanceof EntityInterface) {
+                $params[$key] = $param->getId();
+            }
+        }
+        $this->params = $params;
         $this->sql = $query;
         $result = $this->sendQuery(false, $query, $params);
         $this->qb->reset();
@@ -228,9 +269,29 @@ abstract class AbstractRepository implements RepositoryInterface
         $storedValues = $this->entityProperties['stored'];
         $returnArray = [];
         foreach ($storedValues as $column => $type) {
-            $getFunction = 'get' . ucfirst($column);
+            $columnName = $column;
+            if (isset($type['relation'])) {
+                if (str_ends_with($column, 'Id')) {
+                    $columnName = substr($column, 0, -2);
+                } else {
+                    throw new DatabaseException("Error finding column name {$column} in {$this->entityName}");
+                }
+            }
+            $getFunction = 'get' . ucfirst($columnName);
             $value = $entity->$getFunction();
             $returnArray[$column] = $value;
+        }
+        return $returnArray;
+    }
+
+    protected function getRelationInDb(): array
+    {
+        $properties = $this->entityProperties['stored'];
+        $returnArray = [];
+        foreach ($properties as $key => $property) {
+            if (isset($property['relation'])) {
+                $returnArray[$key] = $property['relation'];
+            }
         }
         return $returnArray;
     }
@@ -240,11 +301,58 @@ abstract class AbstractRepository implements RepositoryInterface
         $newRow = [];
         foreach ($values as $attribute => $value) {
             $key = $this->columnToProperty($attribute);
-            //CheckValue for array
             $newValue = $this->checkIncomingValue($key, $value);
             $newRow[$key] = $newValue;
         }
-        return Hydrator::hydrate(new $this->entity(), $newRow);
+        $entity = Hydrator::hydrate(new $this->entity(), $newRow);
+        $relations = $this->getRelationInDb();
+        try {
+            foreach ($relations as $name => $params) {
+                if (!isset($newRow[$name])) {
+                    throw new DatabaseException("Error finding in {$this->entityName} relation called {$name}");
+                }
+                $idRelation = $newRow[$name];
+                $targetEntity = $params->targetEntity;
+                $newName = substr($name, 0, -2);
+                if (!str_ends_with($name, 'Id')) {
+                    throw new DatabaseException("Error in {$this->entityName} finding name for {$newName}");
+                }
+                $entityRepo = $targetEntity::getRepository();
+                $newRepoRelation = new $entityRepo();
+                $newEntityRelation = $newRepoRelation->find($idRelation);
+                $setter = 'set' . ucfirst($newName);
+                if (!method_exists($entity, $setter)) {
+                    throw new DatabaseException("No setter found for {$newName} in {$this->entityName}");
+                }
+                $entity->$setter($newEntityRelation);
+            }
+        } catch (Exception $e) {
+            throw new DatabaseException($e->getMessage());
+        } catch (Error $e) {
+            throw new DatabaseException($e->getMessage());
+        }
+
+        $relations = $this->entityProperties['unStored'];
+        foreach ($relations as $propertyName => $config) {
+            if ('relation' !== $config['type']) {
+                continue;
+            }
+            $relation = $config['relation'];
+            /**@var OneToMany $relation */
+            $targetEntity = $relation->targetEntity;
+            /**@var EntityInterface $entity */
+            $targetRepoName = $targetEntity::getRepository();
+            $id = $entity->getid();
+            $bag = new LazyBag(function () use ($id, $targetRepoName, $relation): array {
+                $targetRepo = new $targetRepoName();
+                return $targetRepo->findBy([
+                    $relation->mappedBy . '_id' => $id
+                ]);
+            });
+            $setter = 'set' . ucfirst($propertyName);
+            $entity->$setter($bag);
+        }
+        return $entity;
     }
 
     protected function  checkIncomingValue(string $name, mixed $value): mixed
@@ -283,6 +391,8 @@ abstract class AbstractRepository implements RepositoryInterface
             foreach ($listProperties as $property) {
                 $attribute = $property->getAttributes(NotStored::class);
                 $nullable = $property->getAttributes(Nullable::class);
+                $oneToMany = $property->getAttributes(OneToMany::class);
+                $manyToOne = $property->getAttributes(ManyToOne::class);
                 $typeProperty = $property->getType()->getName();
                 $nameProperty = $property->getName();
                 if (null !== $nullable && count($nullable) > 0) {
@@ -294,11 +404,20 @@ abstract class AbstractRepository implements RepositoryInterface
                     'type' => $typeProperty,
                     'nullable' => $nullable
                 ];
-                if (null !== $attribute && count($attribute) > 0) {
-                    //Unstored value
+
+                if ((null !== $attribute && count($attribute) > 0) || (null !== $oneToMany && count($oneToMany) > 0)) {
+                    if (!empty($oneToMany)) {
+                        $arrayProperty['relation'] = $oneToMany[0]->newInstance();
+                        $arrayProperty['type'] = 'relation';
+                    }
                     $unStored[$nameProperty] = $arrayProperty;
                 } else {
-                    //Stored value
+                    if ((null !== $manyToOne) && (!empty($manyToOne))) {
+                        $arrayProperty['relation'] = $manyToOne[0]->newInstance();
+                        $arrayProperty['type'] = 'int';
+                        $nameProperty = $nameProperty . 'Id';
+                        $this->relations[$nameProperty] = $arrayProperty;
+                    }
                     $stored[$nameProperty] = $arrayProperty;
                 }
             }
@@ -352,11 +471,11 @@ abstract class AbstractRepository implements RepositoryInterface
             'DateTime' => 'DATETIME',
             'float' => 'FLOAT',
             'bool' => 'BOOLEAN',
-            'array' => 'JSON'
+            'array' => 'JSON',
         ];
         if (array_key_exists($type, $types)) {
             return $types[$type];
         }
-        throw new DatabaseException('Type can not be converted into SQL type');
+        throw new DatabaseException("Type {$type}  can not be converted into SQL type");
     }
 }

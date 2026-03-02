@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Console System is a command-line interface (CLI) framework that allows developers to create and execute console commands from the terminal. It follows a hierarchical command structure with a main entry point (`console.php`) that routes commands to specialized command classes.
+The Console System is a command-line interface (CLI) framework that allows developers to create and execute console commands from the terminal. It follows a hierarchical command structure with a main entry point (`console`) that routes commands to specialized command classes.
 
 The system is designed with:
 - **Modularity**: Commands are independent classes implementing a consistent interface
@@ -18,8 +18,11 @@ The system is designed with:
 
 ```
 bin/
-├── console.php              # Main entry point
+├── console              # Main entry point
 ├── Console.php              # Main command dispatcher
+
+
+src/Bin
 ├── AbstractConsole.php      # Base class for commands
 ├── ConsoleInterface.php     # Command interface
 ├── ConsoleHelper.php        # Helper utilities
@@ -36,7 +39,7 @@ bin/
 The `ConsoleInterface` defines the contract for all console commands.
 
 ```php
-namespace App\bin;
+namespace App\Bin;
 
 interface ConsoleInterface
 {
@@ -103,7 +106,7 @@ Create colored and styled text output using ANSI escape codes.
 - `reset`, `bold`, `underline`, `reverse`
 
 ```php
-use App\bin\ConsoleHelper;
+use App\Bin\ConsoleHelper;
 
 // Red text with bold style
 $error = ConsoleHelper::makeSpecial('Error', 'red', 'bold');
@@ -178,24 +181,37 @@ class ConsoleHelper
 
 ### console.php
 
-The `console.php` file is the main entry point for all console commands.
+The `console` file is the main entry point for all console commands. There are two usage for it.
 
 ```bash
 #!/usr/bin/env php
-php ./bin/console.php command [args...]
+php ./bin/Console.php command [args...]
+```
+
+or
+
+```bash
+#!/usr/bin/env php
+./bin/console command [args...]
 ```
 
 **Usage:**
 
 ```bash
 # Display help
-php ./bin/console.php help
+php ./bin/console.php help 
+or
+./bin/console help
 
 # Debug routes
 php ./bin/console.php debug route
+or
+./bin/console debug route
 
 # Debug with help
 php ./bin/console.php debug help
+or
+./bin/console debug help
 ```
 
 **Flow:**
@@ -253,7 +269,7 @@ Create a new command by extending `AbstractConsole`:
 ```php
 <?php
 
-namespace App\bin;
+namespace App\Bin;
 
 class Seed extends AbstractConsole
 {
@@ -286,7 +302,7 @@ The `Debug` command demonstrates a parent command with sub-commands.
 ```php
 <?php
 
-namespace App\bin;
+namespace App\Bin;
 
 class Debug extends AbstractConsole
 {
@@ -329,9 +345,9 @@ class Debug extends AbstractConsole
 ```php
 <?php
 
-namespace App\bin\Debug;
+namespace App\Bin\Debug;
 
-use App\bin\AbstractConsole;
+use App\Bin\AbstractConsole;
 use App\Kernel\Config\Router;
 
 class Route extends AbstractConsole
@@ -450,6 +466,9 @@ class Route extends AbstractConsole
 
 ```bash
 php ./bin/console.php help
+or
+./bin/console help
+
 ```
 
 Output:
@@ -468,13 +487,13 @@ Available commands:
 
 ```bash
 # Display all routes
-php ./bin/console.php debug route
+./bin/console debug route
 
 # Display routes help
-php ./bin/console.php debug route help
+./bin/console debug route help
 
 # Display debug help
-php ./bin/console.php debug help
+./bin/console debug help
 ```
 
 Output example:
@@ -603,16 +622,16 @@ if (!$model) {
 Use namespace hierarchy for logical grouping:
 
 ```
-bin/
-├── console.php
-├── Generate.php          # Parent: Generate
-├── Generate/
-│   ├── Model.php         # Sub: generate model
-│   ├── Migration.php     # Sub: generate migration
-│   └── Seed.php          # Sub: generate seed
+Bin/
+├── Database.php          # Parent: Database
+├── Debug.php             # Parent: Debug
+├── Database/
+│   ├── Create.php        # Sub: database create
+│   ├── CreateEntity.php  # Sub: generate entity
+│   └── CreateSql.php     # Sub: generate sql table
 └── Debug/
     ├── Route.php         # Sub: debug route
-    └── Cache.php         # Sub: debug cache
+    └── Cache.php         # Sub: debug cache (example)
 ```
 
 Usage:
@@ -623,33 +642,7 @@ php ./bin/console debug route
 
 ### 7. Make Commands Reusable
 
-Separate command logic from presentation:
-
-```php
-// ✓ GOOD - Reusable logic
-class Route extends AbstractConsole
-{
-    public function execute(): void
-    {
-        $routes = $this->getRoutes();
-        $this->displayRoutes($routes);
-    }
-    
-    public function getRoutes(): array
-    {
-        return Router::getRoutes();
-    }
-    
-    private function displayRoutes(array $routes): void
-    {
-        // Display logic
-    }
-}
-
-// Then in a controller, can call:
-$command = new Route([], 0);
-$routes = $command->getRoutes();
-```
+Separate command logic from presentation.
 
 ---
 
@@ -708,7 +701,7 @@ Here's a complete example of a migration command:
 ```php
 <?php
 
-namespace App\bin;
+namespace App\Bin;
 
 class Migrate extends AbstractConsole
 {
@@ -782,7 +775,7 @@ class Migrate extends AbstractConsole
 
 | Component | Purpose | Example |
 |-----------|---------|---------|
-| **console.php** | Main entry point | `php ./bin/console.php debug route` |
+| **console** | Main entry point | `php ./bin/console.php debug route` |
 | **Console.php** | Command dispatcher | Routes commands to classes |
 | **AbstractConsole** | Base class | Extend to create commands |
 | **ConsoleInterface** | Contract | Implement for valid commands |

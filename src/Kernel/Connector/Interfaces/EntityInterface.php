@@ -5,11 +5,11 @@
  * Copyright (c) 2026 Guillaume Crégut
  */
 
-namespace App\Kernel\Interfaces\Databases;
+namespace App\Kernel\Connector\Interfaces;
 
 interface EntityInterface
 {
     public function getId(): ?int;
     public function setId(int $id): self;
-    public function getRepository(): ?string;
+    public static function getRepository(): ?string;
 }

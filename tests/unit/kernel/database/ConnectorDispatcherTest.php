@@ -4,7 +4,7 @@
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\ConnectorDispatcher;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 class ConnectorDispatcherTest extends TestCase
 {

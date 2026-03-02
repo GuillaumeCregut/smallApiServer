@@ -11,7 +11,7 @@ use App\Kernel\Request;
 
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ClientErrorResponse;
-use App\Kernel\Interfaces\Databases\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Responses\JsonResponse;
 use Exception;
 

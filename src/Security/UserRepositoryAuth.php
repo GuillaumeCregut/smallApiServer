@@ -10,7 +10,7 @@ namespace App\Security;
 use App\Security\User;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\AbstractRepository;
-use App\Kernel\Interfaces\Databases\EntityInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 final class UserRepositoryAuth extends AbstractRepository
 {

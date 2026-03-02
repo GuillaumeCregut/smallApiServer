@@ -10,8 +10,8 @@ namespace App\Bin\Database;
 use App\Bin\ConsoleException;
 use App\Bin\ConsoleHelper;
 use App\Kernel\GetEnvDatas;
-use App\Kernel\Interfaces\Databases\EntityInterface;
-use App\Kernel\Interfaces\Databases\RepositoryInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use App\Kernel\Connector\DatabaseException;
 class CreateSql
 {

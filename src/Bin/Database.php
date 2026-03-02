@@ -29,10 +29,10 @@ class Database extends AbstractConsole
     }
     public function execute(): void
     {
-        //Command will be like create:table, create:entity...
         $commands = explode(':', $this->args[0]);
         if (count($commands) !== 2) {
-            throw new Exception('Check your command');
+            $cmd = ConsoleHelper::makeSpecial('command', 'blue', 'bold');
+            throw new Exception("Check your command\n Must be {$cmd}:arg, try {$cmd}:help");
         }
         $command = $commands[0];
         $this->args = array_slice($this->args, 1);

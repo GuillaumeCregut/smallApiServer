@@ -1,6 +1,6 @@
 <?php
 
-use App\Kernel\Interfaces\Databases\EntityInterface;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 class Entity4 implements EntityInterface
 {
@@ -21,7 +21,7 @@ class Entity4 implements EntityInterface
         return $this;
     }
 
-    public function getRepository(): ?string
+    public static function getRepository(): ?string
     {
         return null;
     }

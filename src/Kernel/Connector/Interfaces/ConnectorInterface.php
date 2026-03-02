@@ -5,7 +5,7 @@
  * Copyright (c) 2026 Guillaume Crégut
  */
 
-namespace App\Kernel\Interfaces\Databases;
+namespace App\Kernel\Connector\Interfaces;
 
 
 interface ConnectorInterface 
