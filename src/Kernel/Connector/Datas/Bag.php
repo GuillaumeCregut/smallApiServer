@@ -22,6 +22,11 @@ class Bag implements BagInterface
         $this->elements = array_values($elements);
     }
 
+    public function get(int $index): mixed
+    {
+        return $this->elements[$index] ?? null;
+    }
+
     public function add(mixed $element): self
     {
         $this->elements[] = $element;

@@ -30,6 +30,12 @@ final class LazyBag extends Bag
         return $this->initialized;
     }
 
+    public function get(int $index): mixed
+    {
+        $this->initialize();
+        return parent::get($index);
+    }
+
     public function add(mixed $element): self
     {
         $this->initialize();
