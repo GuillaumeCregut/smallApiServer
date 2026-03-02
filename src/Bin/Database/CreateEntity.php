@@ -7,7 +7,6 @@
 
 namespace App\Bin\Database;
 
-use Exception;
 use App\Bin\ConsoleHelper;
 use App\Kernel\GetEnvDatas;
 use App\Bin\ConsoleException;
@@ -17,6 +16,7 @@ use App\Kernel\Connector\Interfaces\EntityInterface;
 class CreateEntity
 {
     private string $appPath;
+    private string $EntityPath;
     private bool $isNew = true;
     private array $types = [
         's' => 'string',
@@ -38,20 +38,19 @@ class CreateEntity
         'a' => 'no action',
         'n' => 'set null'
     ];
-
     private array $entityToStore = [];
-
     private array $foreignEntities = [];
-
     private string $entityClassName = '';
 
     public function __construct()
     {
         $this->appPath = GetEnvDatas::getAppPath();
+        $this->EntityPath = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Entity' . DIRECTORY_SEPARATOR;
     }
 
     public function execute(string $arg): void
     {
+        $arg = ucfirst($arg);
         $this->entityToStore['properties'] = [];
         $this->entityToStore['relations'] = [];
         $action = '';
@@ -66,30 +65,152 @@ class CreateEntity
             $this->makeProperty();
             $action = ConsoleHelper::ask('Add a new Property ? (n for stop) ');
         } while ('n' !== $action);
-        
+
         $this->displayEntitySummary();
-        
+
         $question = 'Create files ? (y/n)';
         $saveFile = $this->askYesNo($question);
-        if($saveFile){
+        if ($saveFile) {
             $this->saveFile();
         }
     }
 
     private function saveFile(): void
     {
-        if($this->isNew) {
+        if ($this->isNew) {
             $this->createFile();
         } else {
-
+            $this->updateEntity();
         }
     }
 
+    /**
+     * Save modification made in existing entity
+     *
+     * @return void
+     */
+    private function updateEntity(): void
+    {
+        $properties = $this->entityToStore['properties'];
+        $relations = $this->entityToStore['relations'];
+        foreach ($properties as $name => $values) {
+            $relationType =null;
+            $relationName = null;
+            $relation = [];
+            if (isset($relations[$name])) {
+                $relation = $relations[$name];
+                $relationType = $relation['type'];
+                $relationName = $relation['foreign'];
+            }
+            $formattedValues = $this->formatUpdate($values, $relation);
+           
+            $saved = $this->writeFile($this->entityClassName, $name, $formattedValues['type'], $formattedValues['uses'], $formattedValues['attributes'], $relationType,  $relationName);
+            if ($saved) {
+                $ok = ConsoleHelper::makeSpecial("Property {$name} create successfully...", 'green', 'reset');
+                echo "$ok\n";
+            } else {
+                $error = ConsoleHelper::makeSpecial("Error creating property {$name}", 'red', 'reset');
+                echo "$error\n";
+            }
+        }
+        //Save foreign Entities 
+        if (!empty($this->foreignEntities)) {
+            foreach ($this->foreignEntities as $entityName => $entityInformations) {
+                $saveEntity = $this->saveForeignEntity($entityName, $entityInformations);
+                if ($saveEntity) {
+                    $ok = ConsoleHelper::makeSpecial("Entity {$entityName} modified successfully...", 'green', 'reset');
+                    echo "$ok\n";
+                } else {
+                    $error = ConsoleHelper::makeSpecial("Error updating entity {$entityName}", 'red', 'reset');
+                    echo "$error\n";
+                }
+            }
+        }
+    }
+
+    /**
+     * Format datas (relation, propertie) for adding in an existant Entity
+     *
+     * @param array $property
+     * @param array $relation
+     * @return array
+     */
+    private function formatUpdate(array $property, array $relation): array
+    {
+        $returnArray = [
+            'type' => '',
+            'uses' => [],
+            'attributes' => []
+        ];
+        $uses = [];
+        $attributes = [];
+        $propertyType = $property['type'];
+        if ($propertyType === 'o') {
+            $type = 'LazyBag';
+        } else {
+            $type = $this->types[$propertyType];
+        }
+        if ($property['nullable']) {
+            $uses[] = 'App\\Kernel\\Connector\\Attributes\\Nullable';
+            $attributes[] = '#[Nullable]';
+        }
+
+        if (!$property['stored']) {
+            $uses[] = 'App\\Kernel\\Connector\\Attributes\\NotStored';
+            $attributes[] = '#[NotStored]';
+        }
+        //Cas des relations
+        if (!empty($relation)) {
+            $relationType = $relation['type'];
+            switch ($relationType) {
+                case 'm':
+                    $uses[] = 'App\\Kernel\\Connector\\Attributes\\ManyToOne';
+                    $uses[] = 'App\\Entity\\{$target}';
+                    $target = $relation['foreign'];
+                    $field = $relation['field'];
+                    $attributes[] = "#[ManyToOne(targetEntity: {$target}::class, inversedBy: '{$field}')]";
+                    break;
+                case 'o':
+                    $uses[] = 'App\\Kernel\\Connector\\Attributes\\OneToMany';
+                    $uses[] = 'App\\Kernel\\Connector\\Datas\\LazyBag';
+                    $target = $relation['foreign'];
+                    $field = $relation['field'];
+                    $attributes[] = "#[OneToMany(targetEntity: {$target}::class, mappedBy: '{$field}')]";
+                    break;
+            }
+        }
+        $returnArray['type'] = $type;
+        $returnArray['uses'] = $uses;
+        $returnArray['attributes'] = $attributes;
+        return $returnArray;
+    }
+
+    /**
+     * Add modification to an existing entity
+     *
+     * @param string $entityName
+     * @param string $propertyName
+     * @param string $propertyType
+     * @param array $useStatements
+     * @param array $attributes
+     * @return boolean
+     */
+    private function writeFile(string $entityName, string $propertyName, string $propertyType, array $useStatements, array $attributes, ?string $relationType = null, ?string $relationName = null): bool
+    {
+        $filePath = $this->EntityPath . $entityName . '.php';
+        return EntityModifier::addProperty($filePath, $propertyName, $propertyType, $useStatements, $attributes, $relationType, $relationName);
+    }
+
+    /**
+     * Save a new Entity, Create Repository, save relations Entities
+     *
+     * @return void
+     */
     private function createFile(): void
     {
         $properties = $this->entityToStore['properties'];
         $relations = $this->entityToStore['relations'];
-        $EntityCreator = new MakeEntityFile($this->appPath, $this->types, $this->relations, $this->restrictions);
+        $EntityCreator = new MakeEntityFile($this->appPath, $this->types, $this->restrictions);
         $entityCreate = $EntityCreator->createEntityFile($this->entityClassName,  $properties, $relations);
         if (!$entityCreate) {
             $error = ConsoleHelper::makeSpecial('Error', 'red', 'bold');
@@ -106,6 +227,54 @@ class CreateEntity
             echo "{$error} : Repository not created\n";
             return;
         }
+        $ok = ConsoleHelper::makeSpecial('Repository create successfully...', 'green', 'reset');
+        echo "$ok\n";
+        if (!empty($this->foreignEntities)) {
+            echo "Update foreign entities\n";
+            foreach ($this->foreignEntities as $entityName => $entityInformations) {
+                $saveEntity = $this->saveForeignEntity($entityName, $entityInformations);
+                if ($saveEntity) {
+                    $ok = ConsoleHelper::makeSpecial("Entity {$entityName} modified successfully...", 'green', 'reset');
+                    echo "$ok\n";
+                } else {
+                    $error = ConsoleHelper::makeSpecial("Error updating entity {$entityName}", 'red', 'reset');
+                    echo "$error\n";
+                }
+            }
+        }
+    }
+
+    /**
+     * Save foreign Entity
+     *
+     * @param string $entityName
+     * @param array $properties
+     * @return boolean
+     */
+    private function saveForeignEntity(string $entityName, array $properties): bool
+    {
+        $success = true;
+        foreach ($properties as $property => $informations) {
+            $relationName = null;
+            $relationType = null;
+            $relations = $informations['relations'];
+            $properties = $informations['properties'];
+            if(!empty ($relations)) {
+                $relationName = $relations['foreign'];
+                $relationType = $relations['type'];
+            }
+            $formattedValues = $this->formatUpdate($properties, $relations);
+            $saved = $this->writeFile($entityName, $property, $formattedValues['type'], $formattedValues['uses'], $formattedValues['attributes'],$relationType, $relationName);
+            if ($saved) {
+                $ok = ConsoleHelper::makeSpecial("Property {$property} in {$entityName} create successfully...", 'green', 'reset');
+                echo "$ok\n";
+            } else {
+                $error = ConsoleHelper::makeSpecial("Error creating property {$property} in {$entityName}", 'red', 'reset');
+                echo "$error\n";
+                $success = false;
+            }
+        }
+        return $success;
     }
 
     /**
@@ -117,7 +286,7 @@ class CreateEntity
     {
         $properties = $this->entityToStore['properties'];
         echo "Those infomations will be save into {$this->entityClassName} : \n";
-         foreach ($properties as $key => $values) {
+        foreach ($properties as $key => $values) {
             $displayNull = $values['nullable'] ? '' : 'not ';
             $displayStore = $values['stored'] ? '' : 'not ';
             $type = $values['type'];
@@ -152,7 +321,7 @@ class CreateEntity
         } else {
             $storeProperty = $this->askYesNo('Is property stored in DB ? (y/n)');
         }
-        if($storeProperty){
+        if ($storeProperty) {
             $nullProperty = $this->askYesNo('Is property nullable ? (y/n)');
         }
 
@@ -167,7 +336,7 @@ class CreateEntity
         $saveProperty = $this->askYesNo('Is this OK ? (y/n)');
         if ($saveProperty) {
             $this->entityToStore['properties'][$propertyName] = $property;
-            if(!empty($relation)){
+            if (!empty($relation)) {
                 $this->entityToStore['relations'][$propertyName] = $relation;
                 $this->makeForeignUpdate($propertyName, $property, $relation);
             }
@@ -352,8 +521,7 @@ class CreateEntity
             $entityName = "{$name}Entity";
         }
         $this->entityClassName = $entityName;
-        $path = $this->appPath . 'src' . DIRECTORY_SEPARATOR . 'Entity' . DIRECTORY_SEPARATOR;
-        $filename = "{$path}{$entityName}.php";
+        $filename = "{$this->EntityPath}{$entityName}.php";
         return file_exists($filename);
     }
 

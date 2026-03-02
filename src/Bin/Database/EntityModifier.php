@@ -9,7 +9,9 @@ class EntityModifier
         string $propertyName,
         string $propertyType,
         array $useStatements,
-        array $attributes = []
+        array $attributes = [], 
+        ?string $typeRelation = null,
+        ?string $nameRelation = null
     ): bool {
         $content = file_get_contents($filePath);
         $tokens = token_get_all($content);
@@ -23,7 +25,7 @@ class EntityModifier
 
         $propertyBlock = self::buildPropertyBlock($propertyName, $propertyType, $attributes);
 
-        $methods = self::buildGetterSetter($propertyName, $propertyType);
+        $methods = self::buildGetterSetter($propertyName, $propertyType, $typeRelation, $nameRelation);
 
         $lastBracePos = strrpos($content, '}');
 
@@ -120,20 +122,59 @@ class EntityModifier
         return $block;
     }
 
-    private static function buildGetterSetter(string $name, string $type): string
+    private static function buildGetterSetter(string $name, string $type, ?string $relationType, ?string $relationName): string
     {
         $ucName = ucfirst($name);
-        return "
-    public function get{$ucName}(): {$type}
-    {
-        return \$this->{$name};
-    }
-
+        $getters = <<<GETTER
+        public function get{$ucName}(): {$type}
+        {
+            return \$this->{$name};
+        }\n
+    GETTER;
+    $setters = <<<SETTER
     public function set{$ucName}({$type} \${$name}): self
     {
         \$this->{$name} = \${$name};
         return \$this;
+    }\n
+SETTER;
+    if('m' === $relationType){
+         $setters = <<<SETTER
+        public function set{$ucName}({$type} \${$name}): self
+        {
+            \$this->{$name} = \${$name};
+            \$this->syncRelation('{$name}', \${$name});
+            return \$this;
+        }\n
+    SETTER;   
+
     }
-";
+    if('o' === $relationType) {
+        $getters .= "\n" .<<<GETTER
+        public function getOne{$ucName}(int \$index): {$relationName}
+        {
+            return \$this->{$name}->get(\$index);
+        }\n
+    GETTER;
+
+    $setters .= <<<SETTER
+        
+        public function Add{$ucName}({$relationName} \${$name}): self
+        {
+            if (!\$this->{$name}->contains(\${$name})) {
+                \$this->{$name}->add(\${$name});
+            }    
+            return \$this;
+        }      
+        
+        public function remove{$ucName}({$relationName} \${$name}): self
+        {
+            \$this->{$name}->remove(\${$name});
+            return \$this;
+        }\n
+    SETTER;
+    }
+    $getterSetter ="\n" . $getters . "\n" . $setters;
+    return $getterSetter;
     }
 }
