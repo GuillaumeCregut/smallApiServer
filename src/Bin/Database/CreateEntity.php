@@ -7,6 +7,7 @@
 
 namespace App\Bin\Database;
 
+use Exception;
 use App\Bin\ConsoleHelper;
 use App\Kernel\GetEnvDatas;
 use App\Bin\ConsoleException;
@@ -30,7 +31,7 @@ class CreateEntity
     ];
     private array $relations = [
         'm' => 'Many to One (this entity store field for relation)',
-        'o' => 'One to Many (this entity does not store field for relation',
+        'o' => 'One to Many (this entity does not store field for relation)',
     ];
     private array $restrictions = [
         'c' => 'cascade',
@@ -94,7 +95,7 @@ class CreateEntity
         $properties = $this->entityToStore['properties'];
         $relations = $this->entityToStore['relations'];
         foreach ($properties as $name => $values) {
-            $relationType =null;
+            $relationType = null;
             $relationName = null;
             $relation = [];
             if (isset($relations[$name])) {
@@ -103,8 +104,14 @@ class CreateEntity
                 $relationName = $relation['foreign'];
             }
             $formattedValues = $this->formatUpdate($values, $relation);
-           
-            $saved = $this->writeFile($this->entityClassName, $name, $formattedValues['type'], $formattedValues['uses'], $formattedValues['attributes'], $relationType,  $relationName);
+            $formattedType = $formattedValues['type'];
+            if ('o' === $relationType) {
+                $formattedType = 'LazyBag';
+            }
+            if('m' === $relationType) {
+                $formattedType = $relation['foreign'];
+            }
+            $saved = $this->writeFile($this->entityClassName, $name,  $formattedType, $formattedValues['uses'], $formattedValues['attributes'], $relationType,  $relationName);
             if ($saved) {
                 $ok = ConsoleHelper::makeSpecial("Property {$name} create successfully...", 'green', 'reset');
                 echo "$ok\n";
@@ -145,8 +152,15 @@ class CreateEntity
         $uses = [];
         $attributes = [];
         $propertyType = $property['type'];
-        if ($propertyType === 'o') {
-            $type = 'LazyBag';
+        if ('o' === $propertyType) {
+            if (empty($relation)) {
+                throw new Exception('Error with entity in formatUpdate. No relation found');
+            }
+            if ('o' === $relation['type']) {
+                $type = 'LazyBag';
+            } else {
+                $type = $relation['foreign'];
+            }
         } else {
             $type = $this->types[$propertyType];
         }
@@ -165,10 +179,14 @@ class CreateEntity
             switch ($relationType) {
                 case 'm':
                     $uses[] = 'App\\Kernel\\Connector\\Attributes\\ManyToOne';
-                    $uses[] = 'App\\Entity\\{$target}';
                     $target = $relation['foreign'];
                     $field = $relation['field'];
-                    $attributes[] = "#[ManyToOne(targetEntity: {$target}::class, inversedBy: '{$field}')]";
+                    $updateConstraintKey = $relation['update'];
+                    $deleteConstraintKey = $relation['delete'];
+                    $updateConstraint = $this->restrictions[$updateConstraintKey];
+                    $deleteConstraint = $this->restrictions[$deleteConstraintKey];
+                    $uses[] = "App\\Entity\\{$target}";
+                    $attributes[] = "#[ManyToOne(targetEntity: {$target}::class, inversedBy: '{$field}', onUpdate: '{$updateConstraint}', onDelete: '$deleteConstraint')]";
                     break;
                 case 'o':
                     $uses[] = 'App\\Kernel\\Connector\\Attributes\\OneToMany';
@@ -259,12 +277,12 @@ class CreateEntity
             $relationType = null;
             $relations = $informations['relations'];
             $properties = $informations['properties'];
-            if(!empty ($relations)) {
+            if (!empty($relations)) {
                 $relationName = $relations['foreign'];
                 $relationType = $relations['type'];
             }
             $formattedValues = $this->formatUpdate($properties, $relations);
-            $saved = $this->writeFile($entityName, $property, $formattedValues['type'], $formattedValues['uses'], $formattedValues['attributes'],$relationType, $relationName);
+            $saved = $this->writeFile($entityName, $property, $formattedValues['type'], $formattedValues['uses'], $formattedValues['attributes'], $relationType, $relationName);
             if ($saved) {
                 $ok = ConsoleHelper::makeSpecial("Property {$property} in {$entityName} create successfully...", 'green', 'reset');
                 echo "$ok\n";
