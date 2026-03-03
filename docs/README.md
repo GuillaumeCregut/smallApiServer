@@ -70,10 +70,11 @@ Building and sending HTTP responses.
 ### Working with Databases and Entities
 
 ### [Repository](./repository.md)
-The Repository pattern for data access and persistence.
-- **Topics**: CRUD operations, entity management, query building, data persistence
-- **Use when**: Creating repositories for data access
-- **Key Classes**: `AbstractRepository`, `RepositoryInterface`
+Data access patterns: traditional Repository and modern EntityManager (Unit of Work).
+- **Topics**: CRUD operations, entity management, query building, data persistence, Unit of Work pattern, identity maps
+- **Use when**: Accessing and persisting entities to the database
+- **Key Classes**: `AbstractRepository`, `RepositoryInterface`, `EntityManager`, `AbstractEntity`
+- **Two Approaches**: Choose Repository for simple CRUD OR EntityManager for complex transactions (not both)
 - **Related**: [Query Builder](./queryBuilder.md), [Hydrator](./hydrator.md)
 
 ### [Hydrator](./hydrator.md)

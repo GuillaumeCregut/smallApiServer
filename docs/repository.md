@@ -1,8 +1,21 @@
-# Repositories and Entities
+# Repositories, Entities, and Entity Management
 
 ## Overview
 
-The Repository and Entity system of smallApiServer implements the Repository pattern, which separates data persistence logic from business logic. **Entities** represent business objects, while **Repositories** manage their persistence to the database.
+The SmallMVC framework provides **two complementary patterns** for managing entities: the traditional **Repository pattern** and the modern **EntityManager pattern** (Unit of Work). Choose one approach for your application based on your needs.
+
+### Two Approaches: Repository vs EntityManager
+
+| Feature | Repository | EntityManager |
+|---------|-----------|---------------|
+| **Usage** | Direct save/find on demand | Track entities, flush all at once |
+| **Transactions** | Per operation | Single flush (all-or-nothing) |
+| **Identity Map** | None | Yes (one object per ID) |
+| **Relationships** | Manual sync | Auto-synced |
+| **Learning Curve** | Simple | Moderate |
+| **Best For** | CRUD controllers | Complex business logic |
+
+**⚠️ WARNING**: Use EITHER Repository OR EntityManager, but NOT BOTH in the same request. Mixing them can cause data consistency issues and duplicate operations.
 
 ---
 
@@ -110,6 +123,274 @@ private ?string $newpassword = null;  // Intermediate field for password input
 
 ---
 
+## Entity Manager (Unit of Work Pattern)
+
+The `EntityManager` implements the **Unit of Work pattern**, managing entity persistence lifecycle within a request.
+
+### Concept
+
+Instead of saving individual entities immediately, the EntityManager:
+1. **Tracks** entity changes (new, modified, deleted)
+2. **Manages Identity Map** - ensures one PHP object per database record
+3. **Orders** dependencies automatically (e.g., ManyToOne targets before owners)
+4. **Flushes** all changes in a single transaction
+
+### Initialization
+
+```php
+use App\Kernel\Connector\Management\EntityManager;
+use App\Kernel\Connector\Management\IdentityMap;
+
+// Simple initialization
+$em = new EntityManager();
+
+// Or with custom IdentityMap
+$em = new EntityManager(new IdentityMap());
+```
+
+### Core Methods
+
+#### persist(EntityInterface $entity): void
+
+Mark an entity for persistence (insert or update).
+
+```php
+$user = new User();
+$user->setName('John');
+
+// Entity has no ID yet - will be INSERTed
+$em->persist($user);
+
+// After loading from DB or setting manually
+$existingUser->setName('Jane');
+$em->persist($existingUser);  // Will be UPDATED
+```
+
+#### remove(EntityInterface $entity): void
+
+Mark an entity for deletion.
+
+```php
+$user = $em->find(User::class, 1);
+$em->remove($user);  // Will be DELETED on flush
+```
+
+#### flush(): void
+
+Persist all pending changes in a **single transaction**:
+- Inserts new entities (ordered by ManyToOne dependencies)
+- Updates modified entities
+- Deletes removed entities
+- Rolls back entire transaction on any error
+
+```php
+$author = new Author();
+$author->setName('John');
+$em->persist($author);
+
+$post = new Post();
+$post->setTitle('Hello World');
+$post->setAuthor($author);  // ManyToOne
+$em->persist($post);
+
+$em->flush();  // Transaction ensures both are saved or both rolled back
+```
+
+#### find(string $class, int $id): ?EntityInterface
+
+Retrieve an entity from the identity map or database.
+
+```php
+$user = $em->find(User::class, 1);
+
+// Same object instance on subsequent calls (identity map)
+$sameUser = $em->find(User::class, 1);
+assert($user === $sameUser);  // ✓ Same object
+```
+
+#### findBy(string $class, array $criteria): array
+
+Find multiple entities by criteria.
+
+```php
+$admins = $em->findBy(User::class, ['role' => 'admin']);
+```
+
+#### findAll(string $class): array
+
+Retrieve all entities of a type.
+
+```php
+$allUsers = $em->findAll(User::class);
+```
+
+#### detach(EntityInterface $entity): void
+
+Stop tracking an entity (removes from identity map and all queues).
+
+```php
+$em->detach($user);  // Entity no longer tracked
+$em->persist($user);  // Must re-persist
+```
+
+#### clear(): void
+
+Clear all tracked entities and the identity map.
+
+```php
+$em->clear();  // Reset everything
+```
+
+#### transactional(callable $fn): void
+
+Execute a block of code within a transaction.
+
+```php
+$em->transactional(function() use ($em) {
+    $user = new User();
+    $user->setName('Alice');
+    $em->persist($user);
+    $em->flush();
+});
+// If exception thrown, entire transaction is rolled back
+```
+
+#### getIdentityMap(): IdentityMapInterface
+
+Access the identity map directly (advanced use only).
+
+```php
+$map = $em->getIdentityMap();
+```
+
+### Status Checking Methods
+
+#### isManaged(EntityInterface $entity): bool
+
+Check if entity is tracked (new or dirty).
+
+```php
+if ($em->isManaged($user)) {
+    $em->flush();  // Will persist this user
+}
+```
+
+#### isNew(EntityInterface $entity): bool
+
+Check if entity is new (will be INSERTed on flush).
+
+```php
+$user = new User();
+$em->persist($user);
+
+if ($em->isNew($user)) {
+    echo "Entity will be inserted";
+}
+```
+
+### Entity Manager Workflow Example
+
+```php
+use App\Kernel\Connector\Management\EntityManager;
+
+class OrderService
+{
+    private EntityManager $em;
+
+    public function __construct(EntityManager $em)
+    {
+        $this->em = $em;
+    }
+
+    public function placeOrder(array $orderData, array $itemsData): void
+    {
+        try {
+            // Create order
+            $order = new Order();
+            $order->setTotal(0);
+            $this->em->persist($order);
+
+            // Add items
+            foreach ($itemsData as $itemData) {
+                $item = new OrderItem();
+                $item->setOrder($order);  // ManyToOne
+                $item->setQuantity($itemData['qty']);
+                $item->setPrice($itemData['price']);
+                $this->em->persist($item);
+                
+                // Update total
+                $order->addOrderItem($item);  // OneToMany auto-sync
+            }
+
+            // Single transaction - all or nothing
+            $this->em->flush();
+
+        } catch (Exception $e) {
+            // Entire order creation rolled back
+            throw $e;
+        }
+    }
+}
+```
+
+---
+
+## Entity Relationships and Synchronization
+
+### OneToMany and ManyToOne Attributes
+
+Define relationships in your entities:
+
+```php
+use App\Kernel\Connector\Attributes\OneToMany;
+use App\Kernel\Connector\Attributes\ManyToOne;
+
+class Author extends AbstractEntity
+{
+    #[OneToMany(targetEntity: Post::class, mappedBy: 'author')]
+    private LazyBag $posts;
+
+    public function addPost(Post $post): void
+    {
+        $this->addToCollection('posts', $post);
+    }
+}
+
+class Post extends AbstractEntity
+{
+    #[ManyToOne(targetEntity: Post::class, inversedBy: 'posts')]
+    private ?Author $author = null;
+
+    public function setAuthor(?Author $author): self
+    {
+        $this->syncRelation('author', $author);
+        $this->author = $author;
+        return $this;
+    }
+}
+```
+
+### Automatic Synchronization
+
+When using `addToCollection()` or `syncRelation()`, relationships are **automatically synchronized** in both directions:
+
+```php
+$author = new Author();
+$post = new Post();
+
+// This automatically:
+// 1. Sets $post->author to $author
+// 2. Adds $post to $author->posts
+$author->addPost($post);
+
+// Both EntityManager and Repository support this
+$em->persist($author);
+$em->persist($post);
+$em->flush();  // Both relationships saved correctly
+```
+
+---
+
 ## Repositories
 
 ### Concept
@@ -131,6 +412,8 @@ abstract class AbstractRepository implements RepositoryInterface
 ```
 
 ### Example: UserRepository
+
+The repository now accepts an optional EntityManager:
 
 ```php
 namespace App\Security;
@@ -187,6 +470,26 @@ class UserRepository extends AbstractRepository
         return parent::save($entity);
     }
 }
+```
+
+**Using with EntityManager:**
+
+```php
+$em = new EntityManager();
+$repo = new UserRepository($em);  // Pass EntityManager to constructor
+
+$user = $repo->find(1);
+// User is now in identity map and tracked by $em
+```
+
+**Using directly (traditional Repository approach):**
+
+```php
+$repo = new UserRepository();  // No EntityManager
+
+$user = $repo->find(1);
+// User retrieved but not tracked
+$repo->save($user);  // Direct save
 ```
 
 ### Main Methods
@@ -252,9 +555,91 @@ if ($user) {
 
 ---
 
+## Comparing Both Approaches
+
+### Approach 1: Direct Repository (Simple CRUD)
+
+Best for: Standard CRUD operations with minimal business logic.
+
+```php
+class UserController extends AbstractController
+{
+    private UserRepository $repo;
+
+    public function __construct()
+    {
+        $this->repo = new UserRepository();  // No EntityManager
+    }
+
+    public function update()
+    {
+        $user = $this->repo->find($_POST['id']);
+        $user->setName($_POST['name']);
+        $this->repo->save($user);  // Saves immediately
+        return $this->returnJson($user);
+    }
+}
+```
+
+**Pros:**
+- Simple and straightforward
+- Direct control over persistence
+- Minimal overhead
+
+**Cons:**
+- No automatic relationship sync
+- Multiple transactions if saving related entities
+- Must manage relationships manually
+
+### Approach 2: EntityManager (Unit of Work)
+
+Best for: Complex business logic with multiple related entities.
+
+```php
+class OrderService
+{
+    private EntityManager $em;
+
+    public function __construct()
+    {
+        $this->em = new EntityManager();
+    }
+
+    public function updateOrder($orderId, $data)
+    {
+        $order = $this->em->find(Order::class, $orderId);
+        $order->setTotal($data['total']);
+
+        foreach ($data['items'] as $itemData) {
+            $item = new OrderItem();
+            $item->setQuantity($itemData['qty']);
+            $order->addOrderItem($item);  // Auto-synced
+            $this->em->persist($item);
+        }
+
+        $this->em->persist($order);
+        $this->em->flush();  // Single transaction for everything
+        return $order;
+    }
+}
+```
+
+**Pros:**
+- Automatic relationship synchronization
+- All changes in single transaction
+- Identity map prevents duplicates
+- Dependency ordering automatic
+
+**Cons:**
+- Slight learning curve
+- More memory for tracking
+- All-or-nothing flush semantics
+
+---
+
 ## Usage in Controllers
 
-### Example: UserController
+### Example: UserController (Traditional Repository)
 
 ```php
 namespace App\Controllers;
@@ -364,6 +749,118 @@ class UserController extends AbstractController
         }
 
         $this->repo->delete($user);
+        return $this->returnJson(null, 204);
+    }
+}
+```
+
+### Example: OrderController (EntityManager)
+
+```php
+namespace App\Controllers;
+
+use App\Entities\Order;
+use App\Entities\OrderItem;
+use App\Kernel\Connector\Management\EntityManager;
+use App\Kernel\AbstractController;
+
+class OrderController extends AbstractController
+{
+    private EntityManager $em;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->em = new EntityManager();
+    }
+
+    // CREATE - Place new order with items
+    public function create()
+    {
+        $orderData = $this->request->getAllDatas();
+
+        // Create order
+        $order = new Order();
+        $order->setStatus('pending');
+        $order->setTotal(0);
+
+        // Add items
+        $total = 0;
+        foreach ($orderData['items'] as $itemData) {
+            $item = new OrderItem();
+            $item->setPrice($itemData['price']);
+            $item->setQuantity($itemData['qty']);
+                    
+            // Auto-syncs both directions
+            $order->addOrderItem($item);
+            
+            $this->em->persist($item);
+            $total += $itemData['price'] * $itemData['qty'];
+        }
+
+        $order->setTotal($total);
+        $this->em->persist($order);
+        $this->em->flush();  // Everything persisted in one transaction
+
+        return $this->returnJson(['id' => $order->getId()], 201);
+    }
+
+    // UPDATE - Modify order and items using transactionnal functionnality
+    public function update()
+    {
+        $id = $this->request->getData('id');
+        $orderData = $this->request->getAllDatas();
+
+        try {
+            $this->em->transactional(function() use ($id, $orderData) {
+                $order = $this->em->find(Order::class, $id);
+                if (!$order) {
+                    throw new Exception('Order not found');
+                }
+
+                $order->setStatus($orderData['status']);
+                
+                // EntityManager tracks all changes
+                $this->em->persist($order);
+                $this->em->flush();
+            });
+
+            return $this->returnJson(null, 204);
+        } catch (Exception $e) {
+            return $this->returnError(500);
+        }
+    }
+
+    // READ - Get order with all items
+    public function read()
+    {
+        $id = $this->request->getData('id');
+        $order = $this->em->find(Order::class, $id);
+
+        if (!$order) {
+            return $this->returnError(404);
+        }
+
+        return $this->returnJson([
+            'id' => $order->getId(),
+            'status' => $order->getStatus(),
+            'items' => $order->getOrderItems(),
+        ]);
+    }
+
+    // DELETE - Remove order (and cascade to items)
+    public function delete()
+    {
+        $id = $this->request->getData('id');
+        $order = $this->em->find(Order::class, $id);
+
+        if (!$order) {
+            return $this->returnError(404);
+        }
+
+        $this->em->remove($order);
+        $this->em->flush();
+
         return $this->returnJson(null, 204);
     }
 }
@@ -495,7 +992,43 @@ class UserTest extends TestCase
 
 ## Best Practices
 
-### 1. Business Logic in Repository
+⚠️ **CRITICAL**: Choose ONE approach per request:
+- Use **EntityManager** for operations with multiple related entities
+- Use **Repository** for simple CRUD operations
+- **NEVER MIX** them in the same request cycle
+
+### 1. Choose Your Pattern
+
+**Use EntityManager when:**
+- Multiple entities are created/updated in one operation
+- You need automatic relationship synchronization
+- You want all-or-nothing transaction semantics
+
+```php
+// ✓ GOOD - EntityManager for multi-entity operation
+$em = new EntityManager();
+$order = new Order();
+$item = new OrderItem();
+$order->addOrderItem($item);
+$em->persist($order);
+$em->persist($item);
+$em->flush();  // Both saved together
+```
+
+**Use Repository when:**
+- CRUD operations are simple and independent
+- You want direct control over persistence
+- You're working with a single entity type
+
+```php
+// ✓ GOOD - Repository for simple update
+$repo = new UserRepository();
+$user = $repo->find(1);
+$user->setName('John');
+$repo->save($user);  // Direct save
+```
+
+### 2. Business Logic in Repository
 
 Centralize complex search logic in repository methods:
 
@@ -509,35 +1042,52 @@ public function findActiveUsersByRole(string $role): array
 // ✗ BAD - Logic scattered in controller
 ```
 
-### 2. Data Validation
+### 3. Data Validation
 
-Validate entities before saving:
+Validate entities before persisting:
 
 ```php
+// ✓ GOOD - EntityManager
 if (!$this->isValidUser($user)) {
-    return $this->returnError(422);  // Unprocessable Entity
+    throw new ValidationException("Invalid user data");
+}
+$this->em->persist($user);
+$this->em->flush();
+
+// ✓ GOOD - Repository
+if (!$this->isValidUser($user)) {
+    return $this->returnError(422);
 }
 $this->repo->save($user);
 ```
 
-### 3. Error Handling
+### 4. Error Handling
 
-Handle repository exceptions:
+Handle exceptions properly:
 
 ```php
+// With EntityManager
 try {
-    $user = $this->repo->save($user);
-    if (!$user) {
-        throw new DatabaseException("Failed to save user");
+    $this->em->flush();
+} catch (DatabaseException $e) {
+    // Transaction rolled back automatically
+    return $this->returnError(500);
+}
+
+// With Repository
+try {
+    $result = $this->repo->save($user);
+    if (!$result) {
+        throw new DatabaseException("Failed to save");
     }
 } catch (DatabaseException $e) {
     return $this->returnError(500);
 }
 ```
 
-### 4. Sensitive Properties
+### 5. Sensitive Properties
 
-Use `#[NotStored]` for temporary properties like password input:
+Use `#[NotStored]` for temporary properties:
 
 ```php
 #[NotStored]
@@ -550,17 +1100,17 @@ if (null !== $entity->getNewPassword()) {
 }
 ```
 
-### 5. Using Hydrator
+### 6. Using Hydrator
 
-Use `Hydrator` to populate entities from received data:
+Populate entities from request data:
 
 ```php
 $user = Hydrator::hydrate(new User(), $requestData);
 ```
 
-### 6. Strong Typing
+### 7. Strong Typing
 
-Use type hints to improve clarity:
+Use type hints for clarity:
 
 ```php
 public function save(EntityInterface $entity): null | false | EntityInterface
@@ -572,75 +1122,166 @@ public function save(EntityInterface $entity): null | false | EntityInterface
 }
 ```
 
----
+### 8. Relationship Management
 
-## Complete CRUD Operation Flow
-
-### Creating a User
+Use automatic sync methods:
 
 ```php
-// 1. Retrieve request data
-$userData = $request->getAllDatas();
+// ✓ GOOD - Automatic bidirectional sync
+$author->addPost($post);  // Sets both author->posts and post->author
 
-// 2. Create new entity
-$user = Hydrator::hydrate(new User(), $userData);
-$user->setNewPassword($user->getPassword());
+// ✗ AVOID - Manual sync (error-prone) when no syncRelation is set in SetAuthor
+$post->setAuthor($author);  // Only one direction
+// Must remember to do: $author->getPosts()->add($post);
+```
 
-// 3. Save via repository
-$savedUser = $repo->save($user);
+### 9. Transaction Boundaries
 
-// 4. Return response
+
+**Repository:** Each save is a transaction
+
+```php
+$repo->save($user);  // Transaction: this save
+// No relationship with other saves
+```
+
+### 10. Identity Map Usage
+
+**EntityManager:** Identity map is automatic
+
+```php
+$user1 = $em->find(User::class, 1);
+$user2 = $em->find(User::class, 1);
+
+assert($user1 === $user2);  // ✓ Same object instance
+```
+
+**Repository:** No identity map
+
+```php
+$user1 = $repo->find(1);
+$user2 = $repo->find(1);
+
+assert($user1 !== $user2);  // Different instances
+```
+
+---
+
+## Complete Workflows
+
+### Workflow 1: Repository Pattern (Single Entity)
+
+#### Creating a User
+
+```php
+$repo = new UserRepository();
+
+$user = new User();
+$user->setName('Smith');
+$user->setFirstname('John');
+$user->setUsername('jsmith');
+$user->setNewPassword('secure123');
+
+$savedUser = $repo->save($user);  // INSERT
 return $this->returnJson(['id' => $savedUser->getId()], 201);
 ```
 
-### Retrieving a User
+#### Retrieving a User
 
 ```php
-// 1. Get ID from request
-$id = $request->getData('id');
+$repo = new UserRepository();
+$user = $repo->find(1);
 
-// 2. Search via repository
-$user = $repo->find($id);
-
-// 3. Return response
 if (!$user) {
     return $this->returnError(404);
 }
 return $this->returnJson(['name' => $user->getName()]);
 ```
 
-### Updating a User
+#### Updating a User
 
 ```php
-// 1. Retrieve existing user
-$user = $repo->find($id);
+$repo = new UserRepository();
+$user = $repo->find(1);
 if (!$user) {
     return $this->returnError(404);
 }
 
-// 2. Update properties
-//Build your own system
-
-// 3. Save via repository
-$repo->save($user);
-
-// 4. Return response
+$user->setName('New Name');
+$repo->save($user);  // UPDATE
 return $this->returnJson(null, 204);
 ```
 
-### Deleting a User
+#### Deleting a User
 
 ```php
-// 1. Retrieve user
-$user = $repo->find($id);
+$repo = new UserRepository();
+$user = $repo->find(1);
 if (!$user) {
     return $this->returnError(404);
 }
 
-// 2. Delete via repository
-$repo->delete($user);
+$repo->delete($user);  // DELETE
+return $this->returnJson(null, 204);
+```
 
-// 3. Return response
+### Workflow 2: EntityManager Pattern (Multiple Related Entities)
+
+#### Creating Order with Items
+
+```php
+$em = new EntityManager();
+
+$em->transactional(function() use ($em) {
+    $order = new Order();
+    $order->setStatus('pending');
+    $order->setTotal(0);
+    $em->persist($order);
+
+    foreach ($itemsData as $itemData) {
+        $item = new OrderItem();
+        $item->setPrice($itemData['price']);
+        $item->setQuantity($itemData['qty']);
+        $order->addOrderItem($item);  // Auto-sync
+        $em->persist($item);
+    }
+
+    $em->flush();  // All or nothing
+});
+
+return $this->returnJson(['id' => $order->getId()], 201);
+```
+
+#### Retrieving Order with Items
+
+```php
+$em = new EntityManager();
+$order = $em->find(Order::class, 1);
+
+if (!$order) {
+    return $this->returnError(404);
+}
+
+// Items loaded via lazy bag
+return $this->returnJson($order);
+```
+
+#### Updating Order and Items
+
+```php
+$em = new EntityManager();
+
+$em->transactional(function() use ($em) {
+    $order = $em->find(Order::class, 1);
+    $order->setStatus('shipped');
+    
+    foreach ($order->getOrderItems() as $item) {
+        $item->setStatus('shipped');
+    }
+    
+    $em->flush();  // All changes atomic
+});
+
 return $this->returnJson(null, 204);
 ```
 
@@ -650,8 +1291,95 @@ return $this->returnJson(null, 204);
 
 | Concept | Description | Example |
 |---------|-------------|---------|
-| **Entity** | Class representing a business object | `User`, `Product` |
-| **Repository** | Class managing data persistence | `UserRepository`, `ProductRepository` |
-| **Attributes** | Decorators to control behavior | `#[NotStored]`, `#[Nullable]` |
+| **Entity** | Class representing a business object | `User`, `Order` |
+| **Repository** | Direct data persistence | `UserRepository::save()` |
+| **EntityManager** | Unit of Work pattern - tracks & flushes | `$em->persist()`, `$em->flush()` |
+| **Attributes** | Decorators to control behavior | `#[NotStored]`, `#[OneToMany]` |
 | **Hydrator** | Fill entity from array | `Hydrator::hydrate($user, $data)` |
-| **CRUD** | Create, Read, Update, Delete | `save()`, `find()`, `delete()` |
+| **Identity Map** | One object per ID (EntityManager only) | `$em->find()` returns same instance |
+| **Relationship Sync** | Automatic bidirectional sync | `addToCollection()`, `syncRelation()` |
+
+### Quick Decision Tree
+
+```
+Are you working with multiple related entities?
+├─ YES → Use EntityManager
+│        └─ $em->persist(), $em->flush()
+└─ NO  → Use Repository
+         └─ $repo->save()
+```
+
+---
+
+## Troubleshooting
+
+### "I saved an entity but changes aren't visible"
+
+**Repository:** Changes are persisted immediately.
+
+```php
+$user = $repo->find(1);
+$user->setName('John');
+$repo->save($user);  // ✓ Saved now
+```
+
+**EntityManager:** Must call `flush()`:
+
+```php
+$user = $em->find(User::class, 1);
+$user->setName('John');
+$em->persist($user);
+$em->flush();  // ✓ Must flush
+```
+
+### "I'm getting duplicate entities"
+
+This occurs when **mixing Repository and EntityManager**:
+
+```php
+// ✗ BAD - Mixing approaches
+$em = new EntityManager();
+$repo = new UserRepository();  // Without EntityManager!
+
+$user1 = $em->find(User::class, 1);
+$user2 = $repo->find(1);  // Different object!
+// Now you have two different PHP objects for same DB entity
+```
+
+**Solution:** Pick one approach:
+
+```php
+// ✓ GOOD - EntityManager only
+$em = new EntityManager();
+$repo = new UserRepository($em);  // Pass EntityManager
+$user = $repo->find(1);
+```
+
+### "Transaction rolled back unexpectedly"
+
+This happens in EntityManager when any operation fails:
+
+```php
+$em->transactional(function() use ($em) {
+    $order->save($order);
+    $item->save($item);  // ← Exception here
+    // Order save is ROLLED BACK
+    $em->flush();
+});
+```
+
+**Solution:** Validate before persisting:
+
+```php
+$em->transactional(function() use ($em) {
+    if (!$this->validate($order)) {
+        throw new ValidationException();
+    }
+    if (!$this->validate($item)) {
+        throw new ValidationException();
+    }
+    $em->persist($order);
+    $em->persist($item);
+    $em->flush();  // All valid, all saved
+});
+```
