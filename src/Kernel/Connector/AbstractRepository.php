@@ -18,6 +18,7 @@ use App\Kernel\Connector\Hydrator;
 use App\Kernel\Connector\QueryBuilder;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Connector\Interfaces\EntityManagerInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use Error;
 use Exception;
@@ -35,8 +36,12 @@ abstract class AbstractRepository implements RepositoryInterface
     protected ?string $entityName = null;
     protected QueryBuilder $qb;
     protected array $relations = [];
-    public function __construct()
+    protected ?EntityManagerInterface $em = null;
+
+
+    public function __construct(?EntityManagerInterface $em = null)
     {
+        $this->em = $em;
         $this->connector = ConnectorDispatcher::getConnector();
         if (!is_subclass_of($this->entity, EntityInterface::class)) {
             throw new DatabaseException('Entity class must be an instance of EntityInterface');
@@ -46,6 +51,11 @@ abstract class AbstractRepository implements RepositoryInterface
             throw new DatabaseException('Entity class must be an instance of EntityInterface');
         }
         $this->qb = new QueryBuilder($table);
+    }
+
+    public function setEntityManager(EntityManagerInterface $em): void
+    {
+        $this->em = $em;
     }
 
     public function find(int $id): ?EntityInterface
@@ -202,7 +212,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $id = strtoupper(bin2hex(random_bytes(8)));
             $constraintName = "FK_{$id}";
             $sql = "ALTER TABLE {$this->getTableName()} ADD CONSTRAINTS {$constraintName} FOREIGN KEY ({$name}) REFERENCES {$foreignTable} (id) ON DELETE {$onDelete} ON UPDATE {$onUpdate}";
-            $resultArray[] =$sql;
+            $resultArray[] = $sql;
         }
         return $resultArray;
     }
@@ -319,7 +329,11 @@ abstract class AbstractRepository implements RepositoryInterface
                 }
                 $entityRepo = $targetEntity::getRepository();
                 $newRepoRelation = new $entityRepo();
-                $newEntityRelation = $newRepoRelation->find($idRelation);
+                if (null !== $this->em) {
+                    $newEntityRelation = $this->em->find($targetEntity, $idRelation);
+                } else {
+                    $newEntityRelation = $newRepoRelation->find($idRelation);
+                }
                 $setter = 'set' . ucfirst($newName);
                 if (!method_exists($entity, $setter)) {
                     throw new DatabaseException("No setter found for {$newName} in {$this->entityName}");
@@ -343,11 +357,22 @@ abstract class AbstractRepository implements RepositoryInterface
             /**@var EntityInterface $entity */
             $targetRepoName = $targetEntity::getRepository();
             $id = $entity->getid();
-            $bag = new LazyBag(function () use ($id, $targetRepoName, $relation): array {
+            $em = $this->em; //?????
+            $bag = new LazyBag(function () use ($id, $targetRepoName, $relation, $em): array {
                 $targetRepo = new $targetRepoName();
-                return $targetRepo->findBy([
+                if (null !== $em) {
+                    $targetRepo->setEntityManager($em);
+                }
+                $results = $targetRepo->findBy([
                     $relation->mappedBy . '_id' => $id
                 ]);
+                if (null !== $em) {
+                    return array_map(
+                        fn(EntityInterface $e) => $em->getIdentityMap()->getOrRegister($e),
+                        $results
+                    );
+                }
+                return $results;
             });
             $setter = 'set' . ucfirst($propertyName);
             $entity->$setter($bag);
