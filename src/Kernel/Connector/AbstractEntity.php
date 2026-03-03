@@ -7,9 +7,10 @@
 
 namespace App\Kernel\Connector;
 
+use App\Kernel\Connector\Datas\LazyBag;
 use App\Kernel\Connector\Attributes\ManyToOne;
 use App\Kernel\Connector\Attributes\NotStored;
-use App\Kernel\Connector\Datas\LazyBag;
+use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\Interfaces\BagInterface;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 
@@ -73,5 +74,45 @@ abstract class AbstractEntity implements EntityInterface
         }
         /**@var LazyBag $bag */
         $bag->addWithoutInitializing($this);
+    }
+
+     /**
+     * Add an element to a OneToMany collection property and automatically
+     * set the back-reference (ManyToOne) on the element.
+     *
+     * Usage in a concrete entity:
+     *   public function addComment(CommentEntity $comment): self
+     *   {
+     *       $this->addToCollection('comments', $comment);
+     *       return $this;
+     *   }
+     *
+     * The developer never needs to call $comment->setPost($this) manually.
+     */
+    protected function addToCollection(string $propertyName, EntityInterface $element): void
+    {
+        $reflection = new \ReflectionClass($this);
+
+        if (!$reflection->hasProperty($propertyName)) {
+            return;
+        }
+
+        $property  = $reflection->getProperty($propertyName);
+        $oneToMany = $property->getAttributes(OneToMany::class);
+
+        if (!empty($oneToMany)) {
+            /** @var OneToMany $relation */
+            $relation = $oneToMany[0]->newInstance();
+            $setter   = 'set' . ucfirst($relation->mappedBy);
+            if (method_exists($element, $setter)) {
+                $element->$setter($this); // sets FK back-reference automatically
+            }
+        }
+
+        $bag = $property->getValue($this);
+        if ($bag instanceof BagInterface) {
+            /**@var LazyBag $bag */
+            $bag->addWithoutInitializing($element);
+        }
     }
 }

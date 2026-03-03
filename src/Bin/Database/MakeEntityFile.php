@@ -117,9 +117,7 @@ PHP;
         $functionName = 'add' . ucfirst($propertyName);
         $this->gettersSetters .= "    public function {$functionName} ($elementType \${$propertyName}): self\n";
         $this->gettersSetters .= "    {\n";
-        $this->gettersSetters .= "        if (!\$this->{$propertyName}->contains(\${$propertyName})) {\n";
-        $this->gettersSetters .= "            \$this->{$propertyName}->add(\${$propertyName});\n";
-        $this->gettersSetters .= "        }\n";
+        $this->gettersSetters .= "        \$this->{$propertyName}->addToCollection(\${$propertyName});\n";
         $this->gettersSetters .= "        return \$this;\n";
         $this->gettersSetters .= "    }\n\n";
 
