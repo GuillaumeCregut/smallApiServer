@@ -25,6 +25,14 @@ final class LazyBag extends Bag
         $this->loader = $loader;
     }
 
+    public function wrapLoader(callable $wrapper): void
+    {
+        $previousLoader = $this->loader;
+        $this->loader = function () use ($previousLoader, $wrapper): array {
+            return $wrapper($previousLoader);
+        };
+    }
+
     public function isInitialized(): bool
     {
         return $this->initialized;

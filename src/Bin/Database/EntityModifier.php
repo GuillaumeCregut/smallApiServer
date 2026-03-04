@@ -164,9 +164,7 @@ SETTER;
         
         public function Add{$ucName}({$relationName} \${$name}): self
         {
-            if (!\$this->{$name}->contains(\${$name})) {
-                \$this->{$name}->add(\${$name});
-            }    
+            \$this->{$name}->addToCollection(\${$name});
             return \$this;
         }      
         
