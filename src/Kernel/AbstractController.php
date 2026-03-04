@@ -11,18 +11,21 @@ use App\Kernel\Request;
 
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ClientErrorResponse;
-use App\Kernel\Connector\Interfaces\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\EntityManagerInterface;
+use App\Kernel\Connector\Management\EntityManager;
+use App\Kernel\Connector\Management\IdentityMap;
 use App\Kernel\Responses\JsonResponse;
 use Exception;
 
 abstract class AbstractController
 {
-    protected ConnectorInterface $connector;
     protected Request $request;
+    protected EntityManagerInterface $em;
 
     public function __construct()
     {
         $this->request = Request::getRequestInstance();
+        $this->em = EntityManager::getInstance(new IdentityMap());
     }
 
     protected function returnError(int $error, ?Exception $e = null): ResponseInterface
