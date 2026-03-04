@@ -357,7 +357,7 @@ abstract class AbstractRepository implements RepositoryInterface
             /**@var EntityInterface $entity */
             $targetRepoName = $targetEntity::getRepository();
             $id = $entity->getid();
-            $em = $this->em; //?????
+            $em = $this->em;
             $bag = new LazyBag(function () use ($id, $targetRepoName, $relation, $em): array {
                 $targetRepo = new $targetRepoName();
                 if (null !== $em) {
