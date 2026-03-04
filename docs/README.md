@@ -1,6 +1,6 @@
-# SmallMVC Documentation
+# smallAPIServer Documentation
 
-Welcome to the complete SmallMVC framework documentation. This directory contains comprehensive guides for all framework components, organized by topic for easy navigation.
+Welcome to the complete SmallAPI server framework documentation. This directory contains comprehensive guides for all framework components, organized by topic for easy navigation.
 
 ## Quick Navigation
 
@@ -19,7 +19,7 @@ Welcome to the complete SmallMVC framework documentation. This directory contain
 
 ## Getting Started
 
-New to SmallMVC? Start here:
+New to SmallAPI server ? Start here:
 
 1. **[Kernel Documentation](./kernel.md)** - Understand the application lifecycle and core engine
 2. **[Router Documentation](./router.md)** - Learn how to define application routes

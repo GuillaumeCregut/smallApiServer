@@ -722,7 +722,7 @@ $isValid = $fileUpload->isValid(
 
 ## Summary
 
-`FileUpload` provides a production-ready, security-focused solution for handling file uploads in the smallMVC framework. It implements multiple layers of validation and protection against common file upload attacks, making it safe to use with user-supplied files.
+`FileUpload` provides a production-ready, security-focused solution for handling file uploads in the smallAPIServer framework. It implements multiple layers of validation and protection against common file upload attacks, making it safe to use with user-supplied files.
 
 Key advantages:
 - **Real MIME type detection** prevents spoofing attacks

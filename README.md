@@ -73,7 +73,7 @@ A modern, lightweight PHP MVC framework designed for building RESTful APIs and w
 ```bash
 # Clone repository
 git clone <repository-url>
-cd smallMVC
+cd smallApiServer
 
 
 # Copy environment file
@@ -249,7 +249,7 @@ curl -X POST http://localhost:9000/api/users \
 ## Project Structure
 
 ```
-smallMVC/
+smallApiServer/
 ├── bin/                         # Console commands
 │   └── console.php              # CLI entry point
 |
@@ -406,7 +406,7 @@ Comprehensive documentation for all framework components:
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd smallMVC
+   cd smallApiServer
    ```
 
 2. **Configure environment**
@@ -829,7 +829,7 @@ chmod -R 755 vendor/
 server {
     listen 80;
     server_name yourdomain.com;
-    root /var/www/smallmvc/public;
+    root /var/www/smallApiServer/public;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
