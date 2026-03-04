@@ -9,12 +9,16 @@
  *   posts   (id INT AUTO_INCREMENT PK, title VARCHAR(255) NOT NULL, author_id INT NOT NULL)
  */
 
-
+use App\Kernel\Connector\AbstractEntity;
+use App\Kernel\GetEnvDatas;
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Connector\Datas\LazyBag;
+use App\Kernel\Connector\ConnectorDispatcher;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Management\IdentityMap;
 use App\Kernel\Connector\Management\EntityManager;
 use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Connector\MySQLConnector;
 
 class RelationIntegrationTest extends TestCase
 {
@@ -31,6 +35,8 @@ class RelationIntegrationTest extends TestCase
         $this->tearDownSchema();
         $this->em->clear();
         EntityManager::resetInstance();
+        ConnectorDispatcher::resetConnector();
+        GetEnvDatas::resetInstance();
     }
 
     private function setUpSchema(): void
@@ -43,30 +49,36 @@ class RelationIntegrationTest extends TestCase
 
     private function tearDownSchema(): void
     {
-        // Example for SQLite:
-        // $pdo = \App\Kernel\Connector\ConnectorDispatcher::getConnector()->getConnection();
-        // $pdo->exec('DELETE FROM posts');
-        // $pdo->exec('DELETE FROM authors');
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        $pdo = $connector->getConnection();
+        $pdo->exec('DELETE FROM posts');
+        $pdo->exec('DELETE FROM authors');
     }
 
-    private function insertAuthor(string $name): int
+    private function insertAuthor(string $name, ConnectorInterface $connector): int
     {
-        // $connector = \App\Kernel\Connector\ConnectorDispatcher::getConnector();
-        // return (int) $connector->executeQuery('INSERT INTO authors (name) VALUES (?)', [$name]);
+        return (int) $connector->executeQuery('INSERT INTO authors (name) VALUES (?)', [$name]);
         throw new \LogicException('Implement insertAuthor() for your test DB.');
     }
 
-    private function insertPost(string $title, int $authorId): int
+    private function insertPost(string $title, int $authorId, ConnectorInterface $connector): int
     {
-        // $connector = \App\Kernel\Connector\ConnectorDispatcher::getConnector();
-        // return (int) $connector->executeQuery('INSERT INTO posts (title, author_id) VALUES (?, ?)', [$title, $authorId]);
+        return (int) $connector->executeQuery('INSERT INTO posts (title, author_id) VALUES (?, ?)', [$title, $authorId]);
         throw new LogicException('Implement insertPost() for your test DB.');
     }
 
     public function testFindReturnsSameInstanceForSameId(): void
     {
         $this->markTestSkipped('Needs DB connection');
-        $authorId = $this->insertAuthor('Alice');
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $authorId = $this->insertAuthor('Alice', $connector);
 
         $first  = $this->em->find(AuthorEntity::class, $authorId);
         $second = $this->em->find(AuthorEntity::class, $authorId);
@@ -77,9 +89,14 @@ class RelationIntegrationTest extends TestCase
     public function testManyToOneRelationReturnsSameAuthorInstanceAcrossPosts(): void
     {
         $this->markTestSkipped('Needs DB connection');
-        $authorId = $this->insertAuthor('Bob');
-        $this->insertPost('Post One', $authorId);
-        $this->insertPost('Post Two', $authorId);
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $authorId = $this->insertAuthor('Bob', $connector);
+        $this->insertPost('Post One', $authorId, $connector);
+        $this->insertPost('Post Two', $authorId, $connector);
 
         $repo  = new PostRepository($this->em);
         /**@var Post[]  $posts*/
@@ -92,9 +109,14 @@ class RelationIntegrationTest extends TestCase
     public function testLazyBagLoaderRoutesChildEntitiesThroughIdentityMap(): void
     {
         $this->markTestSkipped('Needs DB connection');
-        $authorId = $this->insertAuthor('Carol');
-        $this->insertPost('Post A', $authorId);
-        $this->insertPost('Post B', $authorId);
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $authorId = $this->insertAuthor('Carol', $connector);
+        $this->insertPost('Post A', $authorId, $connector);
+        $this->insertPost('Post B', $authorId, $connector);
 
         /**@var Author  $author*/
         $author = $this->em->find(AuthorEntity::class, $authorId);
@@ -109,7 +131,12 @@ class RelationIntegrationTest extends TestCase
     public function testPersistAndFlushNewPostWithExistingAuthor(): void
     {
         $this->markTestSkipped('Needs DB connection');
-        $authorId = $this->insertAuthor('Dave');
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $authorId = $this->insertAuthor('Dave', $connector);
         $author   = $this->em->find(AuthorEntity::class, $authorId);
 
         $post = new PostEntity();
@@ -126,9 +153,14 @@ class RelationIntegrationTest extends TestCase
         $this->assertSame($authorId, $found->getAuthor()->getId());
     }
 
-     public function testPersistAndFlushTwoNewEntitiesInDependencyOrder(): void
+    public function testPersistAndFlushTwoNewEntitiesInDependencyOrder(): void
     {
         $this->markTestSkipped('Needs DB connection');
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
         $author = new AuthorEntity();
         $author->setName('Eve');
 
@@ -151,7 +183,12 @@ class RelationIntegrationTest extends TestCase
     public function testPersistAndFlushUpdatesExistingEntity(): void
     {
         $this->markTestSkipped('Needs DB connection');
-        $authorId = $this->insertAuthor('Frank');
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $authorId = $this->insertAuthor('Frank', $connector);
         $author   = $this->em->find(AuthorEntity::class, $authorId);
         /**@var AuthorEntity $author */
         $author->setName('Frank Updated');
@@ -167,7 +204,12 @@ class RelationIntegrationTest extends TestCase
     public function testRemoveAndFlushDeletesEntity(): void
     {
         $this->markTestSkipped('Needs DB connection');
-        $authorId = $this->insertAuthor('Grace');
+        $envFile = GetEnvDatas::getAppPath() . DIRECTORY_SEPARATOR . '.env';
+        GetEnvDatas::getEnvInstance($envFile);
+        $envs = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        $connector = MySQLConnector::getInstance($envs);
+        ConnectorDispatcher::setConnector($connector);
+        $authorId = $this->insertAuthor('Grace', $connector);
         $author   = $this->em->find(AuthorEntity::class, $authorId);
 
         $this->em->remove($author);
@@ -176,37 +218,67 @@ class RelationIntegrationTest extends TestCase
         $this->em->clear();
         $this->assertNull($this->em->find(AuthorEntity::class, $authorId));
     }
-
 }
 
-class AuthorEntity implements EntityInterface
+class AuthorEntity extends AbstractEntity
 {
-    private ?int $id = null;
     private string $name = '';
+    #[\App\Kernel\Connector\Attributes\OneToMany(targetEntity: PostEntity::class, mappedBy: 'author')]
     private ?LazyBag $posts = null;
 
-    public function getId(): ?int { return $this->id; }
-    public function setId(?int $id): static { $this->id = $id; return $this; }
-    public function getName(): string { return $this->name; }
-    public function setName(string $name): static { $this->name = $name; return $this; }
-    public function getPosts(): LazyBag { return $this->posts; }
-    public function setPosts(LazyBag $bag): static { $this->posts = $bag; return $this; }
-    public static function getRepository(): ?string { return AuthorRepository::class; }
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+        return $this;
+    }
+    public function getPosts(): LazyBag
+    {
+        return $this->posts;
+    }
+    public function setPosts(LazyBag $bag): static
+    {
+        $this->posts = $bag;
+        return $this;
+    }
+    public static function getRepository(): ?string
+    {
+        return AuthorRepository::class;
+    }
 }
 
-class PostEntity implements EntityInterface
+class PostEntity extends AbstractEntity
 {
-    private ?int $id = null;
     private string $title = '';
+    #[\App\Kernel\Connector\Attributes\ManyToOne(targetEntity: AuthorEntity::class, inversedBy: 'posts')]
     private ?AuthorEntity $author = null;
 
-    public function getId(): ?int { return $this->id; }
-    public function setId(?int $id): static { $this->id = $id; return $this; }
-    public function getTitle(): string { return $this->title; }
-    public function setTitle(string $title): static { $this->title = $title; return $this; }
-    public function getAuthor(): ?AuthorEntity { return $this->author; }
-    public function setAuthor(?AuthorEntity $author): static { $this->author = $author; return $this; }
-    public static function getRepository(): ?string { return PostRepository::class; }
+    public function getTitle(): string
+    {
+        return $this->title;
+    }
+    public function setTitle(string $title): static
+    {
+        $this->title = $title;
+        return $this;
+    }
+    public function getAuthor(): ?AuthorEntity
+    {
+        return $this->author;
+    }
+    public function setAuthor(?AuthorEntity $author): static
+    {
+        $this->author = $author;
+        return $this;
+    }
+    public static function getRepository(): ?string
+    {
+        return PostRepository::class;
+    }
 }
 
 class AuthorRepository extends \App\Kernel\Connector\AbstractRepository
