@@ -41,7 +41,7 @@ class GetClientParams
         if (! is_string($json)) {
             throw new KernelException('User inputs (not string) format not supported');
         }
-        if('""' === $json){
+        if(('""' === $json) || ('' === $json)){
             return [];
         }
         $data = json_decode($json, true);
