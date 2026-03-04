@@ -32,6 +32,8 @@ class Kernel
     private string $routeCall;
     private Request $request;
     private array $routes;
+    private bool $errorInBoot = false;
+    private string $errorMessage ='';
 
     public function __construct()
     {
@@ -40,16 +42,24 @@ class Kernel
         try {
             GetEnvDatas::getEnvInstance($iniFile);
         } catch (KernelException $e) {
-            $response = new ErrorResponse(500, true, $e);
-            return $response;
+            $this->errorInBoot = true;
+            $this->errorMessage = $e->getMessage();
+            Logger::error($this, $this->errorMessage,false,false);
         }
 
         //get routes for controller instantiation
         $this->routes = Router::getRoutes();
 
         //Get Values from server
-        $datas = GetClientParams::getInputs();
-        $headers = GetClientParams::getheaders();
+        try{
+            $datas = GetClientParams::getInputs();
+            $headers = GetClientParams::getheaders();
+        } catch (KernelException $e) {
+            $this->errorMessage = $e->getMessage();
+            $this->errorInBoot = true;
+            $datas = [];
+            $headers = [];
+        }
 
         //Create Request
         $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers, $_COOKIE);
@@ -62,6 +72,10 @@ class Kernel
 
     public function route(): ResponseInterface
     {
+        if($this->errorInBoot) {
+            $e = new Exception($this->errorMessage);
+            return $this->sendErrorResponse($e);
+        }
         $provider = ListenerProvider::getInstance();
 
         //Launch initKernelEvent
@@ -110,5 +124,11 @@ class Kernel
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
+    }
+
+    private function sendErrorResponse(Exception $e): ResponseInterface
+    {
+         $response = new ErrorResponse(500, true,$e);
+         return $response;
     }
 }
