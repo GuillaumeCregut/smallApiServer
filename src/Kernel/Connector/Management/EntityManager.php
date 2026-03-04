@@ -28,7 +28,7 @@ use App\Kernel\Connector\Interfaces\EntityManagerInterface;
 class EntityManager implements EntityManagerInterface
 {
     private IdentityMapInterface $identityMap;
-
+    private static ?EntityManagerInterface $instance =null;
     /** Entities to insert (id === null when persisted) */
     private array $new     = [];
 
@@ -38,9 +38,22 @@ class EntityManager implements EntityManagerInterface
     /** Entities to delete */
     private array $removed = [];
 
-    public function __construct(?IdentityMapInterface $identityMap = null)
+    private function __construct(?IdentityMapInterface $identityMap = null)
     {
         $this->identityMap = $identityMap ?? new IdentityMap();
+    }
+
+    public static function getInstance(?IdentityMapInterface $identityMap): EntityManagerInterface
+    {
+        if(null === self::$instance) {
+            self::$instance = new EntityManager($identityMap);
+        }
+        return self::$instance;
+    }
+
+    public static function resetInstance(): void
+    {
+        self::$instance = null;
     }
 
     public function find(string $class, int $id): ?EntityInterface

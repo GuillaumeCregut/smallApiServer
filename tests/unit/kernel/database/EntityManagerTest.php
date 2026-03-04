@@ -11,7 +11,13 @@ class EntityManagerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->em = new EntityManager(new IdentityMap());
+        $this->em = EntityManager::getInstance(new IdentityMap());
+    }
+
+    protected function tearDown(): void
+    {
+        EntityManager::resetInstance();
+        parent::tearDown();
     }
 
     public function testPersistQueuesNewEntityWhenIdIsNull(): void

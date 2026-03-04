@@ -22,7 +22,7 @@ class RelationIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->em = new EntityManager(new IdentityMap());
+        $this->em = EntityManager::getInstance(new IdentityMap());
         $this->setUpSchema();
     }
 
@@ -30,6 +30,7 @@ class RelationIntegrationTest extends TestCase
     {
         $this->tearDownSchema();
         $this->em->clear();
+        EntityManager::resetInstance();
     }
 
     private function setUpSchema(): void

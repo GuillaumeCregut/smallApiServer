@@ -142,10 +142,10 @@ use App\Kernel\Connector\Management\EntityManager;
 use App\Kernel\Connector\Management\IdentityMap;
 
 // Simple initialization
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 
 // Or with custom IdentityMap
-$em = new EntityManager(new IdentityMap());
+$em = EntityManager::getInstance(new IdentityMap());
 ```
 
 ### Core Methods
@@ -347,7 +347,7 @@ use App\Kernel\Connector\Attributes\ManyToOne;
 
 class Author extends AbstractEntity
 {
-    #[OneToMany(targetEntity: Post::class, mappedBy: 'author')]
+    #[OneToMany(targetEntity: Post::class, mappedBy: 'author', onUpdate: 'restrict', onDelete: 'restrict')]
     private LazyBag $posts;
 
     public function addPost(Post $post): void
@@ -475,7 +475,7 @@ class UserRepository extends AbstractRepository
 **Using with EntityManager:**
 
 ```php
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 $repo = new UserRepository($em);  // Pass EntityManager to constructor
 
 $user = $repo->find(1);
@@ -602,7 +602,7 @@ class OrderService
 
     public function __construct()
     {
-        $this->em = new EntityManager();
+        $this->em = EntityManager::getInstance();
     }
 
     public function updateOrder($orderId, $data)
@@ -755,7 +755,7 @@ class UserController extends AbstractController
 ```
 
 ### Example: OrderController (EntityManager)
-
+Controllers are already built ith their own EntityManager. No need to create another. 
 ```php
 namespace App\Controllers;
 
@@ -771,7 +771,6 @@ class OrderController extends AbstractController
     public function __construct()
     {
         parent::__construct();
-        $this->em = new EntityManager();
     }
 
     // CREATE - Place new order with items
@@ -1006,7 +1005,7 @@ class UserTest extends TestCase
 
 ```php
 // ✓ GOOD - EntityManager for multi-entity operation
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 $order = new Order();
 $item = new OrderItem();
 $order->addOrderItem($item);
@@ -1230,7 +1229,7 @@ return $this->returnJson(null, 204);
 #### Creating Order with Items
 
 ```php
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 
 $em->transactional(function() use ($em) {
     $order = new Order();
@@ -1255,7 +1254,7 @@ return $this->returnJson(['id' => $order->getId()], 201);
 #### Retrieving Order with Items
 
 ```php
-$em = new EntityManager();
+$em = EntityManager::getinstance();
 $order = $em->find(Order::class, 1);
 
 if (!$order) {
@@ -1269,7 +1268,7 @@ return $this->returnJson($order);
 #### Updating Order and Items
 
 ```php
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 
 $em->transactional(function() use ($em) {
     $order = $em->find(Order::class, 1);
@@ -1338,7 +1337,7 @@ This occurs when **mixing Repository and EntityManager**:
 
 ```php
 // ✗ BAD - Mixing approaches
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 $repo = new UserRepository();  // Without EntityManager!
 
 $user1 = $em->find(User::class, 1);
@@ -1350,7 +1349,7 @@ $user2 = $repo->find(1);  // Different object!
 
 ```php
 // ✓ GOOD - EntityManager only
-$em = new EntityManager();
+$em = EntityManager::getInstance();
 $repo = new UserRepository($em);  // Pass EntityManager
 $user = $repo->find(1);
 ```
