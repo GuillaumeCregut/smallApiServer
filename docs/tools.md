@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document covers the utility tools in SmallMVC that facilitate debugging, data serialization, and response handling. These components provide essential helpers for development and production environments.
+This document covers the utility tools in smallAPIServer that facilitate debugging, data serialization, and response handling. These components provide essential helpers for development and production environments.
 
 **Location**: `Kernel\utils\` and `Kernel\Responses\`
 

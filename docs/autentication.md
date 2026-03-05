@@ -2,7 +2,7 @@
 
 ## Overview
 
-The smallMVC authentication system provides a flexible, multi-strategy authentication framework supporting three primary authentication methods:
+The smallAPIServer authentication system provides a flexible, multi-strategy authentication framework supporting three primary authentication methods:
 
 1. **JWT Bearer Tokens** - Stateless, token-based authentication for APIs
 2. **HTTP Basic Authentication** - Credential-based authentication using HTTP Authorization header

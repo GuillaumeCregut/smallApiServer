@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Response system is a comprehensive framework for handling HTTP responses in the smallMVC application. It provides an abstraction layer for managing response status codes, headers, and body content across different response types (JSON, HTML, errors).
+The Response system is a comprehensive framework for handling HTTP responses in the smallAPIServer application. It provides an abstraction layer for managing response status codes, headers, and body content across different response types (JSON, HTML, errors).
 
 All response classes implement the `ResponseInterface` contract and extend the `AbstractResponse` base class, ensuring consistent behavior throughout the application.
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The SmallMVC framework provides **two complementary patterns** for managing entities: the traditional **Repository pattern** and the modern **EntityManager pattern** (Unit of Work). Choose one approach for your application based on your needs.
+The smallAPIServer framework provides **two complementary patterns** for managing entities: the traditional **Repository pattern** and the modern **EntityManager pattern** (Unit of Work). Choose one approach for your application based on your needs.
 
 ### Two Approaches: Repository vs EntityManager
 
