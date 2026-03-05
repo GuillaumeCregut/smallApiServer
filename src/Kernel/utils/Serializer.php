@@ -84,8 +84,6 @@ class Serializer
 
     private static function getValue(string $name, bool $visible, object $object, array $unShow, int $depth, int $maxDepth): mixed
     {
-        //    if ($visible) {
-        //Maybe a try catch here ??? To resolve others properies
         $value =  self::readValue($name, $visible, $object);
         if (is_object($value)) {
             if ($depth < $maxDepth) {
@@ -93,7 +91,6 @@ class Serializer
             }
             return null;
         }
-        //  }
         if (is_array($value)) {
             foreach ($value as $key => $subValue) {
                 if (is_object($subValue)) {
@@ -106,26 +103,5 @@ class Serializer
             }
         }
         return $value;
-
-        /*
-        $getter = 'get' . ucfirst($name);
-        if (!method_exists($object, $getter)) {
-            throw new Exception();
-        }
-        $value = $object->$getter();
-        if (is_object($value)) {
-            if ($depth < $maxDepth) {
-                return self::serialize($value, [], $depth + 1, $maxDepth);
-            }
-            return null;
-        }
-        if (is_array($value)) {
-            foreach ($value as $key => $subValue) {
-                if (is_object($subValue)) {
-                    $value[$key] = self::serialize($subValue, [], $depth + 1, $maxDepth);
-                }
-            }
-        }
-        return $value;*/
     }
 }
