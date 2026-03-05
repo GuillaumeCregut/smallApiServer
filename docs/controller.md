@@ -551,6 +551,252 @@ return $this->returnError(422);  // Validation failed
 
 ---
 
+## Object Serialization
+
+The `Serializer` class converts entity objects to arrays suitable for JSON responses. This is essential for sending complex objects through HTTP APIs while controlling which fields are exposed.
+
+### Location
+`App\Kernel\utils\Serializer`
+
+### Concept
+
+Serialization transforms a PHP object into a simple array by:
+- Reading all initialized properties (respects visibility)
+- Using getters for private/protected properties
+- Supporting nested objects and arrays
+- Recursively converting objects to arrays based on depth limits
+- Hiding sensitive fields via an exclusion list
+
+### Method
+
+```php
+public static function serialize(
+    object $object,
+    array $unShow = [],
+    int $depth = 0,
+    int $maxDepth = 1
+): array
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `$object` | object | Required | Entity to serialize |
+| `$unShow` | array | `[]` | Fields to hide, keyed by class name |
+| `$depth` | int | `0` | Current recursion depth (internal) |
+| `$maxDepth` | int | `1` | Maximum nesting depth for objects |
+
+### Basic Usage
+
+#### Single Object Serialization
+
+```php
+public function getUser(): ResponseInterface
+{
+    $user = $this->repo->find(1);
+    if (!$user) {
+        return $this->returnError(404);
+    }
+    
+    // Convert object to array
+    $data = Serializer::serialize($user);
+    return $this->returnJson($data);
+}
+```
+
+#### Hide Sensitive Fields
+
+```php
+public function getAll(): ResponseInterface
+{
+    $users = $this->repo->findAll();
+    $result = [];
+    
+    foreach ($users as $user) {
+        // Hide password and newpassword fields
+        $serialized = Serializer::serialize(
+            $user,
+            [User::class => ['password', 'newpassword']]
+        );
+        $result[] = $serialized;
+    }
+    
+    return $this->returnJson($result);
+}
+```
+
+### Advanced Use Cases
+
+#### Control Nesting Depth
+
+```php
+public function getOrderWithItems(): ResponseInterface
+{
+    $order = $this->repo->find(1);
+    
+    // Serialize up to 2 levels deep
+    // order → items (level 1) → item properties (level 2)
+    $data = Serializer::serialize($order, [], 0, 2);
+    
+    return $this->returnJson($data);
+}
+```
+
+**Examples:**
+- `maxDepth = 0`: Only primitives (no nested objects)
+- `maxDepth = 1`: Nested objects → `null` (default)
+- `maxDepth = 2`: One level of nesting allowed
+
+#### Hide Fields from Parent Classes
+
+```php
+// If User extends AbstractEntity
+$serialized = Serializer::serialize(
+    $user,
+    [AbstractEntity::class => ['id']]  // Hides 'id' in all subclasses
+);
+```
+
+Hiding rules apply to the class and all subclasses (Liskov Substitution).
+
+#### Skip Uninitialized Properties
+
+```php
+// Only initialized (non-null) properties are included
+class User {
+    private string $name = 'John';      // Will be included
+    private string $firstname;           // Uninitialized - skipped
+}
+
+$data = Serializer::serialize($user);
+// Result: ['name' => 'John']  (firstname is absent)
+```
+
+#### Serialize Arrays of Objects
+
+```php
+public function listPublications(): ResponseInterface
+{
+    $posts = $this->repo->findAll();
+    
+    // Each post in array is serialized separately
+    $data = [];
+    foreach ($posts as $post) {
+        // Hide draft status and author password
+        $data[] = Serializer::serialize(
+            $post,
+            [
+                Post::class => ['draft'],
+                Author::class => ['password']
+            ]
+        );
+    }
+    
+    return $this->returnJson($data);
+}
+```
+
+### Real-World Example from UserController
+
+```php
+private function getAll(): ResponseInterface
+{
+    $result = $this->repo->findAll();
+    $returnArray = [];
+    
+    foreach ($result as $user) {
+        /**
+         * @var User $user 
+         */
+        // Serialize each user, hiding password fields
+        $serialized = Serializer::serialize(
+            $user,
+            [User::class => ['password', 'newpassword']]
+        );
+        $returnArray[] = $serialized;
+    }
+    
+    return $this->returnJson($returnArray);
+}
+```
+
+**What happens:**
+1. Fetch all users from repository
+2. For each user, convert to array
+3. Exclude `password` and `newpassword` fields
+4. Return array of serialized users as JSON
+
+### Property Visibility
+
+#### Public Properties
+Accessed directly:
+
+```php
+class Product {
+    public string $name;  // Read directly
+}
+$data = Serializer::serialize($product);
+// Includes: ['name' => 'value']
+```
+
+#### Private/Protected Properties
+Accessed via getter methods:
+
+```php
+class User {
+    private string $email;
+    
+    public function getEmail(): string
+    {
+        return $this->email;
+    }
+}
+$data = Serializer::serialize($user);
+// Looks for getEmail(), includes email
+```
+
+**Error:** If a private property has no getter, `Exception` is thrown.
+
+### Best Practices
+
+#### ✅ Do's
+
+```php
+✅ Hide sensitive data
+$serialized = Serializer::serialize(
+    $user,
+    [User::class => ['password', 'token']]
+);
+
+✅ Control nesting depth to prevent circular references
+$data = Serializer::serialize($order, [], 0, 2);
+
+✅ Use consistent field naming (with getters)
+class User {
+    private string $firstName;
+    public function getFirstName(): string { return $this->firstName; }
+}
+```
+
+#### ❌ Don'ts
+
+```php
+❌ Don't expose sensitive fields
+$serialized = Serializer::serialize($user);  // Password visible!
+
+❌ Don't serialize without depth limit (circular reference risk)
+$data = Serializer::serialize($order, [], 0, 999);
+
+❌ Don't use non-standard getter naming
+class User {
+    private string $firstName;
+    public function firstname(): string { }  // Won't work
+}
+```
+
+---
+
 ## Related Documentation
 
 - [Authentication System](autentication.md)
