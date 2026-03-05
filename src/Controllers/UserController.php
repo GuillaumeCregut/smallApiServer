@@ -10,6 +10,7 @@ use App\Kernel\Connector\Hydrator;
 use App\Kernel\GetEnvDatas;
 use App\Kernel\Interfaces\ResponseInterface;
 use App\Kernel\Responses\ErrorResponse;
+use App\Kernel\utils\Serializer;
 
 class UserController extends AbstractController
 {
@@ -134,13 +135,8 @@ class UserController extends AbstractController
             /**
              * @var User $user 
              */
-            $arrayUser = [
-                'id' => $user->getId(),
-                'name' => $user->getName(),
-                'firstname' => $user->getFirstname(),
-                'role' => $user->getRoles(),
-            ];
-            $returnArray[] = $arrayUser;
+            $serialized = Serializer::serialize($user, [User::class =>['password', 'newpassword']]);
+            $returnArray[] = $serialized;//$arrayUser;
         }
         return $this->returnJson($returnArray);
     }
