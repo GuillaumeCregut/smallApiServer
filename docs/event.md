@@ -13,8 +13,9 @@ The event management system in this framework follows PSR-14 standards and provi
 7. [Event Configuration](#event-configuration)
 8. [Priority System](#priority-system)
 9. [Event Propagation](#event-propagation)
-10. [Practical Examples](#practical-examples)
-11. [Testing Events](#testing-events)
+10. [Event Bag](#event-bag)
+11. [Practical Examples](#practical-examples)
+12. [Testing Events](#testing-events)
 
 ## Overview
 
@@ -561,6 +562,256 @@ $events = [
 // 3. LoggingListener.execute() - SKIPPED (propagation stopped)
 ```
 
+## Event Bag
+
+### Overview
+
+The Event Bag is a generic data storage mechanism built into `AbstractStoppableEvent` that allows listeners to pass data to each other and to the event dispatcher. This is useful for:
+
+- Accumulating data from multiple listeners
+- Passing computation results from listener to listener
+- Storing intermediate state during event handling
+- Avoiding listener coupling through shared objects
+
+### Event Bag API
+
+All events inherit these methods from `AbstractStoppableEvent`:
+
+```php
+public function getBag(): array
+```
+Returns the entire bag as an array.
+
+```php
+public function getFromBag(string $key, mixed $default = null): mixed
+```
+Retrieves a value from the bag. Returns `$default` if the key doesn't exist.
+
+```php
+public function addInBag(string $key, mixed $value): self
+```
+Adds or overwrites a value in the bag. Returns `$this` for method chaining.
+
+```php
+public function removeFromBag(string $key): self
+```
+Removes a key from the bag if it exists. Returns `$this` for method chaining.
+
+```php
+public function hasInBag(string $key): bool
+```
+Checks if a key exists in the bag.
+
+### Basic Usage
+
+#### Storing Values in the Bag
+
+```php
+public function execute(StoppableEventInterface $event): void
+{
+    // Add data to the event bag
+    $event->addInBag('user_id', 123);
+    $event->addInBag('permissions', ['read', 'write']);
+    $event->addInBag('timestamp', time());
+}
+```
+
+#### Retrieving Values
+
+```php
+public function execute(StoppableEventInterface $event): void
+{
+    // Get value from bag
+    $userId = $event->getFromBag('user_id');
+    
+    // Get with default value if key doesn't exist
+    $role = $event->getFromBag('role', 'guest');
+}
+```
+
+#### Checking if Key Exists
+
+```php
+public function execute(StoppableEventInterface $event): void
+{
+    if ($event->hasInBag('user_id')) {
+        $userId = $event->getFromBag('user_id');
+        // Process user...
+    }
+}
+```
+
+#### Removing Values
+
+```php
+public function execute(StoppableEventInterface $event): void
+{
+    // Remove a key from bag
+    $event->removeFromBag('temporary_token');
+}
+```
+
+#### Getting Entire Bag
+
+```php
+public function execute(StoppableEventInterface $event): void
+{
+    $allData = $event->getBag();
+    // Result: ['user_id' => 123, 'permissions' => ['read', 'write'], ...]
+}
+```
+
+### Method Chaining
+
+Most bag methods return `$this`, allowing for fluent syntax:
+
+```php
+$event
+    ->addInBag('status', 'pending')
+    ->addInBag('attempts', 0)
+    ->addInBag('timestamp', time());
+```
+
+### Practical Example: Multi-Listener Data Flow
+
+```php
+<?php
+
+namespace App\Kernel\Psr14\Listener;
+
+use App\Kernel\Interfaces\Psr14\ListenerInterface;
+use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
+use App\Kernel\Psr14\Events\CallAuthKernelEvent;
+
+// Listener 1: Check if user exists
+class UserValidationListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof CallAuthKernelEvent) {
+            $userId = $this->getUserIdFromSession();
+            
+            if ($userId === null) {
+                $event->stopPropagation();
+                return;
+            }
+            
+            // Store user_id in bag for other listeners
+            $event->addInBag('user_id', $userId);
+        }
+    }
+    
+    private function getUserIdFromSession(): ?int
+    {
+        $user = Request::getRequestInstance()->getSessionValue('user_id');
+        return $user ?? null;
+    }
+}
+
+// Listener 2: Load user permissions (runs after Listener 1)
+class PermissionLoader implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        // Get user_id added by previous listener
+        if ($event->hasInBag('user_id')) {
+            $userId = $event->getFromBag('user_id');
+            $permissions = $this->loadPermissions($userId);
+            
+            // Add permissions to bag
+            $event->addInBag('permissions', $permissions);
+        }
+    }
+    
+    private function loadPermissions(int $userId): array
+    {
+        // Load from database
+        return ['read', 'write', 'execute'];
+    }
+}
+
+// Listener 3: Log activity (uses data from both previous listeners)
+class ActivityLogger implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        $userId = $event->getFromBag('user_id');
+        $permissions = $event->getFromBag('permissions', []);
+        
+        if ($userId !== null) {
+            $this->log([
+                'user_id' => $userId,
+                'permissions' => $permissions,
+                'timestamp' => time()
+            ]);
+        }
+    }
+    
+    private function log(array $data): void
+    {
+        $permissions = implode(',', $data['permissions']);
+        if ("" === $permissions) {
+            $permissions = "NULL";
+        }
+        // Log to file or database
+        Logger::info($this, "User {$data['user_id']} logged in at {$data['timestamp']} with permissions {}", true, false);
+    }
+}
+```
+
+### Best Practices
+
+#### ✅ Do's
+
+```php
+✅ Use keys to avoid collisions
+$event->addInBag('auth_user_id', $userId);
+$event->addInBag('audit_timestamp', time());
+
+✅ Check key existence before use
+if ($event->hasInBag('user_id')) {
+    $userId = $event->getFromBag('user_id');
+}
+
+✅ Use descriptive key names
+✓ 'validated_email', 'permission_level'
+✗ 'x', 'tmp', 'data'
+
+✅ Chain operations for clarity
+$event
+    ->addInBag('status', 'authenticated')
+    ->addInBag('role', 'admin');
+```
+
+#### ❌ Don'ts
+
+```php
+❌ Don't assume keys exist
+$event->getFromBag('user_id');  // Might be null
+
+❌ Don't overuse generic keys
+$event->addInBag('data', $something);  // Too vague
+
+❌ Don't store massive objects (prefer IDs)
+$event->addInBag('user', $largeUserObject);  // Bad
+$event->addInBag('user_id', $userId);       // Good
+
+❌ Don't use bag as a database cache
+// Avoid storing data that should come from persistent storage
+```
+
+### When to Use Event Bag
+
+| Use Case | Recommendation |
+|----------|---|
+| Pass data between sequential listeners | ✅ Use bag |
+| Share computation results | ✅ Use bag |
+| Accumulate metadata during event handling | ✅ Use bag |
+| Store temporary state | ✅ Use bag |
+| Save large objects | ❌ Don't use (store IDs instead) |
+| Replace a database | ❌ Don't use (single request lifecycle) |
+| Cache shared between requests | ❌ Don't use (create a Service) |
+
 ## Practical Examples
 
 ### Example 1: Session-Based Authentication
@@ -591,7 +842,8 @@ class SessionAuthListener implements ListenerInterface
             }
 
             // User is authenticated
-            $user = User::findById($userId);
+            $repo = new UserRepositoryAuth();
+            $user = $repo->find($userId);
             if ($user === null) {
                 // User not found in database
                 $event->stopPropagation();
