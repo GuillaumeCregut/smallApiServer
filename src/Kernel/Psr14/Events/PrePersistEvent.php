@@ -7,4 +7,4 @@
 
 namespace App\Kernel\Psr14\Events;
 
-class PrePersistEvent extends AbstractStoppableEvent {}
+class PrePersistEvent extends AbstractEntityEvent {}

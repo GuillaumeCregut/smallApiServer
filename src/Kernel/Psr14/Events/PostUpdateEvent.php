@@ -7,4 +7,4 @@
 
 namespace App\Kernel\Psr14\Events;
 
-class PostUpdateEvent extends AbstractStoppableEvent {}
+class PostUpdateEvent extends AbstractEntityEvent {}
