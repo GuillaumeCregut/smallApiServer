@@ -9,10 +9,10 @@ use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 
-include 'EntityToCreate.php';
-include 'EntityToUpdate.php';
-include 'entity3.php';
-include 'entity4.php';
+include_once 'EntityToCreate.php';
+include_once 'EntityToUpdate.php';
+include_once 'entity3.php';
+include_once 'entity4.php';
 class AbstractRepositoryTest extends TestCase
 {
 
