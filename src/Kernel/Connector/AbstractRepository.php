@@ -7,22 +7,32 @@
 
 namespace App\Kernel\Connector;
 
-use App\Kernel\Connector\Attributes\ManyToOne;
-use App\Kernel\Connector\Attributes\NotStored;
-use App\Kernel\Connector\Attributes\Nullable;
-use App\Kernel\Connector\Attributes\OneToMany;
-use App\Kernel\Connector\ConnectorDispatcher;
-use App\Kernel\Connector\DatabaseException;
-use App\Kernel\Connector\Datas\LazyBag;
-use App\Kernel\Connector\Hydrator;
-use App\Kernel\Connector\QueryBuilder;
-use App\Kernel\Connector\Interfaces\ConnectorInterface;
-use App\Kernel\Connector\Interfaces\EntityInterface;
-use App\Kernel\Connector\Interfaces\EntityManagerInterface;
-use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use Error;
 use Exception;
 use ReflectionClass;
+use App\Kernel\Connector\Hydrator;
+use App\Kernel\Connector\QueryBuilder;
+use App\Kernel\Connector\Datas\LazyBag;
+use App\Kernel\Psr14\Events\PostFindEvent;
+use App\Kernel\Connector\DatabaseException;
+use App\Kernel\Psr14\Events\PreRemoveEvent;
+use App\Kernel\Psr14\Events\PreUpdateEvent;
+use App\Kernel\Psr14\Events\PostRemoveEvent;
+use App\Kernel\Psr14\Events\PostUpdateEvent;
+use App\Kernel\Psr14\Events\PrePersistEvent;
+use App\Kernel\Connector\Attributes\Nullable;
+use App\Kernel\Connector\ConnectorDispatcher;
+use App\Kernel\Psr14\Events\PostPersistEvent;
+use App\Kernel\Connector\Attributes\ManyToOne;
+use App\Kernel\Connector\Attributes\NotStored;
+use App\Kernel\Connector\Attributes\OneToMany;
+use App\Kernel\Psr14\Listener\ListenerProvider;
+use App\Kernel\Psr14\Dispatcher\EventDispatcher;
+use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
+use App\Kernel\Connector\Interfaces\RepositoryInterface;
+use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
+use App\Kernel\Connector\Interfaces\EntityManagerInterface;
 
 abstract class AbstractRepository implements RepositoryInterface
 {
@@ -37,7 +47,6 @@ abstract class AbstractRepository implements RepositoryInterface
     protected QueryBuilder $qb;
     protected array $relations = [];
     protected ?EntityManagerInterface $em = null;
-
 
     public function __construct(?EntityManagerInterface $em = null)
     {
@@ -122,6 +131,7 @@ abstract class AbstractRepository implements RepositoryInterface
     public function delete(EntityInterface $entity): bool
     {
         $this->checkEntity($entity);
+        $this->dispatch(new PreRemoveEvent($entity));
         $id = $entity->getId();
         $query = $this->qb->delete($id)
             ->where('id', '=', $id)
@@ -129,7 +139,11 @@ abstract class AbstractRepository implements RepositoryInterface
         $this->sql = $query;
         $params = $this->qb->getParams();
         $this->qb->reset();
-        return $this->sendQuery(false, $query, $params);
+        $result =  $this->sendQuery(false, $query, $params);
+        if($result) {
+            $this->dispatch(new PostRemoveEvent($entity));
+        }
+        return $result;
     }
 
     public function save(EntityInterface $entity): null | false | EntityInterface
@@ -218,6 +232,7 @@ abstract class AbstractRepository implements RepositoryInterface
     }
     protected function insert(EntityInterface $entity): ?EntityInterface
     {
+        $this->dispatch(new PrePersistEvent($entity));
         $entityValues = $this->getEntityValues($entity);
         $columns = [];
         $values = [];
@@ -245,11 +260,13 @@ abstract class AbstractRepository implements RepositoryInterface
         }
         $entity->setId($result);
         $this->qb->reset();
+        $this->dispatch(new PostPersistEvent($entity));
         return $entity;
     }
 
     protected  function update(EntityInterface $entity): EntityInterface | false
     {
+        $this->dispatch(new PreUpdateEvent($entity));
         $entityValues = $this->getEntityValues($entity);
         $id = $entity->getId();
         if (isset($entityValues['id'])) {
@@ -271,6 +288,7 @@ abstract class AbstractRepository implements RepositoryInterface
         if (false === $result) {
             return false;
         }
+        $this->dispatch(new PostUpdateEvent($entity));
         return $entity;
     }
 
@@ -377,6 +395,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $setter = 'set' . ucfirst($propertyName);
             $entity->$setter($bag);
         }
+        $this->dispatch(new PostFindEvent($entity));
         return $entity;
     }
 
@@ -502,5 +521,13 @@ abstract class AbstractRepository implements RepositoryInterface
             return $types[$type];
         }
         throw new DatabaseException("Type {$type}  can not be converted into SQL type");
+    }
+
+    private function dispatch(StoppableEventInterface $event): void
+    {
+        $provider = ListenerProvider::getInstance();
+
+        //Launch initKernelEvent
+        EventDispatcher::getInstance($provider)->dispatch($event);
     }
 }
