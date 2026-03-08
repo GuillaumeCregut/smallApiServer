@@ -82,7 +82,7 @@ class Request
      * @param array|null $routes
      * @return string|null key route if found, null else
      */
-    public function getURI(?array $routes = []): ?string
+    public function getURI(array $routes = []): ?string
     {
         $uri = trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
         $route = $this->makeRoute($uri, $routes);
@@ -225,7 +225,7 @@ class Request
         return $allDatas;
     }
 
-    private function makeRoute(string $route, ?array $routes=[]): ?string
+    private function makeRoute(string $route, array $routes=[]): ?string
     {
         $route = filter_var($route, FILTER_SANITIZE_URL);
         if('' === $route) {
