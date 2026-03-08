@@ -25,11 +25,12 @@ class RequestTest extends TestCase
             'HTTP_HOST' => 'localhost:8000',
             'SERVER_PROTOCOL' => 'HTTP/1.1',
         ];
+        $routes =['local/index'=>[]];
         $request = Request::initInstance($server, [], [], [], [], [], []);
         $this->assertEquals('GET', $request->getMethod());
         $this->assertEquals('HTTP/1.1', $request->getServer('SERVER_PROTOCOL'));
         $this->assertFalse($request->isRefererValid());
-        $this->assertEquals('local/index', $request->getURI());
+        $this->assertEquals('local/index', $request->getURI($routes));
         $this->assertIsArray($request->getAllDatas());
         $this->assertEmpty($request->getAllDatas());
     }
@@ -74,7 +75,10 @@ class RequestTest extends TestCase
             'SERVER_PROTOCOL' => 'HTTP/1.1',
         ];
         $request = Request::initInstance($server, [], [], [], [], [], []);
-        $this->assertEquals('local/index', $request->getURI());
+        $routes = [
+            'local/index/{id}'=>[]
+        ];
+        $this->assertEquals('local/index/{id}', $request->getURI($routes));
         $this->assertEquals(1, $request->getData('id'));
     }
 

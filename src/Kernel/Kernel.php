@@ -29,7 +29,7 @@ use Exception;
 
 class Kernel
 {
-    private string $routeCall;
+    private ?string $routeCall;
     private Request $request;
     private array $routes;
     private bool $errorInBoot = false;
@@ -63,7 +63,7 @@ class Kernel
 
         //Create Request
         $this->request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers, $_COOKIE);
-        $this->routeCall = $this->request->getURI();
+        $this->routeCall = $this->request->getURI($this->routes);
 
         //Init Events
         $eventList = Events::getListeners();
@@ -81,6 +81,11 @@ class Kernel
         //Launch initKernelEvent
         EventDispatcher::getInstance($provider)->dispatch(new InitKernelEvent());
 
+        if(null === $this->routeCall) {
+            $response = new ClientErrorResponse(404);
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            return $response;
+        }
         //If no routes for request
         if (!key_exists($this->routeCall, $this->routes)) {
             $response = new ClientErrorResponse(404);

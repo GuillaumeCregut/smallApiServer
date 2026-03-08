@@ -75,9 +75,17 @@ class Request
         return $this->files[$key] ?? null;
     }
 
-    public function getURI(): string
+    /**
+     * Get from URI the corresponding route key. Return null if no key found
+     * Internally, set Id for composite route, in $this->datas
+     *
+     * @param array|null $routes
+     * @return string|null key route if found, null else
+     */
+    public function getURI(?array $routes = []): ?string
     {
-        $route = $this->makeRoute(trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/'));
+        $uri = trim(parse_url($this->server['REQUEST_URI'], PHP_URL_PATH) ?? '', '/');
+        $route = $this->makeRoute($uri, $routes);
         return $route;
     }
 
@@ -217,18 +225,28 @@ class Request
         return $allDatas;
     }
 
-    private function makeRoute(string $route): string
+    private function makeRoute(string $route, ?array $routes=[]): ?string
     {
         $route = filter_var($route, FILTER_SANITIZE_URL);
-        $routes = explode('/', $route);
-        $id = end($routes);
-        if (is_numeric($id)) {
-            if (!key_exists('id', $this->datas)) {
-                $this->setData('id', (int)$id);
-            }
-            array_pop($routes);
+        if('' === $route) {
+            return $route;
         }
-        $newRoute = implode('/', $routes);
+        $result = RouteCompiler::findRoute($route, $routes);
+        
+        if(null === $result) {
+            return null;
+        }
+        if(!array_key_exists('routeName', $result)) {
+            return null;
+        }
+        
+        $newRoute = $result['routeName'];
+        foreach($result as $key => $value) {
+            if('routeName' === $key) {
+                continue;
+            }
+            $this->datas[$key] = is_numeric($value) ? (int)$value : $value;
+        }
         return $newRoute;
     }
 }
