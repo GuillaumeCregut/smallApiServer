@@ -38,7 +38,7 @@ abstract class AbstractResponse implements ResponseInterface
         return $this;
     }
 
-    public function send(): string
+    public function send(?bool $withCors = true): string
     {
         // Send status code
         $this->sendReponse();
@@ -46,6 +46,9 @@ abstract class AbstractResponse implements ResponseInterface
         // Send headers
         foreach ($this->headers as $name => $value) {
             header("$name: $value");
+        }
+        if ($withCors) {
+            $this->setCorsHeader();
         }
         header("x-powered-by:");
         $this->sendCookies();
@@ -55,7 +58,7 @@ abstract class AbstractResponse implements ResponseInterface
     }
 
     //for tests purposes
-    public function getBody():string
+    public function getBody(): string
     {
         return $this->body;
     }
@@ -70,7 +73,7 @@ abstract class AbstractResponse implements ResponseInterface
         return $this->statusCode;
     }
 
-    public function setCookie(string $name, string $value, ?array $params=[]): self
+    public function setCookie(string $name, string $value, ?array $params = []): self
     {
         /*
         $params = [
@@ -83,6 +86,14 @@ abstract class AbstractResponse implements ResponseInterface
         $params['value'] = $value;
         $this->cookies[$name] = $params;
         return $this;
+    }
+
+    private function setCorsHeader()
+    {
+        $origin = GetEnvDatas::getEnvInstance()->get('ALLOW_ORIGIN', '*');
+        header("Access-Control-Allow-Origin: {$origin}");
+        header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization');
     }
 
     private function DisplayDebugMode(): void
@@ -98,7 +109,7 @@ abstract class AbstractResponse implements ResponseInterface
 
     private function sendCookies(): void
     {
-        $sameSiteValues =['Lax', 'None', 'Strict'];
+        $sameSiteValues = ['Lax', 'None', 'Strict'];
         /*each cookie =
          [
         'value'=>string
@@ -108,58 +119,58 @@ abstract class AbstractResponse implements ResponseInterface
         'expire' => int
         'security'=>int]
         */
-        foreach($this->cookies as $name => $cookie) {
+        foreach ($this->cookies as $name => $cookie) {
             $value = $cookie['value'];
-            if(key_exists('domain', $cookie)){
+            if (key_exists('domain', $cookie)) {
                 $domain = $cookie['domain'];
             } else {
-                $domain =''; 
+                $domain = '';
             }
-            if(key_exists('path', $cookie)){
-                $path= $cookie['path'];
+            if (key_exists('path', $cookie)) {
+                $path = $cookie['path'];
             } else {
-                $path=''; 
+                $path = '';
             }
-            if(key_exists('security', $cookie)){
+            if (key_exists('security', $cookie)) {
                 $security = $cookie['security'];
                 if (0 === $security) {
-                     $secure=false;
-                     $httpOnly = false;
+                    $secure = false;
+                    $httpOnly = false;
                 } else {
                     $secure = $security & Cookie::COOKIE_SECURE;
                     $httpOnly = $security & Cookie::COOKIE_HTTPONLY;
                 }
             } else {
-                $secure=false; 
+                $secure = false;
                 $httpOnly = false;
             }
-             if(key_exists('sameSite', $cookie)){
-                $sameSite= $cookie['sameSite'];
-                if(!in_array($sameSite, $sameSiteValues)) {
+            if (key_exists('sameSite', $cookie)) {
+                $sameSite = $cookie['sameSite'];
+                if (!in_array($sameSite, $sameSiteValues)) {
                     $sameSite = null;
                 }
-                if("None" === $sameSite) {
+                if ("None" === $sameSite) {
                     $secure = true;
                 }
             } else {
-                $sameSite= null; 
+                $sameSite = null;
             }
-            if(key_exists('expire', $cookie)){
+            if (key_exists('expire', $cookie)) {
                 $expire = $cookie['expire'];
             } else {
-                $expire =0;
+                $expire = 0;
             }
-            $options =[
-                'expires'=>$expire,
-                'path'=>$path,
-                'domain'=>$domain,
-                'secure'=>$secure,
-                'httponly'=>$httpOnly
+            $options = [
+                'expires' => $expire,
+                'path' => $path,
+                'domain' => $domain,
+                'secure' => $secure,
+                'httponly' => $httpOnly
             ];
             if (null !== $sameSite) {
                 $options['samesite'] = $sameSite;
             }
-            setcookie($name, $value,$options);
+            setcookie($name, $value, $options);
         }
     }
 }
