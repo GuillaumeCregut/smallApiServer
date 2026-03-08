@@ -46,6 +46,42 @@ public static function getRoutes(): array
 - `PATCH`: Partially update resources
 - `DELETE`: Remove resources
 
+#### Route Parameters (Dynamic Routes)
+
+Routes can include dynamic parameters using curly braces `{paramName}`. These parameters are extracted from the URL by the `RouteCompiler`:
+
+```php
+// Single parameter
+'user/{id}' => [
+    'GET' => [UserController::class, 'get'],
+    'PUT' => [UserController::class, 'update'],
+],
+
+// Multiple parameters
+'user/{id}/post/{postId}' => [
+    'GET' => [UserController::class, 'getPost'],
+],
+
+// String slugs
+'product/{slug}' => [
+    'GET' => [ProductController::class, 'show'],
+],
+```
+
+**Parameter Rules:**
+- Placeholders match any value except forward slashes (`/`)
+- Parameters are extracted and stored in `Request` data
+- `{id}` parameter accessed via `$request->getData('id')`
+- All parameters arrive as strings (convert to int if needed)
+
+**Parameter Examples:**
+
+| Route | URL | Extracted Parameters |
+|-------|-----|---------------------|
+| `user/{id}` | `/user/42` | `id => '42'` |
+| `user/{id}/post/{postId}` | `/user/7/post/123` | `id => '7'`, `postId => '123'` |
+| `product/{slug}` | `/product/my-item` | `slug => 'my-item'` |
+
 ### Example Configuration
 
 ```php
@@ -63,26 +99,54 @@ class Router
                 'DELETE' => [HomeController::class, 'deleteData'],
             ],
 
-            // User route: http://example.com/user
+            // User list: http://example.com/user
             'user' => [
                 'GET' => [UserController::class, 'index'],
                 'POST' => [UserController::class, 'create'],
+            ],
+
+            // Single user by ID: http://example.com/user/42
+            'user/{id}' => [
+                'GET' => [UserController::class, 'get'],
                 'PUT' => [UserController::class, 'update'],
                 'DELETE' => [UserController::class, 'delete'],
             ],
 
-            // API endpoint: http://example.com/api/products
-            'api/products' => [
-                'GET' => [ProductController::class, 'list'],
-                'POST' => [ProductController::class, 'create'],
+            // User's post: http://example.com/user/7/post/123
+            'user/{id}/post/{postId}' => [
+                'GET' => [UserController::class, 'getPost'],
+                'DELETE' => [UserController::class, 'deletePost'],
             ],
 
-            // User profile: http://example.com/user/profile
-            'user/profile' => [
-                'GET' => [UserController::class, 'getProfile'],
-                'PUT' => [UserController::class, 'updateProfile'],
+            // Product by slug: http://example.com/product/my-awesome-item
+            'product/{slug}' => [
+                'GET' => [ProductController::class, 'show'],
+                'PUT' => [ProductController::class, 'update'],
             ],
         ];
+    }
+}
+```
+
+**In the Controller, access parameters:**
+
+```php
+class UserController extends AbstractController
+{
+    public function get(): ResponseInterface
+    {
+        $id = $this->request->getData('id');  // From {id} placeholder
+        $user = $this->repo->find($id);
+        return $this->returnJson($user);
+    }
+
+    public function getPost(): ResponseInterface
+    {
+        $userId = $this->request->getData('id');      // From {id}
+        $postId = $this->request->getData('postId');  // From {postId}
+        
+        $post = $this->repo->findUserPost($userId, $postId);
+        return $this->returnJson($post);
     }
 }
 ```
@@ -107,11 +171,13 @@ To add a new route:
 
 ### URL-to-Route Mapping
 
-| URL | Route Key | Controller | Method |
-|-----|-----------|------------|--------|
-| `http://example.com/` | `''` | HomeController | getDatas |
-| `http://example.com/user` | `user` | UserController | index |
-| `http://example.com/api/products` | `api/products` | ProductController | list |
+| URL | Route Key | Parameters | Controller | Method |
+|-----|-----------|-----------|------------|--------|
+| `http://example.com/` | `''` | — | HomeController | getDatas |
+| `http://example.com/user` | `user` | — | UserController | index |
+| `http://example.com/user/42` | `user/{id}` | `id='42'` | UserController | get |
+| `http://example.com/user/7/post/123` | `user/{id}/post/{postId}` | `id='7'`, `postId='123'` | UserController | getPost |
+| `http://example.com/product/my-item` | `product/{slug}` | `slug='my-item'` | ProductController | show |
 
 ### Error Responses
 
@@ -127,3 +193,12 @@ To add a new route:
 | Component | Purpose |
 |-----------|---------|
 | **Router** | URL-to-controller mapping configuration |
+
+---
+
+## Related Documentation
+
+- [Request Documentation](./request.md) - How parameters are extracted from routes and accessed in controllers
+- [RouteCompiler](./request.md#routecompiler) - Route pattern matching mechanism
+- [Kernel](./kernel.md) - Application engine that processes routes and dispatches requests
+- [Controller](./controller.md) - Build controllers that work with routed requests

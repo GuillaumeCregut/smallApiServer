@@ -4,6 +4,14 @@
 
 The `Request` class is a singleton that encapsulates all HTTP request data and provides a unified interface to access GET parameters, POST data, files, headers, cookies, sessions, and user information. It implements the Singleton pattern to ensure a single instance throughout the application lifecycle.
 
+**Key Features:**
+- **Singleton Pattern**: Single instance throughout application lifecycle
+- **Data Consolidation**: Merges GET, POST, and custom data sources
+- **File Handling**: Automatic file upload processing
+- **Route Integration**: Works with `RouteCompiler` for intelligent URL pattern matching
+- **Parameter Extraction**: Automatically extracts parameters from URLs using route patterns
+- **URI Sanitization**: Protects against injection attacks
+
 ---
 
 ## Singleton Pattern
@@ -119,50 +127,284 @@ if ($method === 'DELETE') {
 
 ## URI and Routing
 
-### Getting the URI
+The Request class integrates with the `RouteCompiler` to perform intelligent URL pattern matching and parameter extraction.
+
+### Route Patterns with Placeholders
+
+Routes are defined with placeholders using curly braces `{paramName}`. The `RouteCompiler` converts these routes into regex patterns for flexible matching.
+
+#### Route Pattern Syntax
 
 ```php
-$uri = $request->getURI();
-// URL: /user/profile/1
-// Result: 'user/profile'
+// Simple static route
+'user'
+
+// Route with single parameter
+'user/{id}'
+
+// Route with multiple parameters
+'user/{id}/post/{postId}'
+
+// Route with string slugs
+'product/{slug}'
 ```
 
-### Automatic ID Extraction
+### Getting the URI with Route Matching
 
-The Request class automatically extracts numeric IDs from the end of the URL path:
+The `getURI()` method now accepts a routes array to match against:
 
 ```php
-$server = ['REQUEST_URI' => '/user/123'];
-$request = Request::initInstance($server, [], [], [], [], [], []);
+$routes = [
+    'user' => [...],
+    'user/{id}' => [...],
+    'user/{id}/post/{postId}' => [...],
+];
 
-$id = $request->getData('id');  // 123
-$uri = $request->getURI();      // 'user'
+// URL: /user/42
+$uri = $request->getURI($routes);
+// Result: 'user/{id}'  (matched pattern, not literal path)
+
+// Extracted parameters automatically stored:
+$id = $request->getData('id');  // 42
 ```
 
-### ID Override
+### RouteCompiler
 
-If an explicit `id` is provided in the data, it takes precedence:
+The `RouteCompiler` class handles route pattern matching using regex:
 
 ```php
-$request = Request::initInstance(
-    ['REQUEST_URI' => '/user/123'],
-    [],
-    ['id' => 456],  // GET parameter
-    [],
-    [], [], []
-);
+use App\Kernel\RouteCompiler;
 
-$id = $request->getData('id');  // 456 (from GET, not 123)
+// Convert route pattern to regex
+$pattern = RouteCompiler::compile('user/{id}');
+// Result: '~^user/(?P<id>[^/]+)$~'
+
+// Find matching route
+$result = RouteCompiler::findRoute('user/42', $routes);
+// Result: [
+//     'routeName' => 'user/{id}',
+//     'id' => '42'
+// ]
+```
+
+#### Compilation Examples
+
+| Route Pattern | Compiled Regex | Matches | Doesn't Match |
+|--|--|--|--|
+| `user` | `~^user$~` | `/user` | `/user/`, `/user/1` |
+| `user/{id}` | `~^user/(?P<id>[^/]+)$~` | `/user/42`, `/user/john` | `/user/42/`, `/user/` |
+| `user/{id}/post/{postId}` | `~^user/(?P<id>[^/]+)/post/(?P<postId>[^/]+)$~` | `/user/42/post/7` | `/user/42/post`, `/user/42` |
+| `product/{slug}` | `~^product/(?P<slug>[^/]+)$~` | `/product/my-item` | `/product/my/item` |
+
+**Key Rules:**
+- Placeholders `{name}` match `[^/]+` (anything except forward slash)
+- Routes must match exactly (no partial matches)
+- Trailing slashes must not be present in URL
+- Parameter values are always strings from regex
+
+### Parameter Extraction
+
+Parameters in the URL are automatically extracted and stored in the Request's data:
+
+```php
+// URL: /user/42
+$routes = ['user/{id}' => [...]];
+$request->getURI($routes);
+
+// Automatically extracted:
+$id = $request->getData('id');     // '42' (string)
+$intId = (int) $request->getData('id');  // 42 (if you need int)
+```
+
+#### Multiple Parameter Extraction
+
+```php
+// URL: /user/123/post/456
+$routes = ['user/{id}/post/{postId}' => [...]];
+$request->getURI($routes);
+
+// Both parameters extracted:
+$userId = $request->getData('id');          // '123'
+$postId = $request->getData('postId');      // '456'
+```
+
+### Route Matching Logic
+
+The `RouteCompiler::findRoute()` method:
+1. Iterates through provided routes in order
+2. For each route, compiles pattern and attempts regex match
+3. Returns first matching route with extracted parameters
+4. Returns `null` if no routes match
+
+```php
+$routes = [
+    'user' => [...],              // Checked 1st
+    'user/{id}' => [...],         // Checked 2nd
+    'user/{id}/post/{postId}' => [...],  // Checked 3rd
+];
+
+// URL: /user/42/post/7
+// Matches: 'user/{id}/post/{postId}' (most specific)
+// Returns: ['routeName' => '...', 'id' => '42', 'postId' => '7']
+```
+
+### Route Matching Examples
+
+#### Static Route
+
+```php
+$routes = [
+    'user' => ['GET' => [...], 'POST' => [...]],
+];
+
+$request->getURI($routes);
+// URL: /user
+// Result: 'user'
+// No parameters extracted
+```
+
+#### Single Parameter
+
+```php
+$routes = [
+    'user/{id}' => ['GET' => [...], 'PUT' => [...]],
+];
+
+$request->getURI($routes);
+// URL: /user/42
+// Result: 'user/{id}'
+// getData('id') = '42'
+```
+
+#### Multiple Parameters
+
+```php
+$routes = [
+    'user/{userId}/post/{postId}' => ['GET' => [...], 'DELETE' => [...]],
+];
+
+$request->getURI($routes);
+// URL: /user/123/post/456
+// Result: 'user/{userId}/post/{postId}'
+// getData('userId') = '123'
+// getData('postId') = '456'
+```
+
+#### String Slugs
+
+```php
+$routes = [
+    'product/{slug}' => ['GET' => [...]],
+];
+
+$request->getURI($routes);
+// URL: /product/my-awesome-product
+// Result: 'product/{slug}'
+// getData('slug') = 'my-awesome-product'
+```
+
+### Parameter Type Conversion
+
+Route parameters are always extracted as strings. Convert to appropriate types as needed:
+
+```php
+$id = $request->getData('id');  // '42' (string from regex)
+
+// Convert to integer
+$intId = (int) $id;             // 42
+
+// Convert to string (already is)
+$strId = (string) $id;          // '42'
+
+// Check if numeric
+if (is_numeric($id)) {
+    $intId = (int) $id;
+}
+```
+
+### Route Matching Specificity
+
+More specific routes should be defined before less specific ones:
+
+```php
+// Good order (specific to general)
+$routes = [
+    'user/{id}/post/{postId}' => [...],  // Most specific
+    'user/{id}' => [...],
+    'user' => [...],                     // Least specific
+];
+
+// If reversed, less specific routes would match first
 ```
 
 ### URI Sanitization
 
-URIs are sanitized using `FILTER_SANITIZE_URL` to prevent injection attacks:
+URIs are sanitized using `FILTER_SANITIZE_URL` before route matching to prevent injection attacks:
 
 ```php
 $server = ['REQUEST_URI' => '/user/<script>alert("xss")</script>'];
 $request = Request::initInstance($server, [], [], [], [], [], []);
-// The URI is sanitized automatically
+// XSS attempt is sanitized and won't match routes
+```
+
+### Complete Routing Example
+
+```php
+// Define routes
+$routes = [
+    '' => ['GET' => [HomeController::class, 'index']],
+    'user' => [
+        'GET' => [UserController::class, 'listAll'],
+        'POST' => [UserController::class, 'create'],
+    ],
+    'user/{id}' => [
+        'GET' => [UserController::class, 'getOne'],
+        'PUT' => [UserController::class, 'update'],
+        'DELETE' => [UserController::class, 'delete'],
+    ],
+    'user/{userId}/post/{postId}' => [
+        'GET' => [UserController::class, 'getPost'],
+    ],
+];
+
+// In Kernel or Router
+$uri = $request->getURI($routes);
+
+if ($uri === null) {
+    // Route not found - return 404
+    return $this->returnError(404);
+}
+
+// Get matched route configuration
+$routeConfig = $routes[$uri][$request->getMethod()] ?? null;
+if (!$routeConfig) {
+    // HTTP method not allowed
+    return $this->returnError(405);
+}
+
+// Extract controller and method
+[$controller, $method] = $routeConfig;
+
+// Parameters automatically available
+$userId = $request->getData('userId');   // If matched from {userId}
+$postId = $request->getData('postId');   // If matched from {postId}
+
+// Dispatch to controller
+$instance = new $controller();
+return $instance->$method();  // $this->getURI($routes) already called
+```
+
+### Fallback: No Routes Provided
+
+If no routes are provided to `getURI()`, it returns the raw sanitized path:
+
+```php
+$request->getURI();  // No routes array
+// URL: /user/42
+// Result: 'user/42' (literal path, not best practice)
+
+// Better approach: always provide routes
+$uri = $request->getURI($routes);
 ```
 
 ---
@@ -885,23 +1127,97 @@ class UserController extends AbstractController
 }
 ```
 
----
-
 ## Summary
 
-| Feature | Method | Returns |
-|---------|--------|---------|
-| **Initialization** | `initInstance()` | `Request` |
-| **Get Instance** | `getRequestInstance()` | `Request` |
-| **HTTP Method** | `getMethod()` | `string` |
-| **All Data** | `getAllDatas()` | `array` |
-| **Single Data** | `getData(name)` | `mixed` |
-| **Set Data** | `setData(key, value)` | `void` |
-| **URI** | `getURI()` | `string` |
-| **Files** | `getFiles()` | `array` |
-| **File** | `getFile(name)` | `array\|null` |
-| **Headers** | `getHeaders(name)` | `string\|null` |
-| **Cookies** | `getCookie(name)` | `string\|null` |
+| Feature | Method | Parameters | Returns |
+|---------|--------|-----------|---------|
+| **Initialization** | `initInstance()` | server, datas, get, post, files, session, headers, cookies | `Request` |
+| **Get Instance** | `getRequestInstance()` | — | `Request` |
+| **HTTP Method** | `getMethod()` | — | `string` |
+| **All Data** | `getAllDatas()` | — | `array` |
+| **Single Data** | `getData(name)` | name | `mixed` |
+| **Set Data** | `setData(key, value)` | key, value | `void` |
+| **URI (with Routes)** | `getURI(routes)` | routes array | `string` (or `null`) |
+| **URI (raw)** | `getURI()` | — | `string` (or `null`) |
+| **Files** | `getFiles()` | — | `array` |
+| **File** | `getFile(name)` | name | `array\|null` |
+| **Headers** | `getHeaders(name)` | name | `string\|null` |
+| **Cookies** | `getCookie(name)` | name | `string\|null` |
+| **Session Value** | `getSessionValue(name)` | name | `mixed` |
+| **Add Parameter** | `addParam(name, value)` | name, value | `$this` |
+| **Get Parameter** | `getParam(name)` | name | `mixed` |
+
+---
+
+## Request and Routing Integration
+
+The Request class is tightly integrated with the `RouteCompiler` and `Kernel` to provide a cohesive routing system:
+
+### Kernel Integration
+
+In the Kernel's constructor, routes are retrieved and passed to the Request:
+
+```php
+// From Kernel.php
+$routes = Router::getRoutes();  // Get all defined routes
+$request = Request::initInstance($_SERVER, $datas, $_GET, $_POST, $_FILES, $_SESSION, $headers, $_COOKIE);
+
+// Most important line: Pass routes to getURI()
+$routeCall = $request->getURI($routes);
+
+// $routeCall is now the matched route pattern like 'user/{id}'
+// Route parameters are automatically extracted into Request data
+```
+
+### Request Lifecycle
+
+1. **Request Creation**: `Request::initInstance()` with raw server data
+2. **Route Matching**: `request->getURI($routes)` using RouteCompiler
+3. **Parameter Extraction**: Parameters extracted from URL into data
+4. **Route Resolution**: Kernel uses returned route to find controller
+5. **Data Access**: Controller accesses parameters via `$request->getData()`
+
+### Typical Flow Example
+
+```php
+// URL: /user/42/post/7
+
+// 1. Kernel creates request and routes
+$request = Request::initInstance($_SERVER, ...);
+$routes = Router::getRoutes();  // Contains 'user/{id}/post/{postId}'
+
+// 2. Request matches route
+$uri = $request->getURI($routes);
+// Result: 'user/{id}/post/{postId}'
+
+// 3. Parameters extracted automatically
+$userId = $request->getData('id');          // '42'
+$postId = $request->getData('postId');      // '7'
+
+// 4. Kernel resolves controller from $routes[$uri]
+[$controller, $method] = $routes[$uri][$httpMethod];
+
+// 5. Controller receives fully-initialized request
+class UserController extends AbstractController
+{
+    public function getPost(): ResponseInterface
+    {
+        $userId = $this->request->getData('id');      // Works!
+        $postId = $this->request->getData('postId');  // Works!
+        // ... handle request
+    }
+}
+```
+
+---
+
+## Related Documentation
+
+- [Router Configuration](./router.md) - Define your application routes
+- [Kernel](./kernel.md) - Application engine that manages request lifecycle
+- [Controller](./controller.md) - Build controllers that work with Request
+- [Route Compilation Details](./router.md#route-compiler) - Deep dive into pattern matching
+
 | **Session** | `getSessionValue(name)` | `mixed` |
 | **User** | `getUser()` | `User\|null` |
 | **Connected** | `isConnected()` | `bool` |
