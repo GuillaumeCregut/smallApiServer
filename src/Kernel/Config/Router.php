@@ -42,6 +42,9 @@ class Router
             'user'=>[
                 'GET' => [UserController::class, 'get'],
                 'POST' => [UserController::class, 'add'],
+            ],
+            'user/{id}' => [
+                'GET' => [UserController::class, 'get'],
                 'PUT' => [UserController::class, 'update'],
                 'PATCH' =>[UserController::class, 'update'],
                 'DELETE' => [UserController::class, 'delete'],
