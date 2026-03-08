@@ -33,7 +33,7 @@ class Kernel
     private Request $request;
     private array $routes;
     private bool $errorInBoot = false;
-    private string $errorMessage ='';
+    private string $errorMessage = '';
 
     public function __construct()
     {
@@ -44,14 +44,14 @@ class Kernel
         } catch (KernelException $e) {
             $this->errorInBoot = true;
             $this->errorMessage = $e->getMessage();
-            Logger::error($this, $this->errorMessage,false,false);
+            Logger::error($this, $this->errorMessage, false, false);
         }
 
         //get routes for controller instantiation
         $this->routes = Router::getRoutes();
 
         //Get Values from server
-        try{
+        try {
             $datas = GetClientParams::getInputs();
             $headers = GetClientParams::getheaders();
         } catch (KernelException $e) {
@@ -72,7 +72,7 @@ class Kernel
 
     public function route(): ResponseInterface
     {
-        if($this->errorInBoot) {
+        if ($this->errorInBoot) {
             $e = new Exception($this->errorMessage);
             return $this->sendErrorResponse($e);
         }
@@ -81,27 +81,41 @@ class Kernel
         //Launch initKernelEvent
         EventDispatcher::getInstance($provider)->dispatch(new InitKernelEvent());
 
-        if(null === $this->routeCall) {
+        if (null === $this->routeCall) {
             $response = new ClientErrorResponse(404);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
+
         //If no routes for request
         if (!key_exists($this->routeCall, $this->routes)) {
             $response = new ClientErrorResponse(404);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
         }
+
         //Get Controller and method
         $clientMethod = Request::getRequestInstance()->getMethod();
+
+        $methods = implode(',',$this->getAllowedMethods($this->routeCall));
+        //Handle Preflight request
+        if ('OPTIONS' === $clientMethod) {
+            $origin = GetEnvDatas::getEnvInstance()->get('ALLOW_ORIGIN', '*');
+            header("Access-Control-Allow-Origin: {$origin}");
+            header("Access-Control-Allow-Methods: {$methods}, OPTIONS");
+            header('Access-Control-Allow-Headers: Content-Type, Authorization');
+            header('Access-Control-Max-Age: 86400');
+            http_response_code(200);
+            exit();
+        }
+
         $routeAndMethod = $this->routes[$this->routeCall];
-        
+
         if (!key_exists($clientMethod, $routeAndMethod)) {
             $response = new ClientErrorResponse(405);
             EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
             return $response;
-        }
-        else {
+        } else {
             $matchingRoute = $routeAndMethod[$clientMethod];
         }
 
@@ -133,7 +147,16 @@ class Kernel
 
     private function sendErrorResponse(Exception $e): ResponseInterface
     {
-         $response = new ErrorResponse(500, true,$e);
-         return $response;
+        $response = new ErrorResponse(500, true, $e);
+        return $response;
+    }
+
+    private function getAllowedMethods(string $route): array
+    {
+        $methods = [];
+        foreach ($this->routes[$route] as $method => $_) {
+            $methods[] = $method;
+        }
+        return $methods;
     }
 }
