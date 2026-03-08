@@ -555,6 +555,531 @@ if ($user) {
 
 ---
 
+## Repository Events
+
+The repository dispatcher emits events at key lifecycle moments for INSERT, UPDATE, DELETE, and SELECT operations. This allows you to hook into data operations and perform custom logic like validation, auditing, or side effects.
+
+### Event Lifecycle
+
+#### INSERT (Create New Entity)
+
+```
+1. save(entity) called with entity.id = null
+   ↓
+2. PrePersistEvent dispatched
+   - Entity can be modified by listeners
+   ↓
+3. SQL INSERT executed
+   ↓
+4. Entity gets new ID assigned
+   ↓
+5. PostPersistEvent dispatched
+   - Entity has ID available
+   - Only dispatched if INSERT succeeds
+```
+
+#### UPDATE (Save Existing Entity)
+
+```
+1. save(entity) called with entity.id set
+   ↓
+2. PreUpdateEvent dispatched
+   - Entity can be modified by listeners
+   ↓
+3. SQL UPDATE executed
+   ↓
+4. PostUpdateEvent dispatched
+   - Only dispatched if UPDATE succeeds
+```
+
+#### DELETE
+
+```
+1. delete(entity) called
+   ↓
+2. PreRemoveEvent dispatched
+   - Entity data still accessible
+   ↓
+3. SQL DELETE executed
+   ↓
+4. PostRemoveEvent dispatched
+   - Only dispatched if DELETE succeeds
+   - Entity data still accessible
+```
+
+#### READ (Find)
+
+```
+1. find(id), findBy(...), or findAll() called
+   ↓
+2. SQL SELECT executed
+   ↓
+3. Entity hydrated from database
+   ↓
+4. PostFindEvent dispatched for each entity
+   - Entity fully loaded with all data
+```
+
+### Event Classes
+
+All repository events inherit from `AbstractStoppableEvent` and include the entity being affected.
+
+| Operation | Event Class | When Dispatched | Entity ID |
+|-----------|-------------|-----------------|-----------|
+| **INSERT** | `PrePersistEvent` | Before INSERT | Not set |
+| | `PostPersistEvent` | After INSERT (success only) | **Assigned** |
+| **UPDATE** | `PreUpdateEvent` | Before UPDATE | Set |
+| | `PostUpdateEvent` | After UPDATE (success only) | Set |
+| **DELETE** | `PreRemoveEvent` | Before DELETE | Set |
+| | `PostRemoveEvent` | After DELETE (success only) | Set |
+| **SELECT** | `PostFindEvent` | After entity hydrated | Set |
+
+### Registering Event Listeners
+
+Events are managed through the `ListenerProvider`:
+
+```php
+use App\Kernel\Psr14\Listener\ListenerProvider;
+use App\Kernel\Psr14\Events\PrePersistEvent;
+use App\Kernel\Interfaces\Psr14\ListenerInterface;
+
+class AuditListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PrePersistEvent) {
+            // Handle PrePersistEvent
+        }
+    }
+}
+
+ListenerProvider::getInstance()->addListener(
+    PrePersistEvent::class,
+    new AuditListener()
+);
+```
+
+### PrePersistEvent (Before INSERT)
+
+Dispatched before a new entity is inserted into the database.
+
+**When:** `save($entity)` called with `$entity->getId() === null`
+
+**Listener Method:**
+```php
+public function execute(StoppableEventInterface $event): void
+{
+    if ($event instanceof PrePersistEvent) {
+        $entity = $event->getEntity();
+        // Entity is a User, Product, etc.
+    }
+}
+```
+
+**Use Cases:**
+- Validate entity data before persistence
+- Set computed fields (timestamps, defaults)
+- Encrypt sensitive data
+- Generate slugs or identifiers
+
+**Example:**
+```php
+class TimestampListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PrePersistEvent) {
+            $entity = $event->getEntity();
+            
+            if (method_exists($entity, 'setCreatedAt')) {
+                $entity->setCreatedAt(new DateTime());
+            }
+        }
+    }
+}
+```
+
+**Modifying Entity:**
+```php
+$listener = new class implements ListenerInterface {
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PrePersistEvent) {
+            $entity = $event->getEntity();
+            // Modifications affect what gets saved
+            $entity->setStatus('active');
+        }
+    }
+};
+```
+
+### PostPersistEvent (After INSERT)
+
+Dispatched after a new entity is successfully inserted into the database.
+
+**When:** `save($entity)` completes INSERT successfully
+
+**Important:** NOT dispatched if INSERT fails (`$result = false`).
+
+**Entity State:**
+- ID is now assigned
+- Database record created
+
+**Use Cases:**
+- Notify external systems (webhooks, queues)
+- Trigger related operations
+- Log successful creation
+- Update search indices
+
+**Example:**
+```php
+class SearchIndexListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PostPersistEvent) {
+            $entity = $event->getEntity();
+            $id = $entity->getId();  // ID is now available
+            
+            // Index in search engine
+            $this->indexSearch($entity, $id);
+        }
+    }
+}
+```
+
+### PreUpdateEvent (Before UPDATE)
+
+Dispatched before an existing entity is updated in the database.
+
+**When:** `save($entity)` called with `$entity->getId() !== null`
+
+**Use Cases:**
+- Validate changes before update
+- Track audit trail of what changed
+- Modify data before persistence
+- Prevent certain updates
+
+**Example:**
+```php
+class AuditChangeListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PreUpdateEvent) {
+            $entity = $event->getEntity();
+            $id = $entity->getId();
+            
+            // Log what's being changed
+            $oldEntity = $this->fetchOriginal($id);
+            $this->logChanges($oldEntity, $entity);
+        }
+    }
+}
+```
+
+**Modifying Before Update:**
+```php
+$listener = new class implements ListenerInterface {
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PreUpdateEvent) {
+            $entity = $event->getEntity();
+            
+            if (method_exists($entity, 'setUpdatedAt')) {
+                $entity->setUpdatedAt(new DateTime());
+            }
+        }
+    }
+};
+```
+
+### PostUpdateEvent (After UPDATE)
+
+Dispatched after an existing entity is successfully updated in the database.
+
+**When:** `save($entity)` completes UPDATE successfully
+
+**Important:** NOT dispatched if UPDATE fails (`$result = false`).
+
+**Use Cases:**
+- Notify of entity changes
+- Invalidate caches
+- Trigger workflows
+- Send notifications
+
+**Example:**
+```php
+class CacheInvalidateListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PostUpdateEvent) {
+            $entity = $event->getEntity();
+            $id = $entity->getId();
+            
+            // Clear cache for this entity
+            $this->cache->delete("entity_{$id}");
+        }
+    }
+}
+```
+
+### PreRemoveEvent (Before DELETE)
+
+Dispatched before an entity is deleted from the database.
+
+**When:** `delete($entity)` called
+
+**Entity Data:** Fully accessible
+
+**Use Cases:**
+- Log deletion (audit trail)
+- Archive data
+- Prevent deletion of protected records
+- Cascade operations to related entities
+
+**Example:**
+```php
+class ArchiveListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PreRemoveEvent) {
+            $entity = $event->getEntity();
+            
+            // Archive before deletion
+            $this->archiveService->archive($entity->getId());
+        }
+    }
+}
+```
+
+### PostRemoveEvent (After DELETE)
+
+Dispatched after an entity is successfully deleted from the database.
+
+**When:** `delete($entity)` completes successfully
+
+**Important:** NOT dispatched if DELETE fails (`$result = false`).
+
+**Entity Data:** Still accessible even though deleted from DB
+
+**Use Cases:**
+- Log successful deletion
+- Notify external systems
+- Clean up related resources
+- Update search indices
+
+**Example:**
+```php
+class SearchRemoveListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PostRemoveEvent) {
+            $entity = $event->getEntity();
+            $id = $entity->getId();
+            
+            // Remove from search index
+            $this->searchService->remove($id);
+            
+            // Log deletion
+            $this->auditLog->recordDeletion($entity::class, $id);
+        }
+    }
+}
+```
+
+### PostFindEvent (After SELECT)
+
+Dispatched after each entity is hydrated from a SELECT query.
+
+**When:** Entity loaded from database by `find()`, `findBy()`, or `findAll()`
+
+**Entity State:**
+- Fully hydrated with all database values
+- ID set
+- Ready to use
+
+**Frequency:** Dispatched once per entity found
+- `find(1)` returns 1 entity → PostFindEvent dispatched 1 time
+- `findAll()` returns 5 entities → PostFindEvent dispatched 5 times
+- `findBy(['status' => 'active'])` returns 10 entities → PostFindEvent dispatched 10 times
+
+**Use Cases:**
+- Decrypt sensitive fields
+- Load related data (lazy loading)
+- Transform repository data
+- Populate computed properties
+- Track entity access
+
+**Example:**
+```php
+class LazyLoadListener implements ListenerInterface
+{
+    public function execute(StoppableEventInterface $event): void
+    {
+        if ($event instanceof PostFindEvent) {
+            $entity = $event->getEntity();
+            
+            // If entity has comments relation, load them
+            if (method_exists($entity, 'loadComments')) {
+                $entity->loadComments();  // Lazy load related
+            }
+        }
+    }
+}
+```
+
+### Using Event Bag for Listener Communication
+
+Listeners can share data through the event's bag (inherited from `AbstractStoppableEvent`):
+
+```php
+// Listener 1: Compute value
+ListenerProvider::getInstance()->addListener(
+    PrePersistEvent::class,
+    new class implements ListenerInterface {
+        public function execute(StoppableEventInterface $event): void
+        {
+            $event->addInBag('price_usd', 100 * 1.1);  // With tax
+        }
+    }
+);
+
+// Listener 2: Use computed value
+ListenerProvider::getInstance()->addListener(
+    PrePersistEvent::class,
+    new class implements ListenerInterface {
+        public function execute(StoppableEventInterface $event): void
+        {
+            if ($event->hasInBag('price_usd')) {
+                $price = $event->getFromBag('price_usd');
+                $entity = $event->getEntity();
+                $entity->setTotal($price);
+            }
+        }
+    }
+);
+```
+
+### Real-World Example: Complete Audit Trail
+
+```php
+class AuditTrailService
+{
+    public function registerListeners(): void
+    {
+        ListenerProvider::getInstance()->addListener(
+            PrePersistEvent::class,
+            $this->createAuditListener('CREATE')
+        );
+        
+        ListenerProvider::getInstance()->addListener(
+            PreUpdateEvent::class,
+            $this->createAuditListener('UPDATE')
+        );
+        
+        ListenerProvider::getInstance()->addListener(
+            PreRemoveEvent::class,
+            $this->createAuditListener('DELETE')
+        );
+    }
+    
+    private function createAuditListener(string $action): ListenerInterface
+    {
+        return new class($action) implements ListenerInterface {
+            public function __construct(private string $action) {}
+            
+            public function execute(StoppableEventInterface $event): void
+            {
+                $entity = $event->getEntity();
+                $userId = $this->getCurrentUserId();
+                
+                $record = [
+                    'action' => $this->action,
+                    'entity_type' => $entity::class,
+                    'entity_id' => $entity->getId(),
+                    'user_id' => $userId,
+                    'timestamp' => (new DateTime())->format('Y-m-d H:i:s'),
+                    'data' => serialize($entity),
+                ];
+                
+                $this->auditLog->insert($record);
+            }
+            
+            private function getCurrentUserId(): int
+            {
+                return $_SESSION['user_id'] ?? 0;
+            }
+        };
+    }
+}
+
+// In application bootstrap:
+(new AuditTrailService())->registerListeners();
+```
+
+### Best Practices
+
+#### ✅ Do's
+
+```php
+✅ Keep listeners focused on one concern
+class EmailNotificationListener implements ListenerInterface { }
+class SearchIndexListener implements ListenerInterface { }
+
+✅ Handle specific event types
+if ($event instanceof PostPersistEvent) { }
+
+✅ Use event bag for inter-listener communication
+$event->addInBag('processed', true);
+
+✅ Gracefully handle missing methods
+if (method_exists($entity, 'setCreatedAt')) {
+    $entity->setCreatedAt(now());
+}
+
+✅ Log listener errors
+try {
+    $this->notifyExternal($entity);
+} catch (Exception $e) {
+    $this->log->error('Notification failed', $e);
+}
+```
+
+#### ❌ Don'ts
+
+```php
+❌ Don't perform long-running operations in listeners
+// BAD
+ListenerProvider::getInstance()->addListener(
+    PostPersistEvent::class,
+    new class implements ListenerInterface {
+        public function execute($event) {
+            sleep(10);  // Blocks request!
+        }
+    }
+);
+
+❌ Don't modify event outside your listener's scope
+$event->getEntity()->delete();  // May cause issues
+
+❌ Don't assume entity ID in PrePersistEvent
+if ($event instanceof PrePersistEvent) {
+    $id = $entity->getId();  // Still null!
+}
+
+❌ Don't rely on PostEvent if operation may fail
+// Use Post events only for operations that succeeded
+
+❌ Don't create circular listener dependencies
+ListenerA → NotifyService → UpdateEntity → ListenerB → ...
+```
+
+---
+
 ## Comparing Both Approaches
 
 ### Approach 1: Direct Repository (Simple CRUD)

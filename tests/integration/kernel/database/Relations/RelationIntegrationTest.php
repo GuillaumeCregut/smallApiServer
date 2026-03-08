@@ -26,6 +26,7 @@ class RelationIntegrationTest extends TestCase
 
     protected function setUp(): void
     {
+        GetEnvDatas::resetInstance();
         $this->em = EntityManager::getInstance(new IdentityMap());
         $this->setUpSchema();
     }
