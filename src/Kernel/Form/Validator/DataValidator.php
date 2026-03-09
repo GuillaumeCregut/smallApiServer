@@ -5,7 +5,7 @@
  * Copyright (c) 2026 Guillaume Crégut
  */
 
-namespace App\Kernel\Validator;
+namespace App\Kernel\Form\Validator;
 
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use InvalidArgumentException;

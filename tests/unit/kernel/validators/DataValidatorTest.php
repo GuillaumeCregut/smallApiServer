@@ -1,9 +1,8 @@
 <?php
 
 use App\Kernel\Connector\Interfaces\EntityInterface;
-use App\Kernel\Validator\Assert\NotBlank;
-use App\Kernel\Validator\DataValidator;
-use App\Kernel\Validator\ValidatorInterface;
+use App\Kernel\Form\Validator\DataValidator;
+use App\Kernel\Form\Validator\ValidatorInterface;
 use PHPUnit\Framework\TestCase;
 
 class DataValidatorTest extends TestCase
