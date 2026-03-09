@@ -11,8 +11,8 @@ use ReflectionClass;
 use ReflectionProperty;
 use ReflectionAttribute;
 use InvalidArgumentException;
-use App\Kernel\Form\Validator\Assert\IsNull;
 use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Form\Validator\Assert\Optional;
 
 class DataValidator
 {
@@ -28,6 +28,7 @@ class DataValidator
      */
     public static function validate(string $entity, array $values, array $files = []): bool
     {
+        $values = array_merge($values, $files);
         if (!is_subclass_of($entity, EntityInterface::class)) {
             throw new InvalidArgumentException('Entity must implements EntityInterface');
         }
@@ -43,10 +44,9 @@ class DataValidator
     }
 
 
-    private static function validateProperty(ReflectionProperty $property, array $values, array $files = []): bool
+    private static function validateProperty(ReflectionProperty $property, array $values): bool
     {
         $name = $property->getName();
-        $values = array_merge($values, $files);
         $attributes = $property->getAttributes(ValidatorInterface::class, ReflectionAttribute::IS_INSTANCEOF);
         if (empty($attributes)) {
             return true;
@@ -54,11 +54,14 @@ class DataValidator
         foreach ($attributes as $attribute) {
             $testAttribute = $attribute->newInstance();
             if (!array_key_exists($name, $values)) {
-                if ($testAttribute instanceof IsNull) {
+                if ($testAttribute instanceof Optional) {
                     continue;
                 } else {
                     return false;
                 }
+            }
+            if ($testAttribute instanceof Optional) {
+                continue; 
             }
             $valid = $testAttribute->validate($values[$name]);
             if (!$valid) {
