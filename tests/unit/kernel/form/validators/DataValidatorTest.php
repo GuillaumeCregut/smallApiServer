@@ -1,6 +1,7 @@
 <?php
 
 use App\Kernel\Connector\Interfaces\EntityInterface;
+use App\Kernel\Form\Validator\Assert\IsNull;
 use App\Kernel\Form\Validator\DataValidator;
 use App\Kernel\Form\Validator\ValidatorInterface;
 use PHPUnit\Framework\TestCase;
@@ -79,6 +80,13 @@ class DataValidatorTest extends TestCase
     }
 
     public function testValidateExtraKeysInDataAreIgnored(): void
+    {
+        $datas = ['id' => 12, 'unexpected' => 'ghost'];
+        $result = DataValidator::validate(EntityToValidate2::class, $datas);
+        $this->assertTrue($result);
+    }
+
+    public function testIsNullAllowed(): void
     {
         $datas = ['id' => 12, 'unexpected' => 'ghost'];
         $result = DataValidator::validate(EntityToValidate2::class, $datas);
@@ -181,6 +189,31 @@ class EntityToValidate5 implements EntityInterface
     #[AlwaysValid]
     #[AlwaysInvalid]
     private int $id;
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+
+    public static function getRepository(): string
+    {
+        return '';
+    }
+}
+
+class EntityToValidate6 implements EntityInterface
+{
+    #[AlwaysValid]
+    private int $id;
+
+    #[IsNull]
+    private int $age;
 
     public function getId(): int
     {
