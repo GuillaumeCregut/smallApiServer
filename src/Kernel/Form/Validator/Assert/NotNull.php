@@ -8,13 +8,10 @@
 namespace App\Kernel\Form\Validator\Assert;
 
 use \Attribute;
-use App\Kernel\Form\Validator\ValidatorInterface;
 
 #[Attribute]
-class NotNull implements ValidatorInterface
-{
-private string $errorMessage;
-    
+class NotNull extends AbstractAssert
+{   
     public function __construct(?string $errorMessage = null)
     {
         $this->errorMessage = $errorMessage ?? 'Value %s must not be null';

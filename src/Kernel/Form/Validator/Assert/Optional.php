@@ -8,12 +8,10 @@
 namespace App\Kernel\Form\Validator\Assert;
 
 use \Attribute;
-use App\Kernel\Form\Validator\ValidatorInterface;
 
 #[Attribute]
-class Optional implements ValidatorInterface
+class Optional extends AbstractAssert
 {
-private string $errorMessage;
     
     public function __construct(?string $errorMessage = null)
     {
