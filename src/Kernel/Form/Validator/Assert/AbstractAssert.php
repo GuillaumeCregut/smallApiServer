@@ -6,7 +6,7 @@ use App\Kernel\Form\Validator\ValidatorInterface;
 
 abstract class AbstractAssert implements ValidatorInterface
 {
-    protected string $errorMessage;
+    protected string $errorMessage = '';
 
     abstract public function validate(mixed $value): bool;
 
