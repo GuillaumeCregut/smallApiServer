@@ -15,7 +15,17 @@ use ReflectionAttribute;
 
 class DataValidator
 {
-    public static function validate(string $entity, array $values): bool
+
+    /**
+     * Validate incoming datas matching with asserts
+     * If one field fails, return false
+     *
+     * @param string $entity
+     * @param array $values
+     * @param array $files
+     * @return boolean
+     */
+    public static function validate(string $entity, array $values, array $files =[]): bool
     {
         if (!is_subclass_of($entity, EntityInterface::class)) {
             throw new InvalidArgumentException('Entity must implements EntityInterface');
@@ -32,9 +42,10 @@ class DataValidator
     }
 
 
-    private static function validateProperty(ReflectionProperty $property, array $values): bool
+    private static function validateProperty(ReflectionProperty $property, array $values, array $files=[]): bool
     {
         $name = $property->getName();
+        $values = array_merge($values, $files);
         $attributes = $property->getAttributes(ValidatorInterface::class, ReflectionAttribute::IS_INSTANCEOF);
         if (empty($attributes)) {
             return true;
