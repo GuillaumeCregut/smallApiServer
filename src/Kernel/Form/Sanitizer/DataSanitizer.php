@@ -13,6 +13,7 @@ class DataSanitizer
     private static array $stringRules = [
         'trim',
         'strip_tags',
+        [self::class,'htmlSpecial']
     ];
     public static function sanitize(array $values): array
     {
@@ -33,6 +34,11 @@ class DataSanitizer
         foreach(self::$stringRules as $rule) {
             $value = $rule($value);
         }
+        return $value;
+    }
+
+    private static function htmlSpecial(string $value): string
+    {
         return htmlspecialchars($value, ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }
