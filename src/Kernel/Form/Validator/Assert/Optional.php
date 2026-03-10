@@ -12,7 +12,7 @@ use \Attribute;
 #[Attribute]
 class Optional extends AbstractAssert
 {
-    
+
     public function __construct(?string $errorMessage = null)
     {
         $this->errorMessage = $errorMessage ?? 'Value %s must not be blank';
@@ -22,7 +22,7 @@ class Optional extends AbstractAssert
         return true;
     }
 
-    public function check(mixed $value): bool
+    protected function check(mixed $value): bool
     {
         return true;
     }

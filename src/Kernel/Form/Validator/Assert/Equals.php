@@ -26,7 +26,7 @@ class Equals extends AbstractAssert
         return $this->check($value);
     }
 
-    public function check(mixed $value): bool
+    protected function check(mixed $value): bool
     {
         return $value === $this->expected;
     }

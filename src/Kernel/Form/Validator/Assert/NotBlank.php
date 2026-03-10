@@ -18,7 +18,7 @@ class NotBlank extends AbstractAssert
         $this->allowedTypes = ['string'];
     }
 
-    public function check(mixed $value): bool
+    protected function check(mixed $value): bool
     {
         $testValue = trim($value);
         if ('' === $testValue)  {
