@@ -9,6 +9,10 @@ namespace App\Kernel\Form\Validator\Assert;
 
 use \Attribute;
 
+/**
+ * Validates that a  value is equals to expected.
+ * Note: null values pass through — use #[NotNull] if null should be rejected.
+ */
 #[Attribute]
 class Equals extends AbstractAssert
 {
