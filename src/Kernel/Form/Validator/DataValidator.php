@@ -17,6 +17,8 @@ use App\Kernel\Form\Validator\Assert\Optional;
 class DataValidator
 {
 
+    private static array $errorMessages = [];
+
     /**
      * Validate incoming datas matching with asserts
      * If one field fails, return false
@@ -28,6 +30,7 @@ class DataValidator
      */
     public static function validate(string $entity, array $values, array $files = []): bool
     {
+        self::$errorMessages = [];
         $values = array_merge($values, $files);
         if (!is_subclass_of($entity, EntityInterface::class)) {
             throw new InvalidArgumentException('Entity must implements EntityInterface');
@@ -51,23 +54,36 @@ class DataValidator
         if (empty($attributes)) {
             return true;
         }
-        foreach ($attributes as $attribute) {
-            $testAttribute = $attribute->newInstance();
-            if (!array_key_exists($name, $values)) {
-                if ($testAttribute instanceof Optional) {
-                    continue;
-                } else {
-                    return false;
+
+        if (!array_key_exists($name, $values)) {
+            foreach ($attributes as $attribute) {
+                if ($attribute->newInstance() instanceof Optional) {
+                    return true; // whole property skipped
                 }
             }
+            self::$errorMessages[$name] = ['error' => 'Property has assert but no value provided'];
+            return false;
+        }
+
+        foreach ($attributes as $attribute) {
+            $attributeName = $attribute->getName();
+            $testAttribute = $attribute->newInstance();
             if ($testAttribute instanceof Optional) {
-                continue; 
+                continue;
             }
             $valid = $testAttribute->validate($values[$name]);
             if (!$valid) {
+                $message = $testAttribute->getMessage();
+                $error = sprintf($message, $name);
+                self::$errorMessages[$name] = array($attributeName => $error);
                 return false;
             }
         }
         return true;
+    }
+
+    public static function getErrors(): array
+    {
+        return self::$errorMessages;
     }
 }

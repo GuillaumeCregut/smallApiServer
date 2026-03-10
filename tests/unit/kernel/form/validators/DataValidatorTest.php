@@ -15,6 +15,14 @@ class DataValidatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         DataValidator::validate(stdClass::class, []);
     }
+
+    public function testThrowsWhenClassDoesNotExist(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        DataValidator::validate('NonExistentClass', []);
+    }
+
+
     public function testValidateNoElement(): void
     {
         $datas = [];
@@ -96,13 +104,13 @@ class DataValidatorTest extends TestCase
     public function testObjectPropertyWithoutAttributeIsIgnored(): void
     {
         // 'relation' has no attribute → passes regardless
-        $result = DataValidator::validate(EntityWithRelation::class, ['name' => 'John']);
+        $result = DataValidator::validate(EntityWithRelation3::class, ['name' => 'John']);
         $this->assertTrue($result);
     }
 
     public function testObjectPropertyWithoutAttributeIsIgnoredEvenIfPresent(): void
     {
-        $result = DataValidator::validate(EntityWithRelation::class, [
+        $result = DataValidator::validate(EntityWithRelation3::class, [
             'name'     => 'John',
             'relation' => new RelatedEntity(),
         ]);
@@ -157,6 +165,144 @@ class DataValidatorTest extends TestCase
         ]);
         $this->assertTrue($result);
     }
+
+    public function testGetErrorsIsEmptyOnSuccess(): void
+    {
+        DataValidator::validate(ValidEntity::class, ['name' => 'John']);
+        $this->assertEmpty(DataValidator::getErrors());
+    }
+
+    public function testErrorsAreResetBetweenValidateCalls(): void
+    {
+        // first call pollutes errors
+        DataValidator::validate(InvalidEntity::class, ['name' => 'John']);
+        $this->assertNotEmpty(DataValidator::getErrors());
+
+        // second call must reset them
+        DataValidator::validate(ValidEntity::class, ['name' => 'John']);
+        $this->assertEmpty(DataValidator::getErrors());
+    }
+
+    public function testGetErrorsUsesPropertyNameAsKey(): void
+    {
+        DataValidator::validate(InvalidEntity::class, ['name' => 'John']);
+        $this->assertArrayHasKey('name', DataValidator::getErrors());
+    }
+
+    public function testGetErrorsUsesCorrectPropertyNameAsKey(): void
+    {
+        // 'age' fails, not 'name' — key must be 'age', not hardcoded 'name'
+        DataValidator::validate(MultiOneInvalidEntity::class, [
+            'name' => 'John',
+            'age'  => 30,
+        ]);
+        $errors = DataValidator::getErrors();
+        $this->assertArrayHasKey('age', $errors);
+        $this->assertArrayNotHasKey('name', $errors);
+    }
+
+    public function testGetErrorsContainsMissingValueMessageWhenKeyAbsent(): void
+    {
+        DataValidator::validate(ValidEntity::class, []);
+        $errors = DataValidator::getErrors();
+        $this->assertArrayHasKey('name', $errors);
+        $this->assertArrayHasKey('error', $errors['name']);
+    }
+
+    public function testGetErrorsContainsAssertClassNameAsKey(): void
+    {
+        DataValidator::validate(InvalidEntity::class, ['name' => 'John']);
+        $errors = DataValidator::getErrors();
+        $this->assertArrayHasKey(AlwaysInvalid::class, $errors['name']);
+    }
+
+    public function testGetErrorsContainsFormattedMessage(): void
+    {
+        DataValidator::validate(InvalidEntity::class, ['name' => 'John']);
+        $errors = DataValidator::getErrors();
+        // getMessage() returns 'Field %s is always invalid', sprintf fills %s with property name
+        $this->assertSame('Field name is always invalid', $errors['name'][AlwaysInvalid::class]);
+    }
+
+    public function testOptionalMixWillReturnTrueOnNoValues(): void
+    {
+        $result = DataValidator::validate(OptionalAndAllwaysInvalid::class, [
+            
+        ]);
+        $this->assertTrue($result);
+    }
+
+    public function testOptionalMixWillReturnFalseOnValues(): void
+    {
+        $result = DataValidator::validate(OptionalAndAllwaysInvalid::class, [
+            'name'=>'John'
+        ]);
+        $this->assertFalse($result);
+    }
+
+    public function testOptionalMixWillReturnTrueOnValues(): void
+    {
+        $result = DataValidator::validate(OptionalAndAllwaysValid::class, [
+            'name'=>'John'
+        ]);
+        $this->assertTrue($result);
+    }
+
+    public function testOptionalMixWillReturnTrueOnNoValuesWithValid(): void
+    {
+        $result = DataValidator::validate(OptionalAndAllwaysValid::class, [
+        ]);
+        $this->assertTrue($result);
+    }
+}
+class OptionalAndAllwaysValid implements EntityInterface
+{
+    private int $id;
+
+    #[Optional]
+    #[AlwaysValid]
+    private ?string $name;
+
+    public static function getRepository(): string
+    {
+        return '';
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+}
+
+class OptionalAndAllwaysInvalid implements EntityInterface
+{
+    private int $id;
+
+    #[Optional]
+    #[AlwaysInvalid]
+    private ?string $name;
+
+    public static function getRepository(): string
+    {
+        return '';
+    }
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
 }
 
 class OptionalFieldEntity implements EntityInterface
@@ -180,6 +326,31 @@ class OptionalFieldEntity implements EntityInterface
     {
         $this->id = $id;
         return $this;
+    }
+}
+
+class MultiOneInvalidEntity implements EntityInterface
+{
+    private int $id;
+    #[AlwaysValid]
+    private string $name;
+    #[AlwaysInvalid]
+    private int $age;
+
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+
+    public static function getRepository(): string
+    {
+        return '';
     }
 }
 
@@ -339,7 +510,47 @@ class RelatedEntity implements EntityInterface
     }
 }
 
-class EntityWithRelation implements EntityInterface
+class ValidEntity implements EntityInterface
+{
+    private int $id;
+    #[AlwaysValid]
+    private string $name;
+    public static function getRepository(): string
+    {
+        return '';
+    }
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+}
+
+class InvalidEntity implements EntityInterface
+{
+    private int $id;
+    #[AlwaysInvalid]
+    private string $name;
+    public static function getRepository(): string
+    {
+        return '';
+    }
+    public function getId(): int
+    {
+        return $this->id;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+}
+
+class EntityWithRelation3 implements EntityInterface
 {
     private int $id;
     private RelatedEntity $relation;
@@ -391,6 +602,11 @@ class AlwaysValid implements ValidatorInterface
     {
         return true;
     }
+
+    public function getMessage(): string
+    {
+        return "Allways Valid";
+    }
 }
 
 #[Attribute]
@@ -399,5 +615,10 @@ class AlwaysInvalid implements ValidatorInterface
     public function validate(mixed $value): bool
     {
         return false;
+    }
+
+    public function getMessage(): string
+    {
+        return "Field %s is always invalid";
     }
 }
