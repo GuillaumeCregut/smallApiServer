@@ -120,9 +120,9 @@ class DataCasterTest extends TestCase
 
     public function testObjectPropertyIsUntouched(): void
     {
-        $related = new RelatedEntity();
+        $related = new RelatedEntity2();
 
-        $result = DataCaster::cast(EntityWithRelation::class, ['relation' => $related]);
+        $result = DataCaster::cast(EntityWithRelation2::class, ['relation' => $related]);
 
         $this->assertSame($related, $result['relation']);
     }
@@ -203,7 +203,7 @@ class CastableEntity implements EntityInterface
     }
 }
 
-class RelatedEntity implements EntityInterface
+class RelatedEntity2 implements EntityInterface
 {
     private int $id;
     public static function getRepository(): string
@@ -221,10 +221,10 @@ class RelatedEntity implements EntityInterface
     }
 }
 
-class EntityWithRelation implements EntityInterface
+class EntityWithRelation2 implements EntityInterface
 {
     private int $id;
-    private RelatedEntity $relation;
+    private RelatedEntity2 $relation;
     public function getId(): int
     {
         return $this->id;
