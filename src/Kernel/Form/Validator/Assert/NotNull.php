@@ -14,10 +14,14 @@ class NotNull extends AbstractAssert
 {   
     public function __construct(?string $errorMessage = null)
     {
-        $this->errorMessage = $errorMessage ?? 'Value %s must not be null';
+        $this->errorMessage = $errorMessage ?? 'Property %s must not be null';
+    }
+    final public function validate(mixed $value): bool
+    {
+        return $this->check($value);
     }
 
-    public function validate(mixed $value): bool
+    protected function check(mixed $value): bool
     {
         return null !== $value;
     }

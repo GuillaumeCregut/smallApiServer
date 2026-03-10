@@ -16,10 +16,15 @@ class NotBlankTest extends TestCase
     {
         $notBlank = new NotBlank();
         $this->assertTrue($notBlank->validate('John'));
-        $this->assertTrue($notBlank->validate(0));
         $this->assertTrue($notBlank->validate(null));
-        $this->assertTrue($notBlank->validate([]));
-        $this->assertTrue($notBlank->validate(false));
-        $this->assertTrue($notBlank->validate(true));
+    }
+
+    public function testWillReturnFalseNotAllowedTypes(): void
+    {
+        $notBlank = new NotBlank();
+        $this->assertFalse($notBlank->validate(0));
+        $this->assertFalse($notBlank->validate([]));
+        $this->assertFalse($notBlank->validate(false));
+        $this->assertFalse($notBlank->validate(true));
     }
 }

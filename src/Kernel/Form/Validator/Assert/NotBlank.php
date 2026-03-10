@@ -14,14 +14,12 @@ class NotBlank extends AbstractAssert
 {
     public function __construct(?string $errorMessage = null)
     {
-        $this->errorMessage = $errorMessage ?? 'Value %s must not be blank';
+        $this->errorMessage = $errorMessage ?? 'property %s must not be blank';
+        $this->allowedTypes = ['string'];
     }
 
-    public function validate(mixed $value): bool
+    public function check(mixed $value): bool
     {
-        if (!is_string($value)){
-            return true;
-        }
         $testValue = trim($value);
         if ('' === $testValue)  {
             return false;

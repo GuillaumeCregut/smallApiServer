@@ -17,8 +17,12 @@ class Optional extends AbstractAssert
     {
         $this->errorMessage = $errorMessage ?? 'Value %s must not be blank';
     }
+    final public function validate(mixed $value): bool
+    {
+        return true;
+    }
 
-    public function validate(mixed $value): bool
+    public function check(mixed $value): bool
     {
         return true;
     }
