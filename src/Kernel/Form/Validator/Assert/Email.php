@@ -18,7 +18,7 @@ class Email extends AbstractAssert
         $this->errorMessage = $errorMessage ?? 'Value %s must not be blank';
     }
 
-    public function check(mixed $value): bool
+    protected function check(mixed $value): bool
     {
         return filter_var($value, FILTER_VALIDATE_EMAIL) !== false;;
     }
