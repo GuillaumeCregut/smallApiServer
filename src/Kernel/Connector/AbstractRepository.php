@@ -33,6 +33,7 @@ use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
 use App\Kernel\Connector\Interfaces\EntityManagerInterface;
+use App\Kernel\Files\FileUpload;
 
 abstract class AbstractRepository implements RepositoryInterface
 {
@@ -252,6 +253,9 @@ abstract class AbstractRepository implements RepositoryInterface
             if ($param instanceof EntityInterface) {
                 $params[$key] = $param->getId();
             }
+            if($param instanceof FileUpload) {
+                 $params[$key] = $param->getFullPath();
+            }
         }
         $this->params = $params;
         $result = $this->sendQuery(false, $query, $params);
@@ -279,6 +283,9 @@ abstract class AbstractRepository implements RepositoryInterface
         foreach ($params as $key => $param) {
             if ($param instanceof EntityInterface) {
                 $params[$key] = $param->getId();
+            }
+            if($param instanceof FileUpload) {
+                 $params[$key] = $param->getFullPath();
             }
         }
         $this->params = $params;
@@ -406,6 +413,9 @@ abstract class AbstractRepository implements RepositoryInterface
             if ($properties[$name]['type'] == 'array') {
                 $value = json_decode($value, true);
             }
+            if ($properties[$name]['type'] == 'file') {
+                $value = FileUpload::fromPath($value);
+            }
         }
         return $value;
     }
@@ -437,7 +447,16 @@ abstract class AbstractRepository implements RepositoryInterface
                 $nullable = $property->getAttributes(Nullable::class);
                 $oneToMany = $property->getAttributes(OneToMany::class);
                 $manyToOne = $property->getAttributes(ManyToOne::class);
+                //Check if type is Buidtin
                 $typeProperty = $property->getType()->getName();
+                if(!$property->getType()->isBuiltin()) {
+                    if(FileUpload::class !== $typeProperty &&
+                      LazyBag::class !== $typeProperty &&
+                      !is_a($typeProperty,EntityInterface::class, true)) {
+                        throw new DatabaseException("Object {$typeProperty} can't be stored in database");
+                    }
+                    $typeProperty = "file";
+                }
                 $nameProperty = $property->getName();
                 if (null !== $nullable && count($nullable) > 0) {
                     $nullable = true;
@@ -516,6 +535,7 @@ abstract class AbstractRepository implements RepositoryInterface
             'float' => 'FLOAT',
             'bool' => 'BOOLEAN',
             'array' => 'JSON',
+            'file' => 'VARCHAR(255)'
         ];
         if (array_key_exists($type, $types)) {
             return $types[$type];
