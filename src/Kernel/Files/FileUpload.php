@@ -150,6 +150,19 @@ class FileUpload extends SplFileInfo
         return $this->full_path;
     }
 
+
+    public static function fromPath(string $path): self
+    {
+        return new self([
+            'name'      => basename($path),
+            'type'      => '',
+            'tmp_name'  => $path,
+            'size'      => 0,
+            'error'     => UPLOAD_ERR_OK,
+            'full_path' => $path,
+        ]);
+    }
+    
     private function getFName(string $name): string
     {
         $tmpName = str_replace('\\', DIRECTORY_SEPARATOR, $name);
