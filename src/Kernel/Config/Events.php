@@ -7,8 +7,10 @@
 
 namespace App\Kernel\Config;
 
-use App\Kernel\Middleware\Security\AuthManagerMiddleware;
+use App\Listeners\DbConnectionListener;
 use App\Kernel\Psr14\Events\CallAuthKernelEvent;
+use App\Kernel\Psr14\Events\ConnectorKernelEvent;
+use App\Kernel\Middleware\Security\AuthManagerMiddleware;
 
 class Events
 {
@@ -35,7 +37,8 @@ class Events
     public static function getListeners(): array
     {
         $events = [
-            CallAuthKernelEvent::class=>[new AuthManagerMiddleware()]
+            CallAuthKernelEvent::class => [new AuthManagerMiddleware()],
+            ConnectorKernelEvent::class => [new DbConnectionListener()],
         ];
         return $events;
     }
