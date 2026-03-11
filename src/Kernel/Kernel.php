@@ -7,11 +7,9 @@
 
 namespace App\Kernel;
 
-use App\Kernel\Config\DatabaseConnector;
 use App\Kernel\Request;
 use App\Kernel\Config\Events;
 use App\Kernel\Config\Router;
-use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Exceptions\KernelException;
 use App\Kernel\GetClientParams;
 use App\Kernel\Responses\ErrorResponse;
@@ -125,11 +123,8 @@ class Kernel
 
         try {
             EventDispatcher::getInstance()->dispatch(new ConnectorKernelEvent());
-            ConnectorDispatcher::setConnector(DatabaseConnector::getConnector());
-
             EventDispatcher::getInstance()->dispatch(new CallAuthKernelEvent());
             EventDispatcher::getInstance()->dispatch(new CheckApiKeyKernelEvent());
-
             // execute the controller
             EventDispatcher::getInstance()->dispatch(new StartControllerKernelEvent());
             $page = (new $controller())->$method();
