@@ -2,17 +2,19 @@
 
 use App\Security\User;
 use PHPUnit\Framework\TestCase;
+use App\Kernel\Files\FileUpload;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\AbstractRepository;
-
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
-
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 include_once 'EntityToCreate.php';
 include_once 'EntityToUpdate.php';
-include_once 'entity3.php';
-include_once 'entity4.php';
+include_once 'Entity3.php';
+include_once 'Entity4.php';
+include_once 'EntityWithFileIn.php';
+
 class AbstractRepositoryTest extends TestCase
 {
 
@@ -412,7 +414,7 @@ class AbstractRepositoryTest extends TestCase
         $this->assertTrue($result);
     }
 
-    public function testfestchEntityWithArray(): void
+    public function testfetchEntityWithArray(): void
     {
         $roles = json_encode(['ADMIN']);
         $values = [
@@ -441,5 +443,174 @@ class AbstractRepositoryTest extends TestCase
         $this->assertEquals(30, $result->getAge());
         $this->assertIsArray($result->getRoles());
         $this->assertSame('ADMIN', $result->getRoles()[0]);
+    }
+
+    public function testCreateTableEntityWithFile(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        ConnectorDispatcher::setConnector($connector);
+          $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityWithFileIn::class;
+        };
+        $sql = 'CREATE TABLE entity_with_file_ins (id INT NOT NULL AUTO_INCREMENT , name VARCHAR(255) NOT NULL, firstname VARCHAR(255) NOT NULL, avatar VARCHAR(255) NOT NULL, PRIMARY KEY (id))';
+        $this->assertEquals($sql, $repository->createSqlTable());
+    }
+
+     public function testFindAllWithFileQuerySql(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityWithFileIn::class;
+        };
+        $sql = 'SELECT * FROM entity_with_file_ins';
+        $test = $repository->findAll();
+        $this->assertEquals($sql, $repository->sql);
+    }
+
+    public function testFindWithFile(): void
+    {
+        $values = [
+            [
+                'id' => 1,
+                'name' => 'Doe',
+                'first_name' => 'John',
+                'avatar' => 'myfile.jpg'
+            ],
+        ];
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('fetchQuery')
+            ->willReturn($values);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityWithFileIn::class;
+        };
+        /**
+         * @var EntityWithFileIn $result 
+         */
+        $result = $repository->find(1);
+        $this->assertEquals(1, $result->getid());
+        $this->assertEquals('Doe', $result->getName());
+        $this->assertEquals('John', $result->getFirstName());
+        $avatar = $result->getAvatar();
+        $this->assertInstanceOf(FileUpload::class, $avatar);
+        $this->assertEquals('myfile.jpg',$avatar->getFullPath());
+    }
+
+    public function testInsertNewEntityWithFile(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(20);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityWithFileIn::class;
+        };
+        $avatar =new FileUpload(
+            ['name' => 'avatar.png',
+            'type' => 'text/plain',
+            'tmp_name' => 'tempName',
+            'size' => 1000,
+            'full_path' => 'upload/avatar.png',
+            'error' => UPLOAD_ERR_OK,]
+        );
+        $entity = new EntityWithFileIn();
+        $entity->setName('Doe')
+            ->setFirstName('John')
+            ->setAvatar($avatar);
+        $result = $repository->save($entity);
+        $query = 'INSERT INTO entity_with_file_ins (name, firstname, avatar) VALUES (?, ?, ?)';
+        $params = $repository->params;
+        $expected = [
+            'Doe',
+            'John',
+            'upload/avatar.png'
+        ];
+        $this->assertEquals($expected, $params);
+        $this->assertEquals($query, $repository->sql);
+        $this->assertEquals(20, $result->getId());
+    }
+
+    public function testUpdateNewEntityWithFile(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(20);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityWithFileIn::class;
+        };
+        $avatar =new FileUpload(
+            ['name' => 'avatar.png',
+            'type' => 'text/plain',
+            'tmp_name' => 'tempName',
+            'size' => 1000,
+            'full_path' => 'upload/avatar.png',
+            'error' => UPLOAD_ERR_OK,]
+        );
+        $entity = new EntityWithFileIn();
+        $entity->setName('Doe')
+            ->setid(20)
+            ->setFirstName('John')
+            ->setAvatar($avatar);
+        $result = $repository->save($entity);
+        $query = 'UPDATE entity_with_file_ins SET name = ?, firstname = ?, avatar = ? WHERE id = ?';
+        $params = $repository->params;
+        $expected = [
+            'Doe',
+            'John',
+            'upload/avatar.png',
+            20
+        ];
+        $this->assertEquals($expected, $params);
+        $this->assertEquals($query, $repository->sql);
+        $this->assertEquals(20, $result->getId());
+    }
+
+    public function testWithObject(): void
+    {
+        $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('executeQuery')
+            ->willReturn(20);
+        ConnectorDispatcher::setConnector($connector);
+        $repository = new class extends AbstractRepository {
+            protected ?string $entity = EntityWithObject::class;
+        };
+        $this->expectException(DatabaseException::class);
+        $result = $repository->createSqlTable();
+    }
+}
+
+class EntityWithObject implements EntityInterface
+{
+    private ?int $id = null;
+    private ?stdClass $name= null;
+
+    public function getid(): ?int
+    {
+        return $this->id;
+    }
+
+    public function setid(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+ 
+    public function getName(): ?stdClass
+    {
+        return $this->name;
+    }
+
+    public function setName(?stdClass $name): self
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public static function getRepository(): ?string
+    {
+        return null;
     }
 }

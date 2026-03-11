@@ -3,7 +3,7 @@
 use PHPUnit\Framework\TestCase;
 use App\Kernel\Files\FileUpload;
 
-include('TestFileSystem.php');
+include_once('TestFileSystem.php');
 
 class FileUploadTest extends TestCase
 {
