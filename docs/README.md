@@ -126,6 +126,13 @@ Making HTTP requests to external APIs.
 - **Use when**: Integrating with third-party APIs
 - **Key Methods**: HTTP client methods
 
+### [Form Handler](./formHandler.md)
+Form data processing pipeline: sanitization, casting, and validation.
+- **Topics**: Input sanitization, type casting, attribute-based validation, file uploads, error handling
+- **Use when**: Processing and validating form submissions before entity hydration
+- **Key Classes**: `FormHandler`, `DataSanitizer`, `DataCaster`, `DataValidator`
+- **Related**: [Request](./request.md), [Hydrator](./hydrator.md), [Response](./response.md)
+
 ---
 
 ## Security & Authentication
@@ -241,7 +248,7 @@ Managing application configuration from environment files.
 |-------|-------|
 | **Core Framework** | Kernel, Router, Controller |
 | **Data Access** | Repository, Hydrator, QueryBuilder, MySQLConnector |
-| **HTTP Handling** | Request, Response, FileUpload, ApiClient |
+| **HTTP Handling** | Request, Response, FileUpload, ApiClient, FormHandler |
 | **Security** | Authentication, JWT Tokens |
 | **Automation** | Console System |
 | **Advanced** | Event System, Mailer |
@@ -255,8 +262,9 @@ Managing application configuration from environment files.
 1. [Router](./router.md) - Define the route
 2. [Controller](./controller.md) - Create the controller
 3. [Request](./request.md) - Access request data
-4. [Repository](./repository.md) - Query the database
-5. [Response](./response.md) - Send the response
+4. [FormHandler](./formHandler.md) - Validate and sanitize input
+5. [Repository](./repository.md) - Query the database
+6. [Response](./response.md) - Send the response
 
 **Adding user authentication:**
 1. [Authentication](./autentication.md) - User login
@@ -265,8 +273,9 @@ Managing application configuration from environment files.
 
 **Uploading and processing files:**
 1. [Request](./request.md) - Receive file upload
-2. [File Upload](./fileUpload.md) - Handle the file
-3. [Response](./response.md) - Return result
+2. [FormHandler](./formHandler.md) - Validate file and form data
+3. [File Upload](./fileUpload.md) - Handle the file
+4. [Response](./response.md) - Return result
 
 **Creating automation tools:**
 1. [Console System](./console.md) - Build command
@@ -298,6 +307,7 @@ docs/
 ├── mysqlConnector.md            # MySQL database connector
 ├── console.md                   # Console commands
 ├── logger.md                    # Application logging system
+├── formHandler.md               # Form validation and data processing
 ├── tools.md                     # Helper utilities and debugging
 └── homecontroller.md            # Example controller
 ```
@@ -450,6 +460,7 @@ See: [Console System](./console.md)
 | How routes work | [Router](./router.md) |
 | Building controllers | [Controller](./controller.md) |
 | Getting request data | [Request](./request.md) |
+| Validating form input | [FormHandler](./formHandler.md) |
 | Sending responses | [Response](./response.md) |
 | Database operations | [Repository](./repository.md) |
 | Database connection | [MySQL Connector](./mysqlConnector.md) |
@@ -506,6 +517,7 @@ See: [Console System](./console.md)
 | mailer.md | ✅ Complete | 2026-02-17 |
 | getEnv.md | ✅ Complete | 2026-02-17 |
 | homecontroller.md | ✅ Complete | 2026-02-17 |
+| formHandler.md | ✅ Complete | 2026-03-11 |
 | logger.md | ✅ Complete | 2026-02-17 |
 | tools.md | ✅ Complete | 2026-02-17 |
 
