@@ -178,10 +178,9 @@ public function createResource(): ResponseInterface
 public function updateResource(): ResponseInterface
 {
     $id = $this->request->getData('id');
-    $data = $this->request->getAllDatas();
-    
-    if (!$this->validateInput($data)) {
-        return $this->returnError(422);
+     $result = FormHandler::handle(YourEntity::class, $this->request->getAllDatas());
+    if (!$result['valid']) {
+        return $this->returnError(422, $result['errors']);
     }
     
     $updated = $this->updateResourceInDB($id, $data);
@@ -446,9 +445,9 @@ public function deleteProduct(): ResponseInterface
 ✅ Good:
 public function createUser(): ResponseInterface
 {
-    $data = $this->request->getAllDatas();
-    if (!$this->validateUserData($data)) {
-        return $this->returnError(422);
+    $result = FormHandler::handle(User::class, $this->request->getAllDatas());
+    if (!$result['valid']) {
+        return $this->returnError(422, $result['errors']);
     }
     // Create user...
 }
@@ -800,6 +799,7 @@ class User {
 ## Related Documentation
 
 - [Authentication System](autentication.md)
+- [Form Validation](formHandler.md)
 - [Response System](response.md)
 - [Request](request.md)
 - [Kernel](kernel.md)
