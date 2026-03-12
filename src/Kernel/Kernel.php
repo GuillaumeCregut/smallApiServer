@@ -21,8 +21,10 @@ use App\Kernel\Psr14\Dispatcher\EventDispatcher;
 use App\Kernel\Psr14\Events\CallAuthKernelEvent;
 use App\Kernel\Psr14\Events\ConnectorKernelEvent;
 use App\Kernel\Psr14\Events\CheckApiKeyKernelEvent;
+use App\Kernel\Psr14\Events\CheckCsrfEvent;
 use App\Kernel\Psr14\Events\ReturnResponseKernelEvent;
 use App\Kernel\Psr14\Events\StartControllerKernelEvent;
+use App\Kernel\Psr14\Exceptions\EventException;
 use Exception;
 
 class Kernel
@@ -81,14 +83,14 @@ class Kernel
 
         if (null === $this->routeCall) {
             $response = new ClientErrorResponse(404);
-            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent($response, Request::getRequestInstance()));
             return $response;
         }
 
         //If no routes for request
         if (!key_exists($this->routeCall, $this->routes)) {
             $response = new ClientErrorResponse(404);
-            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent($response, Request::getRequestInstance()));
             return $response;
         }
 
@@ -111,7 +113,7 @@ class Kernel
 
         if (!key_exists($clientMethod, $routeAndMethod)) {
             $response = new ClientErrorResponse(405);
-            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent($response, Request::getRequestInstance()));
             return $response;
         } else {
             $matchingRoute = $routeAndMethod[$clientMethod];
@@ -124,18 +126,26 @@ class Kernel
         try {
             EventDispatcher::getInstance()->dispatch(new ConnectorKernelEvent());
             EventDispatcher::getInstance()->dispatch(new CallAuthKernelEvent());
+            EventDispatcher::getInstance()->dispatch(new CheckCsrfEvent(Request::getRequestInstance()));
             EventDispatcher::getInstance()->dispatch(new CheckApiKeyKernelEvent());
             // execute the controller
             EventDispatcher::getInstance()->dispatch(new StartControllerKernelEvent());
             $page = (new $controller())->$method();
 
-            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent($page, Request::getRequestInstance()));
             return $page;
-        } catch (Exception $e) {
+        }catch(EventException $e) {
+            // if an exception is thrown during Events
+            $debug = GetEnvDatas::getEnvInstance()->get('DEBUG_MODE');
+            $response = new ErrorResponse($e->getCode(), $debug, $e);
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent($response, Request::getRequestInstance()));
+            return $response;
+        }
+         catch (Exception $e) {
             // if an exception is thrown during controller execution
             $debug = GetEnvDatas::getEnvInstance()->get('DEBUG_MODE');
             $response = new ErrorResponse(500, $debug, $e);
-            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent());
+            EventDispatcher::getInstance()->dispatch(new ReturnResponseKernelEvent($response, Request::getRequestInstance()));
             return $response;
         }
     }
