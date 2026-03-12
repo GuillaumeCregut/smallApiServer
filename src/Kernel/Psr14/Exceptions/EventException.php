@@ -11,8 +11,8 @@ use Exception;
 
 class EventException extends Exception
 {
-     public function __construct(string $message)
+     public function __construct(string $message, ?int $code =0)
     {
-        parent::__construct($message, 0);
+        parent::__construct($message, $code);
     }
 }
