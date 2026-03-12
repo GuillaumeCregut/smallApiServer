@@ -71,6 +71,9 @@ class MakeEntityFile
         $propertyTypeKey = $property['type'];
         if (array_key_exists($propertyTypeKey, $this->types)) {
             $propertyType = $this->types[$propertyTypeKey];
+            if('fl' === $propertyTypeKey) {
+                $this->uses['File'] = "use App\\Kernel\\Files\\FileUpload;\n";
+            }
         } else {
             throw new ConsoleException("Type {$propertyTypeKey} for {$propertyName} does not exists");
         }

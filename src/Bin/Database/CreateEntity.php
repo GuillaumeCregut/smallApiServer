@@ -28,6 +28,7 @@ class CreateEntity
         'b' => 'bool',
         'a' => 'array',
         'r' => 'relation',
+        'fl' =>'FileUpload'
     ];
     private array $relations = [
         'm' => 'Many to One (this entity store field for relation)',
@@ -163,6 +164,9 @@ class CreateEntity
             }
         } else {
             $type = $this->types[$propertyType];
+            if('fl' === $propertyType) {
+                $uses[] = 'App\\Kernel\\Files\\FileUpload';
+            }
         }
         if ($property['nullable']) {
             $uses[] = 'App\\Kernel\\Connector\\Attributes\\Nullable';
