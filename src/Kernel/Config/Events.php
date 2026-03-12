@@ -7,6 +7,7 @@
 
 namespace App\Kernel\Config;
 
+use App\Kernel\Request;
 use App\Kernel\Security\CsrfManager;
 use App\Listeners\DbConnectionListener;
 use App\Kernel\Psr14\Events\CheckCsrfEvent;
@@ -44,8 +45,8 @@ class Events
         $events = [
             CallAuthKernelEvent::class => [new AuthManagerMiddleware()],
             ConnectorKernelEvent::class => [new DbConnectionListener()],
-            CheckCsrfEvent::class =>[new CsrfValidationListener(new CsrfManager())],
-            ReturnResponseKernelEvent::class =>[new CsrfTokenInjectorListener(new CsrfManager())]
+            CheckCsrfEvent::class =>[new CsrfValidationListener(new CsrfManager(Request::getRequestInstance()))],
+            ReturnResponseKernelEvent::class =>[new CsrfTokenInjectorListener(new CsrfManager(Request::getRequestInstance()))]
         ];
         return $events;
     }
