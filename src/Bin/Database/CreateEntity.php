@@ -28,6 +28,7 @@ class CreateEntity
         'b' => 'bool',
         'a' => 'array',
         'r' => 'relation',
+        'fl' =>'FileUpload'
     ];
     private array $relations = [
         'm' => 'Many to One (this entity store field for relation)',
