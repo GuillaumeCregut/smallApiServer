@@ -89,7 +89,7 @@ class EntityAnalyserTest extends TestCase
             ],
             'values' => [
                 'nullable' => false,
-                'type' => 'array',
+                'type' => 'json',
                 'relation' => []
             ],
             'price' => [
@@ -267,7 +267,7 @@ class EntityAnalyserTest extends TestCase
             ],
             'values' => [
                 'nullable' => false,
-                'type' => 'array',
+                'type' => 'json',
                 'relation' => []
             ],
             'price' => [

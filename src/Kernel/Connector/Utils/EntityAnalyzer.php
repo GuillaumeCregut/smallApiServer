@@ -63,6 +63,10 @@ class EntityAnalyzer
         if (FileUpload::class === $typeProperty) {
             $typeProperty = 'string';
         }
+
+        if('array' === $typeProperty) {
+            $typeProperty ='json';
+        }
         $manyToOne = $property->getAttributes(ManyToOne::class);
         if (!empty($manyToOne)) {
             if ($translated) {
