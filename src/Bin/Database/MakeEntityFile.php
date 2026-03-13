@@ -103,7 +103,7 @@ namespace App\Entity;
 use App\Kernel\Connector\AbstractEntity;
 
 $useDisplay
-class $entityName extends AbstractEntity
+final class $entityName extends AbstractEntity
 {
 
 {$this->properties}
