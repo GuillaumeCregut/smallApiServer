@@ -3,6 +3,7 @@
 use App\Kernel\Connector\Attributes\ManyToOne;
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
+use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Connector\Utils\EntityAnalyzer;
 use App\Kernel\Files\FileUpload;
@@ -284,7 +285,42 @@ class EntityAnalyserTest extends TestCase
         $result = EntityAnalyzer::getStoredProperties(EntityAnlyzeWithManyProps::class, true);
         $this->assertSame($expect, $result);
     }
+
+    public function testOneToManyDoesNotAppear(): void
+    {
+        $expect = [
+            'id' => [
+                'nullable' => false,
+                'type' => 'int',
+                'relation' => []
+            ],
+        ];
+        $result = EntityAnalyzer::getStoredProperties(EntityAnalyzeWithOneToMany::class);
+        $this->assertSame($expect, $result);
+    }
 }
+
+final class EntityAnalyzeWithOneToMany implements EntityInterface
+{
+    private ?int $id = null;
+    #[OneToMany()]
+    private ?array $avatar = null;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+    public static function getRepository(): ?string
+    {
+        return '';
+    }
+}
+
 
 final class EntityAnalyzeWithFile implements EntityInterface
 {

@@ -13,6 +13,7 @@ use InvalidArgumentException;
 use App\Kernel\Connector\Attributes\Nullable;
 use App\Kernel\Connector\Attributes\ManyToOne;
 use App\Kernel\Connector\Attributes\NotStored;
+use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Files\FileUpload;
 
@@ -53,6 +54,11 @@ class EntityAnalyzer
         if (!empty($notStored)) {
             return null;
         }
+        $OneToMany = $property->getAttributes(OneToMany::class);
+        if(!empty($OneToMany)) {
+            return null;
+        }
+
         $isNul = false;
         $nullable = $property->getAttributes(Nullable::class);
         if (!empty($nullable)) {
@@ -64,12 +70,13 @@ class EntityAnalyzer
             $typeProperty = 'string';
         }
 
-        if('array' === $typeProperty) {
-            $typeProperty ='json';
+        if ('array' === $typeProperty) {
+            $typeProperty = 'json';
         }
         $manyToOne = $property->getAttributes(ManyToOne::class);
         if (!empty($manyToOne)) {
             if ($translated) {
+                $typeProperty = preg_replace('/Entity$/', '', $typeProperty);
                 $typeProperty = Helper::propertyToColumn($typeProperty) . 's';
             }
             $relation['entity'] = $typeProperty;
