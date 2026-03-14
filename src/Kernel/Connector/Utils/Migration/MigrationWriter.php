@@ -31,21 +31,21 @@ class MigrationWriter
      */
     public function write(array $sql): ?string
     {
-         $allUp = array_merge($sql['safe'], $sql['destructive']);
-         if (empty($allUp)) {
+        $allUp = array_merge($sql['safe'], $sql['destructive']);
+        if (empty($allUp)) {
             return null;
         }
-        $version   = $this->generateVersion();
+        $version = $this->generateVersion();
         $className = "Version{$version}";
-        $filePath  = "{$this->migrationsPath}/{$className}.php";
-        $upStatements   = $this->renderStatements($allUp);
+        $filePath = "{$this->migrationsPath}/{$className}.php";
+        $upStatements = $this->renderStatements($allUp);
         $downStatements = $this->renderDownPlaceholder();
         $content = $this->renderClass($className, $upStatements, $downStatements);
         if (!is_dir($this->migrationsPath)) {
             mkdir($this->migrationsPath, 0755, true);
         }
         file_put_contents($filePath, $content);
- 
+
         return $filePath;
     }
 
@@ -100,5 +100,4 @@ class {$className} implements MigrationInterface
 }
 PHP;
     }
-
 }

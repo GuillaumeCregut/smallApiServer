@@ -7,7 +7,6 @@
 
 namespace App\Kernel\Connector\Utils\Scanner;
 
-use Exception;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 class SQLiteScannerDriver extends AbstractScannerDriver
@@ -46,7 +45,7 @@ class SQLiteScannerDriver extends AbstractScannerDriver
         foreach ($rows as $row) {
             $result[$row['name']] = [
                 'nullable' => $row['notnull'] == 0,
-                'type'     => $this->normalizeType($row['type']),
+                'type' => $this->normalizeType($row['type']),
                 'relation' => [],
             ];
         }
@@ -85,15 +84,15 @@ class SQLiteScannerDriver extends AbstractScannerDriver
 
         $result = [];
         foreach ($rows as $row) {
-            $colName  = $row['from'];
+            $colName = $row['from'];
             $nullable = isset($columnInfo[$colName]) ? $columnInfo[$colName]['notnull'] == 0 : true;
 
             $result[$colName] = [
                 'nullable' => $nullable,
-                'type'     => 'relation',
+                'type' => 'relation',
                 'relation' => [
                     'entity' => $row['table'],
-                    'key'    => $colName,
+                    'key' => $colName,
                 ],
             ];
         }
@@ -116,10 +115,10 @@ class SQLiteScannerDriver extends AbstractScannerDriver
             }
 
             $indexName = $index['name'];
-            $columns   = $this->connector->fetchQuery("PRAGMA index_info(`{$indexName}`)");
+            $columns = $this->connector->fetchQuery("PRAGMA index_info(`{$indexName}`)");
 
             $result[$indexName] = [
-                'unique'  => $index['unique'] == 1,
+                'unique' => $index['unique'] == 1,
                 'columns' => array_map(fn($col) => $col['name'], $columns),
             ];
         }
@@ -134,7 +133,7 @@ class SQLiteScannerDriver extends AbstractScannerDriver
     {
         $schema = [];
         foreach ($this->getTables() as $table) {
-            $columns     = $this->getColumns($table);
+            $columns = $this->getColumns($table);
             $foreignKeys = $this->getForeignKeys($table);
 
             // FK columns override basic column entries (type becomes 'relation')
@@ -143,9 +142,9 @@ class SQLiteScannerDriver extends AbstractScannerDriver
             }
 
             $schema[$table] = [
-                'columns'      => $columns,
+                'columns' => $columns,
                 'primary_keys' => $this->getPrimaryKeys($table),
-                'indexes'      => $this->getIndexes($table),
+                'indexes' => $this->getIndexes($table),
             ];
         }
         return $schema;
@@ -157,7 +156,7 @@ class SQLiteScannerDriver extends AbstractScannerDriver
      */
     private function getColumnsRaw(string $table): array
     {
-        $rows   = $this->connector->fetchQuery("PRAGMA table_info(`{$table}`)");
+        $rows = $this->connector->fetchQuery("PRAGMA table_info(`{$table}`)");
         $result = [];
         foreach ($rows as $row) {
             $result[$row['name']] = $row;

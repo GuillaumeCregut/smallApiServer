@@ -22,28 +22,28 @@ class MysqlMigrationGenerator extends AbstractMigrationGeneratorDriver
     protected function generateAlterColumn(string $table, string $colName, array $changes): string
     {
         $colDef = [
-            'type'     => $changes['type']['to']     ?? null,
+            'type' => $changes['type']['to']     ?? null,
             'nullable' => $changes['nullable']['to'] ?? null,
             'relation' => $changes['relation']['to'] ?? [],
         ];
- 
-        $t          = $this->wrapIdentifier($table);
+
+        $t = $this->wrapIdentifier($table);
         $definition = $this->buildColumnDefinition($colName, $colDef);
         return "ALTER TABLE {$t} MODIFY COLUMN {$definition};";
     }
 
     protected function toSQLType(string $colName, string $genericType): string
     {
-        return match($genericType) {
-            'int'      => 'INT',
-            'string'   => 'VARCHAR(255)',
-            'bool'     => 'TINYINT(1)',
-            'float'    => 'DECIMAL(10,2)',
+        return match ($genericType) {
+            'int' => 'INT',
+            'string' => 'VARCHAR(255)',
+            'bool' => 'TINYINT(1)',
+            'float' => 'DECIMAL(10,2)',
             'datetime' => 'DATETIME',
-            'date'     => 'DATE',
-            'time'     => 'TIME',
-            'json'     => 'JSON',
-            default    => 'VARCHAR(255)',
+            'date' => 'DATE',
+            'time' => 'TIME',
+            'json' => 'JSON',
+            default => 'VARCHAR(255)',
         };
     }
 }

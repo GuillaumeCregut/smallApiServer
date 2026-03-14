@@ -28,11 +28,11 @@ class MigrationRunner
     public function migrate(): array
     {
         $pending = $this->getPendingMigrations();
- 
+
         if (empty($pending)) {
             return [];
         }
- 
+
         $executed = [];
         foreach ($pending as $version => $filePath) {
             $migration = $this->loadMigration($filePath);
@@ -47,7 +47,7 @@ class MigrationRunner
                 throw new KernelException("Migration {$version} failed: " . $e->getMessage());
             }
         }
- 
+
         return $executed;
     }
 
@@ -58,14 +58,14 @@ class MigrationRunner
     public function rollback(): ?string
     {
         $last = $this->getLastExecutedMigration();
- 
+
         if (null === $last) {
             return null;
         }
- 
-        $filePath  = "{$this->migrationsPath}/Version{$last}.php";
+
+        $filePath = "{$this->migrationsPath}/Version{$last}.php";
         $migration = $this->loadMigration($filePath);
- 
+
         $this->connector->startTransac();
         try {
             $migration->down($this->connector);
@@ -75,20 +75,20 @@ class MigrationRunner
             $this->connector->rollBack();
             throw new KernelException("Rollback of {$last} failed: " . $e->getMessage());
         }
- 
+
         return $last;
     }
 
-     public function status(): array
+    public function status(): array
     {
-        $all      = $this->getAllMigrationFiles();
+        $all = $this->getAllMigrationFiles();
         $executed = $this->getExecutedVersions();
-        $status   = [];
- 
+        $status = [];
+
         foreach ($all as $version => $filePath) {
             $status[$version] = in_array($version, $executed) ? 'executed' : 'pending';
         }
- 
+
         return $status;
     }
 
@@ -111,16 +111,16 @@ class MigrationRunner
      */
     private function getPendingMigrations(): array
     {
-        $all      = $this->getAllMigrationFiles();
+        $all = $this->getAllMigrationFiles();
         $executed = $this->getExecutedVersions();
-        $pending  = [];
- 
+        $pending = [];
+
         foreach ($all as $version => $filePath) {
             if (!in_array($version, $executed)) {
                 $pending[(string)$version] = $filePath;
             }
         }
- 
+
         ksort($pending, SORT_STRING);
         return $pending;
     }
@@ -133,16 +133,16 @@ class MigrationRunner
         if (!is_dir($this->migrationsPath)) {
             return [];
         }
- 
-        $files  = glob("{$this->migrationsPath}/Version*.php");
+
+        $files = glob("{$this->migrationsPath}/Version*.php");
         $result = [];
- 
+
         foreach ($files as $filePath) {
             $className = basename($filePath, '.php');
-            $version   = str_replace('Version', '', $className);
+            $version = str_replace('Version', '', $className);
             $result[(string)$version] = $filePath;
         }
- 
+
         ksort($result, SORT_STRING);
         return $result;
     }
@@ -166,21 +166,21 @@ class MigrationRunner
         if (!file_exists($filePath)) {
             throw new KernelException("Migration file not found: {$filePath}");
         }
- 
+
         require_once $filePath;
- 
+
         $className = basename($filePath, '.php');
- 
+
         if (!class_exists($className)) {
             throw new KernelException("Migration class {$className} not found in {$filePath}");
         }
- 
+
         $instance = new $className();
- 
+
         if (!$instance instanceof MigrationInterface) {
             throw new KernelException("{$className} must implement MigrationInterface");
         }
- 
+
         return $instance;
     }
 
@@ -192,7 +192,7 @@ class MigrationRunner
         );
     }
 
-      /**
+    /**
      * Returns the last executed migration version, or null.
      */
     private function getLastExecutedMigration(): ?string

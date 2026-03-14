@@ -22,11 +22,11 @@ class DatabaseScanner
         /**@var \PDO $pdo */
         $pdo = $connector->getConnection();
         $driverName = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-        $this->driver = match($driverName) {
-            'mysql'  => new MySQLScannerDriver($connector),
-            'pgsql'  => new PostGreScannerDriver($connector),
+        $this->driver = match ($driverName) {
+            'mysql' => new MySQLScannerDriver($connector),
+            'pgsql' => new PostGreScannerDriver($connector),
             'sqlite' => new SQLiteScannerDriver($connector),
-            default  => throw new KernelException("Unsupported driver: $driverName")
+            default => throw new KernelException("Unsupported driver: $driverName")
         };
     }
 
@@ -35,7 +35,7 @@ class DatabaseScanner
         return $this->driver->scan();
     }
 
-     public function getDriver(): DatabaseScannerDriverInterface
+    public function getDriver(): DatabaseScannerDriverInterface
     {
         return $this->driver;
     }

@@ -21,12 +21,12 @@ class MigrationGenerator
     public function __construct(ConnectorInterface $connector)
     {
         $driverName = $connector->getConnection()->getAttribute(PDO::ATTR_DRIVER_NAME);
- 
-        $this->driver = match($driverName) {
-            'mysql'  => new MysqlMigrationGenerator(),
-            'pgsql'  => new PostgreSqlMigrationGenerator(),
+
+        $this->driver = match ($driverName) {
+            'mysql' => new MysqlMigrationGenerator(),
+            'pgsql' => new PostgreSqlMigrationGenerator(),
             'sqlite' => new SQLiteMigrationGenerator(),
-            default  => throw new KernelException("Unsupported database driver: {$driverName}")
+            default => throw new KernelException("Unsupported database driver: {$driverName}")
         };
     }
 

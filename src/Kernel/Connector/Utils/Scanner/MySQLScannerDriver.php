@@ -117,7 +117,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
             $indexName = $row['index_name'];
             if (!isset($result[$indexName])) {
                 $result[$indexName] = [
-                    'unique'  => $row['non_unique'] == 0,
+                    'unique' => $row['non_unique'] == 0,
                     'columns' => [],
                 ];
             }
@@ -130,7 +130,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
     {
         $schema = [];
         foreach ($this->getTables() as $table) {
-            $columns     = $this->getColumns($table);
+            $columns = $this->getColumns($table);
             $foreignKeys = $this->getForeignKeys($table);
 
             // FK columns override basic column entries (type becomes 'relation')
@@ -141,9 +141,9 @@ class MySQLScannerDriver extends AbstractScannerDriver
             }
 
             $schema[$table] = [
-                'columns'      => $columns,
+                'columns' => $columns,
                 'primary_keys' => $this->getPrimaryKeys($table),
-                'indexes'      => $this->getIndexes($table),
+                'indexes' => $this->getIndexes($table),
             ];
         }
         return $schema;
@@ -158,11 +158,11 @@ class MySQLScannerDriver extends AbstractScannerDriver
     protected function normalizeColumn(array $row): array
     {
         return [
-            'name'     => $row['column_name'] ?? $row['COLUMN_NAME'],
-            'type'     => $this->normalizeType($row['data_type'] ?? $row['DATA_TYPE']),
-            'length'   => $row['character_maximum_length'] ?? null,
+            'name' => $row['column_name'] ?? $row['COLUMN_NAME'],
+            'type' => $this->normalizeType($row['data_type'] ?? $row['DATA_TYPE']),
+            'length' => $row['character_maximum_length'] ?? null,
             'nullable' => ($row['is_nullable'] ?? $row['IS_NULLABLE']) === 'YES',
-            'default'  => $row['column_default'] ?? $row['COLUMN_DEFAULT'],
+            'default' => $row['column_default'] ?? $row['COLUMN_DEFAULT'],
         ];
     }
 
@@ -173,11 +173,11 @@ class MySQLScannerDriver extends AbstractScannerDriver
         }
         return match (strtolower($dataType)) {
             'int', 'integer', 'bigint', 'smallint' => 'int',
-            'varchar', 'char', 'text', 'longtext'  => 'string',
-            'tinyint'  => 'bool',
-            'datetime', 'timestamp'  => 'datetime',
-            'float', 'double', 'decimal'  => 'float',
-            default   => $dataType
+            'varchar', 'char', 'text', 'longtext' => 'string',
+            'tinyint' => 'bool',
+            'datetime', 'timestamp' => 'datetime',
+            'float', 'double', 'decimal' => 'float',
+            default => $dataType
         };
     }
 

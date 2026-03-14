@@ -45,13 +45,13 @@ class SchemaComparator
     {
         $diff = [
             'tables_to_create' => [],
-            'tables_to_drop'   => [],
-            'columns_to_add'   => [],
-            'columns_to_drop'  => [],
+            'tables_to_drop' => [],
+            'columns_to_add' => [],
+            'columns_to_drop' => [],
             'columns_to_alter' => [],
         ];
 
-        $dbTables     = array_keys($dbSchema);
+        $dbTables = array_keys($dbSchema);
         $entityTables = array_keys($entitySchema);
 
         // Tables present in entities but missing in DB → need to be created
@@ -67,10 +67,10 @@ class SchemaComparator
         // Tables present in both → compare columns
         foreach (array_intersect($entityTables, $dbTables) as $table) {
             $entityColumns = $entitySchema[$table];
-            $dbColumns     = $dbSchema[$table]['columns'];
- 
+            $dbColumns = $dbSchema[$table]['columns'];
+
             $columnDiff = $this->compareColumns($entityColumns, $dbColumns);
- 
+
             if (!empty($columnDiff['to_add'])) {
                 $diff['columns_to_add'][$table] = $columnDiff['to_add'];
             }
@@ -99,24 +99,24 @@ class SchemaComparator
     private function compareColumns(array $entityColumns, array $dbColumns): array
     {
         $result = [
-            'to_add'   => [],
-            'to_drop'  => [],
+            'to_add' => [],
+            'to_drop' => [],
             'to_alter' => [],
         ];
- 
+
         $entityColNames = array_keys($entityColumns);
-        $dbColNames     = array_keys($dbColumns);
- 
+        $dbColNames = array_keys($dbColumns);
+
         // Columns in entity but missing in DB → add
         foreach (array_diff($entityColNames, $dbColNames) as $col) {
             $result['to_add'][$col] = $entityColumns[$col];
         }
- 
+
         // Columns in DB but missing in entity → drop
         foreach (array_diff($dbColNames, $entityColNames) as $col) {
             $result['to_drop'][] = $col;
         }
- 
+
         // Columns in both → check for differences
         foreach (array_intersect($entityColNames, $dbColNames) as $col) {
             $changes = $this->detectColumnChanges(
@@ -127,7 +127,7 @@ class SchemaComparator
                 $result['to_alter'][$col] = $changes;
             }
         }
- 
+
         return $result;
     }
 
@@ -138,31 +138,31 @@ class SchemaComparator
     private function detectColumnChanges(array $entityCol, array $dbCol): array
     {
         $changes = [];
- 
+
         // Type changed
         if ($entityCol['type'] !== $dbCol['type']) {
             $changes['type'] = [
                 'from' => $dbCol['type'],
-                'to'   => $entityCol['type'],
+                'to' => $entityCol['type'],
             ];
         }
- 
+
         // Nullability changed
         if ($entityCol['nullable'] !== $dbCol['nullable']) {
             $changes['nullable'] = [
                 'from' => $dbCol['nullable'],
-                'to'   => $entityCol['nullable'],
+                'to' => $entityCol['nullable'],
             ];
         }
- 
+
         // Relation changed
         if ($entityCol['relation'] !== $dbCol['relation']) {
             $changes['relation'] = [
                 'from' => $dbCol['relation'],
-                'to'   => $entityCol['relation'],
+                'to' => $entityCol['relation'],
             ];
         }
- 
+
         return $changes;
     }
 }

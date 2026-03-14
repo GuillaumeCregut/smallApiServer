@@ -12,10 +12,10 @@ use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 class PostGreScannerDriver extends AbstractScannerDriver
 {
- private const DEFAULT_SCHEMA = 'public';
- 
+    private const DEFAULT_SCHEMA = 'public';
+
     public function __construct(protected ConnectorInterface $connector) {}
- 
+
     /**
      * Returns all table names in the public schema.
      */
@@ -27,10 +27,10 @@ class PostGreScannerDriver extends AbstractScannerDriver
             WHERE schemaname = :schema
             ORDER BY tablename
         ", ['schema' => self::DEFAULT_SCHEMA]);
- 
+
         return array_map(fn($row) => $row['tablename'], $rows);
     }
- 
+
     /**
      * Returns columns normalized to match EntityAnalyzer output shape.
      */
@@ -44,19 +44,19 @@ class PostGreScannerDriver extends AbstractScannerDriver
             AND   table_schema = :schema
             ORDER BY ordinal_position
         ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
- 
+
         $result = [];
         foreach ($rows as $row) {
             $name = $row['column_name'];
             $result[$name] = [
                 'nullable' => $row['is_nullable'] === 'YES',
-                'type'     => $this->normalizeType($row['data_type'], $row['column_default'] ?? ''),
+                'type' => $this->normalizeType($row['data_type'], $row['column_default'] ?? ''),
                 'relation' => [],
             ];
         }
         return $result;
     }
- 
+
     /**
      * Returns primary key column names for a given table.
      */
@@ -74,10 +74,10 @@ class PostGreScannerDriver extends AbstractScannerDriver
             AND   tc.table_schema    = :schema
             ORDER BY kcu.ordinal_position
         ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
- 
+
         return array_map(fn($row) => $row['column_name'], $rows);
     }
- 
+
     /**
      * Returns foreign keys normalized to match EntityAnalyzer relation shape.
      */
@@ -99,21 +99,21 @@ class PostGreScannerDriver extends AbstractScannerDriver
             AND   tc.table_name      = :table
             AND   tc.table_schema    = :schema
         ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
- 
+
         $result = [];
         foreach ($rows as $row) {
             $colName = $row['column_name'];
             $result[$colName] = [
-                'type'     => 'relation',
+                'type' => 'relation',
                 'relation' => [
                     'entity' => $row['referenced_table_name'],
-                    'key'    => $colName,
+                    'key' => $colName,
                 ],
             ];
         }
         return $result;
     }
- 
+
     /**
      * Returns indexes for a given table (excluding PRIMARY KEY).
      */
@@ -135,13 +135,13 @@ class PostGreScannerDriver extends AbstractScannerDriver
             AND   ix.indisprimary = false
             ORDER BY i.relname
         ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
- 
+
         $result = [];
         foreach ($rows as $row) {
             $indexName = $row['index_name'];
             if (!isset($result[$indexName])) {
                 $result[$indexName] = [
-                    'unique'  => $row['is_unique'],
+                    'unique' => $row['is_unique'],
                     'columns' => [],
                 ];
             }
@@ -149,7 +149,7 @@ class PostGreScannerDriver extends AbstractScannerDriver
         }
         return $result;
     }
- 
+
     /**
      * Full scan: returns the complete schema for all tables.
      * FK columns override their basic column entry to carry relation metadata.
@@ -158,24 +158,24 @@ class PostGreScannerDriver extends AbstractScannerDriver
     {
         $schema = [];
         foreach ($this->getTables() as $table) {
-            $columns     = $this->getColumns($table);
+            $columns = $this->getColumns($table);
             $foreignKeys = $this->getForeignKeys($table);
- 
+
             foreach ($foreignKeys as $colName => $fkInfo) {
                 $columns[$colName] = array_merge($fkInfo, [
                     'nullable' => $columns[$colName]['nullable'] ?? false,
                 ]);
             }
- 
+
             $schema[$table] = [
-                'columns'      => $columns,
+                'columns' => $columns,
                 'primary_keys' => $this->getPrimaryKeys($table),
-                'indexes'      => $this->getIndexes($table),
+                'indexes' => $this->getIndexes($table),
             ];
         }
         return $schema;
     }
- 
+
     /**
      * Maps PostgreSQL native types to generic types matching EntityAnalyzer output.
      *
@@ -189,20 +189,20 @@ class PostGreScannerDriver extends AbstractScannerDriver
         if (str_starts_with($columnDefault, 'nextval(')) {
             return 'int';
         }
- 
-        return match(strtolower($dataType)) {
+
+        return match (strtolower($dataType)) {
             'integer', 'bigint', 'smallint', 'int', 'int2', 'int4', 'int8' => 'int',
             'character varying', 'varchar', 'char',
-            'character', 'text', 'citext'                                   => 'string',
-            'boolean', 'bool'                                               => 'bool',
+            'character', 'text', 'citext' => 'string',
+            'boolean', 'bool'  => 'bool',
             'numeric', 'decimal', 'real',
-            'double precision', 'float4', 'float8'                         => 'float',
+            'double precision', 'float4', 'float8' => 'float',
             'timestamp', 'timestamp without time zone',
-            'timestamp with time zone', 'timestamptz'                      => 'datetime',
-            'date'                                                          => 'date',
-            'time', 'time without time zone'                               => 'time',
-            'json', 'jsonb'                                                 => 'json',
-            default                                                         => $dataType,
+            'timestamp with time zone', 'timestamptz' => 'datetime',
+            'date' => 'date',
+            'time', 'time without time zone' => 'time',
+            'json', 'jsonb'  => 'json',
+            default  => $dataType,
         };
     }
 }

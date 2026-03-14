@@ -29,28 +29,28 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
     public function generate(array $diff): array
     {
         $sql = [
-            'safe'        => [],
+            'safe' => [],
             'destructive' => [],
         ];
- 
+
         // CREATE TABLE
         foreach ($diff['tables_to_create'] as $table => $columns) {
             $sql['safe'][] = $this->generateCreateTable($table, $columns);
         }
- 
+
         // DROP TABLE — destructive
         foreach ($diff['tables_to_drop'] as $table) {
             $t = $this->wrapIdentifier($table);
             $sql['destructive'][] = "DROP TABLE {$t};";
         }
- 
+
         // ADD COLUMN
         foreach ($diff['columns_to_add'] as $table => $columns) {
             foreach ($columns as $colName => $colDef) {
                 $sql['safe'][] = $this->generateAddColumn($table, $colName, $colDef);
             }
         }
- 
+
         // DROP COLUMN — destructive
         foreach ($diff['columns_to_drop'] as $table => $columns) {
             foreach ($columns as $colName) {
@@ -59,14 +59,14 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
                 $sql['destructive'][] = "ALTER TABLE {$t} DROP COLUMN {$c};";
             }
         }
- 
+
         // ALTER COLUMN
         foreach ($diff['columns_to_alter'] as $table => $columns) {
             foreach ($columns as $colName => $changes) {
                 $sql['safe'][] = $this->generateAlterColumn($table, $colName, $changes);
             }
         }
- 
+
         return $sql;
     }
 
@@ -77,16 +77,16 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
     {
         $t     = $this->wrapIdentifier($table);
         $lines = [];
- 
+
         foreach ($columns as $colName => $colDef) {
             $lines[] = '    ' . $this->buildColumnDefinition($colName, $colDef);
         }
- 
+
         if (array_key_exists('id', $columns)) {
             $id = $this->wrapIdentifier('id');
             $lines[] = "    PRIMARY KEY ({$id})";
         }
- 
+
         $body = implode(",\n", $lines);
         return "CREATE TABLE {$t} (\n{$body}\n);";
     }
@@ -96,38 +96,38 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
      */
     protected function generateAddColumn(string $table, string $colName, array $colDef): string
     {
-        $t          = $this->wrapIdentifier($table);
+        $t = $this->wrapIdentifier($table);
         $definition = $this->buildColumnDefinition($colName, $colDef);
         return "ALTER TABLE {$t} ADD COLUMN {$definition};";
     }
 
-     /**
+    /**
      * Generate an ALTER COLUMN statement.
      * Delegated to each driver as syntax differs significantly.
      */
     abstract protected function generateAlterColumn(string $table, string $colName, array $changes): string;
- 
+
     /**
      * Build a single column definition string.
      */
     protected function buildColumnDefinition(string $colName, array $colDef): string
     {
-        $type     = $colDef['type']     ?? 'string';
+        $type = $colDef['type']     ?? 'string';
         $nullable = $colDef['nullable'] ?? false;
- 
+
         // Relations are stored as int FK columns
         if ($type === 'relation') {
             $type = 'int';
         }
- 
-        $c        = $this->wrapIdentifier($colName);
-        $sqlType  = $this->toSQLType($colName, $type);
+
+        $c  = $this->wrapIdentifier($colName);
+        $sqlType = $this->toSQLType($colName, $type);
         $nullPart = $nullable ? 'NULL' : 'NOT NULL';
- 
+
         if ($colName === 'id' && $type === 'int') {
             return "{$c} {$sqlType} NOT NULL " . $this->autoIncrementKeyword();
         }
- 
+
         return "{$c} {$sqlType} {$nullPart}";
     }
 
@@ -136,5 +136,4 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
      * Overridden per driver.
      */
     abstract protected function autoIncrementKeyword(): string;
-
-} 
+}

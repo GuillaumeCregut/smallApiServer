@@ -37,16 +37,16 @@ class SqliteMigrationGenerator extends AbstractMigrationGeneratorDriver
 
     protected function toSQLType(string $colName, string $genericType): string
     {
-        return match($genericType) {
-            'int'      => 'INTEGER',
-            'string'   => 'TEXT',
-            'bool'     => 'INTEGER',  // SQLite has no native bool
-            'float'    => 'REAL',
+        return match ($genericType) {
+            'int' => 'INTEGER',
+            'string' => 'TEXT',
+            'bool' => 'INTEGER',  // SQLite has no native bool
+            'float' => 'REAL',
             'datetime' => 'TEXT',     // SQLite has no native datetime
-            'date'     => 'TEXT',
-            'time'     => 'TEXT',
-            'json'     => 'TEXT',     // SQLite has no native JSON type
-            default    => 'TEXT',
+            'date' => 'TEXT',
+            'time' => 'TEXT',
+            'json' => 'TEXT',     // SQLite has no native JSON type
+            default => 'TEXT',
         };
     }
 }
