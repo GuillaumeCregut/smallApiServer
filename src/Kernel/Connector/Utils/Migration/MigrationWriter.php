@@ -84,7 +84,7 @@ class MigrationWriter
  */
  
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
-use App\Kernel\Connector\Migration\Interfaces\MigrationInterface;
+use App\Kernel\Connector\Interfaces\MigrationInterface;
  
 class {$className} implements MigrationInterface
 {
