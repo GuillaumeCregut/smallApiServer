@@ -17,8 +17,34 @@ use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Files\FileUpload;
 
+
 class EntityAnalyzer
 {
+
+    public static function getAllEntitiesProperties(string $path): array
+    {
+        if (!is_dir($path)) {
+            throw new InvalidArgumentException("Path {$path} does not exists");
+        }
+        $entities = [];
+        $entitiesFiles = glob($path . '*.php');
+        foreach ($entitiesFiles as $file) {
+            require_once $file;
+            $className = basename($file, '.php');
+            $fqcn = self::getClassNamespace($file) . '\\' . $className;
+            if (class_exists($fqcn)) {
+                //Get properties
+                $properties = self::getStoredProperties($fqcn, true);
+                //transform className
+                //Store
+                $className = preg_replace('/Entity$/', '', $className);
+                $className = Helper::propertyToColumn($className) . 's';
+                $entities[$className] = $properties;
+            }
+        }
+        return $entities;
+    }
+
     public static function getStoredProperties(string $entity, bool $translated = false): array
     {
         if (!is_subclass_of($entity, EntityInterface::class)) {
@@ -91,5 +117,24 @@ class EntityAnalyzer
         ];
     }
 
-    
+    private static function getClassNameSpace(string $file): string
+    {
+        $tokens = token_get_all(file_get_contents($file));
+        $namespace = '';
+        foreach ($tokens as $i => $token) {
+            if (is_array($token) && $token[0] === T_NAMESPACE) {
+                // Collect all tokens after T_NAMESPACE until semicolon
+                for ($j = $i + 1; $j < count($tokens); $j++) {
+                    if ($tokens[$j] === ';') {
+                        break;
+                    }
+                    if (is_array($tokens[$j]) && $tokens[$j][0] !== T_WHITESPACE) {
+                        $namespace .= $tokens[$j][1];
+                    }
+                }
+                break;
+            }
+        }
+        return $namespace;
+    }
 }
