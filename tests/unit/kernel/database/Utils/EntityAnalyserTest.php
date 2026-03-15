@@ -9,6 +9,8 @@ use App\Kernel\Connector\Utils\EntityAnalyzer;
 use App\Kernel\Files\FileUpload;
 use PHPUnit\Framework\TestCase;
 
+use function PHPUnit\Framework\once;
+
 class EntityAnalyserTest extends TestCase
 {
     public function testWillThrowExceptionsOnEmpty(): void
@@ -72,7 +74,7 @@ class EntityAnalyserTest extends TestCase
             ]
         ];
         $result = EntityAnalyzer::getStoredProperties(EntityAnlyzeWithNotStored::class);
-        $this->assertSame($expect, $result);
+        $this->assertEquals($expect, $result);
     }
 
     public function testWillReturnStoredPropertyWitMixed(): void
@@ -121,12 +123,14 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'EntityAnlyzeWithStoredProps',
-                    'key' => 'entityId'
+                    'key' => 'entityId',
+                    'onUpdate' => 'RESTRICT',
+                    'onDelete' => 'CASCADE'
                 ]
             ]
         ];
         $result = EntityAnalyzer::getStoredProperties(EntityAnlyzeWithRelationProps::class);
-        $this->assertSame($expect, $result);
+        $this->assertEquals($expect, $result);
     }
 
     public function testWillReturnStoredPropertyWithNullableRelation(): void
@@ -142,12 +146,14 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'EntityAnlyzeWithStoredProps',
-                    'key' => 'entityId'
+                    'key' => 'entityId',
+                    'onUpdate' => 'CASCADE',
+                    'onDelete' => 'CASCADE'
                 ]
             ]
         ];
         $result = EntityAnalyzer::getStoredProperties(EntityAnalyzeWithNullRelationProps::class);
-        $this->assertSame($expect, $result);
+        $this->assertEquals($expect, $result);
     }
 
     public function testWillReturnCorrectKeyForRelation(): void
@@ -163,12 +169,14 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'EntityAnlyzeWithStoredProps',
-                    'key' => 'relatedItemId'
+                    'key' => 'relatedItemId',
+                    'onUpdate' => 'RESTRICT',
+                    'onDelete' => 'RESTRICT'
                 ]
             ]
         ];
         $result = EntityAnalyzer::getStoredProperties(EntityAnalyzeWithNamedRelation::class);
-        $this->assertSame($expect, $result);
+        $this->assertEquals($expect, $result);
     }
 
     public function testWillThrowExceptionOnNonFinalClass(): void
@@ -190,7 +198,9 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'EntityAnlyzeWithStoredProps',
-                    'key' => 'relatedItemId'
+                    'key' => 'relatedItemId',
+                    'onUpdate' => 'RESTRICT',
+                    'onDelete' => 'CASCADE'
                 ]
             ],
             'other' => [
@@ -198,12 +208,14 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'EntityAnalyzeWithNamedRelation',
-                    'key' => 'otherId'
+                    'key' => 'otherId',
+                    'onUpdate' => 'CASCADE',
+                    'onDelete' => 'RESTRICT'
                 ]
             ]
         ];
         $result = EntityAnalyzer::getStoredProperties(EntityToAnalyseWithTwoRelations::class);
-        $this->assertSame($expect, $result);
+        $this->assertEquals($expect, $result);
     }
 
     public function testFileIsConvertedToString(): void
@@ -237,7 +249,9 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'entity_anlyze_with_stored_propss',
-                    'key' => 'related_item_id'
+                    'key' => 'related_item_id',
+                    'onDelete' => 'CASCADE',
+                    'onUpdate' => 'RESTRICT',
                 ]
             ],
             'other' => [
@@ -245,12 +259,14 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'relation',
                 'relation' => [
                     'entity' => 'entity_analyze_with_named_relations',
-                    'key' => 'other_id'
+                    'key' => 'other_id',
+                    'onUpdate' => 'CASCADE',
+                    'onDelete' => 'RESTRICT',
                 ]
             ]
         ];
         $result = EntityAnalyzer::getStoredProperties(EntityToAnalyseWithTwoRelations::class, true);
-        $this->assertSame($expect, $result);
+        $this->assertEquals($expect, $result);
     }
 
     public function testWillReturnStoredPropertyWitMixedTranslated(): void
@@ -346,10 +362,10 @@ final class EntityToAnalyseWithTwoRelations implements EntityInterface
 {
     private ?int $id = null;
 
-    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class)]
+    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class, onDelete: 'CASCADE', onUpdate: 'RESTRICT')]
     private ?EntityAnlyzeWithStoredProps $relatedItem = null;
 
-    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnalyzeWithNamedRelation::class)]
+    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnalyzeWithNamedRelation::class, onUpdate: 'CASCADE', onDelete: 'RESTRICT')]
     private ?EntityAnalyzeWithNamedRelation $other = null;
 
     public function getId(): ?int
@@ -437,7 +453,7 @@ final class EntityAnlyzeWithRelationProps implements EntityInterface
 {
     private ?int $id = null;
 
-    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class)]
+    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class, onUpdate: 'RESTRICT', onDelete: 'CASCADE')]
     private ?EntityAnlyzeWithStoredProps $entity = null;
 
     public function getId(): ?int
@@ -461,7 +477,7 @@ final class EntityAnalyzeWithNullRelationProps implements EntityInterface
 {
     private ?int $id = null;
     #[Nullable]
-    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class)]
+    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class, onDelete: 'CASCADE', onUpdate: 'CASCADE')]
     private ?EntityAnlyzeWithStoredProps $entity = null;
 
     public function getId(): ?int

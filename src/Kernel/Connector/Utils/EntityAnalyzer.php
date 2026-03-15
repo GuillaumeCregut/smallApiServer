@@ -33,10 +33,7 @@ class EntityAnalyzer
             $className = basename($file, '.php');
             $fqcn = self::getClassNamespace($file) . '\\' . $className;
             if (class_exists($fqcn)) {
-                //Get properties
                 $properties = self::getStoredProperties($fqcn, true);
-                //transform className
-                //Store
                 $className = preg_replace('/Entity$/', '', $className);
                 $className = Helper::propertyToColumn($className) . 's';
                 $entities[$className] = $properties;
@@ -105,9 +102,12 @@ class EntityAnalyzer
                 $typeProperty = preg_replace('/Entity$/', '', $typeProperty);
                 $typeProperty = Helper::propertyToColumn($typeProperty) . 's';
             }
+            $instance = $manyToOne[0]->newInstance();
             $relation['entity'] = $typeProperty;
             $ext = $translated ? '_id' : 'Id';
             $relation['key'] = $name . $ext;
+            $relation['onDelete'] = strtoupper($instance->onDelete);
+            $relation['onUpdate'] = strtoupper($instance->onUpdate);
             $typeProperty = 'relation';
         }
         return [
