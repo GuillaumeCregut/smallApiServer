@@ -5,7 +5,7 @@ use App\Kernel\Connector\Utils\Migration\MysqlMigrationGenerator;
 
 class MysqlMigrationGeneratorTest extends TestCase
 {
-    private MysqlMigrationGenerator $generator;
+   private MysqlMigrationGenerator $generator;
  
     protected function setUp(): void
     {
@@ -187,7 +187,17 @@ class MysqlMigrationGeneratorTest extends TestCase
  
         $sql = $this->generator->generate($diff);
  
+        // Two safe statements: ADD COLUMN + ADD CONSTRAINT
+        $this->assertCount(2, $sql['safe']);
+ 
         $this->assertStringContainsString('ALTER TABLE `posts` ADD COLUMN `author_id` INT NOT NULL', $sql['safe'][0]);
+ 
+        $this->assertStringContainsString('ALTER TABLE `posts`', $sql['safe'][1]);
+        $this->assertStringContainsString('ADD CONSTRAINT `fk_posts_author_id`', $sql['safe'][1]);
+        $this->assertStringContainsString('FOREIGN KEY (`author_id`)', $sql['safe'][1]);
+        $this->assertStringContainsString('REFERENCES `authors` (`id`)', $sql['safe'][1]);
+        $this->assertStringContainsString('ON DELETE CASCADE', $sql['safe'][1]);
+        $this->assertStringContainsString('ON UPDATE RESTRICT', $sql['safe'][1]);
     }
  
     // -------------------------------------------------------------------------
@@ -331,7 +341,7 @@ class MysqlMigrationGeneratorTest extends TestCase
  
         $sql = $this->generator->generate($diff);
  
-        $this->assertCount(4, $sql['safe']);       // CREATE TABLE + ADD CONSTRAINT (new table FK) + ADD COLUMN + ALTER COLUMN + ADD CONSTRAINT (existing table)
+        $this->assertCount(4, $sql['safe']);       // CREATE TABLE + ADD COLUMN + ALTER COLUMN + ADD CONSTRAINT (existing table)
         $this->assertCount(2, $sql['destructive']); // DROP TABLE + DROP COLUMN
     }
 }
