@@ -13,12 +13,12 @@ class SqliteMigrationGenerator extends AbstractMigrationGeneratorDriver
     {
         return "\"{$name}\"";
     }
-
+ 
     protected function autoIncrementKeyword(): string
     {
         return 'AUTOINCREMENT';
     }
-
+ 
     /**
      * SQLite does NOT support ALTER COLUMN or MODIFY COLUMN.
      * The only way to change a column is to recreate the table.
@@ -34,7 +34,23 @@ class SqliteMigrationGenerator extends AbstractMigrationGeneratorDriver
             "-- To apply: recreate the table with the new schema and copy the data.",
         ]);
     }
-
+ 
+    /**
+     * SQLite does NOT support ADD CONSTRAINT / FOREIGN KEY via ALTER TABLE.
+     * Foreign keys must be defined at CREATE TABLE time.
+     * We generate a comment warning the dev to handle this manually.
+     */
+    protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string
+    {
+        $constraintDesc = json_encode($constraintDef, JSON_PRETTY_PRINT);
+        return implode("\n", [
+            "-- WARNING: SQLite does not support ADD CONSTRAINT via ALTER TABLE.",
+            "-- Foreign key on \"{$colName}\" in table \"{$table}\" requires manual migration.",
+            "-- Constraint definition: {$constraintDesc}",
+            "-- To apply: recreate the table with the FK defined inline in CREATE TABLE.",
+        ]);
+    }
+ 
     protected function toSQLType(string $colName, string $genericType): string
     {
         return match ($genericType) {
