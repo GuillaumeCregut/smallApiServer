@@ -55,6 +55,9 @@ class SchemaComparator
 
         // Tables in DB but missing in entity → drop
         foreach (array_diff($dbTables, $entityTables) as $table) {
+            if('migrations' === $table) {
+                continue;
+            }
             $diff['tables_to_drop'][] = $table;
         }
 
