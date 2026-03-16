@@ -6,9 +6,11 @@ use App\Kernel\Connector\Utils\Scanner\MySQLScannerDriver;
 
 class MySQLScannerDriverTest extends TestCase
 {
-    private function makeConnector(array $fetchQueryMap = [], ?array $fetchQueryOnceReturn = null): ConnectorInterface
+
+    private function makeConnector(array $fetchQueryMap = []): ConnectorInterface
     {
         $connector = $this->createStub(ConnectorInterface::class);
+        $connector->method('fetchQueryOnce')->willReturn(['db' => 'test_db']);
  
         if (!empty($fetchQueryMap)) {
             $connector->method('fetchQuery')
@@ -22,16 +24,12 @@ class MySQLScannerDriverTest extends TestCase
                 });
         }
  
-        if ($fetchQueryOnceReturn !== null) {
-            $connector->method('fetchQueryOnce')
-                ->willReturn($fetchQueryOnceReturn);
-        } else {
-            $connector->method('fetchQueryOnce')
-                ->willReturn(['db' => 'test_db']);
-        }
- 
         return $connector;
     }
+ 
+    // -------------------------------------------------------------------------
+    // getTables
+    // -------------------------------------------------------------------------
  
     public function testGetTablesReturnsTableNames(): void
     {
@@ -42,46 +40,40 @@ class MySQLScannerDriverTest extends TestCase
             ]
         ]);
  
-        $driver = new MySQLScannerDriver($connector);
-        $tables = $driver->getTables();
- 
-        $this->assertEquals(['users', 'posts'], $tables);
+        $this->assertEquals(['users', 'posts'], (new MySQLScannerDriver($connector))->getTables());
     }
  
     public function testGetTablesReturnsEmptyArrayWhenNoTables(): void
     {
         $connector = $this->makeConnector(['SHOW TABLES' => []]);
-        $driver    = new MySQLScannerDriver($connector);
- 
-        $this->assertEmpty($driver->getTables());
+        $this->assertEmpty((new MySQLScannerDriver($connector))->getTables());
     }
+ 
+    // -------------------------------------------------------------------------
+    // getColumns — flat shape, no fk
+    // -------------------------------------------------------------------------
  
     public function testGetColumnsNormalizesBasicTypes(): void
     {
         $connector = $this->makeConnector([
             'information_schema.columns' => [
-                ['column_name' => 'id',    'data_type' => 'int',     'column_type' => 'int(11)',      'is_nullable' => 'NO',  'column_default' => null],
-                ['column_name' => 'email', 'data_type' => 'varchar', 'column_type' => 'varchar(255)', 'is_nullable' => 'NO',  'column_default' => null],
-                ['column_name' => 'age',   'data_type' => 'int',     'column_type' => 'int(11)',      'is_nullable' => 'YES', 'column_default' => null],
+                ['column_name' => 'id',    'data_type' => 'int',     'column_type' => 'int(11)',      'is_nullable' => 'NO'],
+                ['column_name' => 'email', 'data_type' => 'varchar', 'column_type' => 'varchar(255)', 'is_nullable' => 'NO'],
+                ['column_name' => 'age',   'data_type' => 'int',     'column_type' => 'int(11)',      'is_nullable' => 'YES'],
             ]
         ]);
  
-        $driver  = new MySQLScannerDriver($connector);
-        $columns = $driver->getColumns('users');
+        $columns = (new MySQLScannerDriver($connector))->getColumns('users');
  
-        $this->assertArrayHasKey('id', $columns);
         $this->assertEquals('int',    $columns['id']['type']);
         $this->assertFalse($columns['id']['nullable']);
- 
-        $this->assertArrayHasKey('email', $columns);
         $this->assertEquals('string', $columns['email']['type']);
-        $this->assertFalse($columns['email']['nullable']);
- 
-        $this->assertArrayHasKey('age', $columns);
         $this->assertTrue($columns['age']['nullable']);
  
         foreach ($columns as $col) {
-            $this->assertEmpty($col['relation']);
+            $this->assertArrayNotHasKey('fk',       $col);
+            $this->assertArrayNotHasKey('onDelete',  $col);
+            $this->assertArrayNotHasKey('onUpdate',  $col);
         }
     }
  
@@ -89,13 +81,11 @@ class MySQLScannerDriverTest extends TestCase
     {
         $connector = $this->makeConnector([
             'information_schema.columns' => [
-                ['column_name' => 'is_admin', 'data_type' => 'tinyint', 'column_type' => 'tinyint(1)', 'is_nullable' => 'NO', 'column_default' => null],
+                ['column_name' => 'is_admin', 'data_type' => 'tinyint', 'column_type' => 'tinyint(1)', 'is_nullable' => 'NO'],
             ]
         ]);
  
-        $driver  = new MySQLScannerDriver($connector);
-        $columns = $driver->getColumns('users');
- 
+        $columns = (new MySQLScannerDriver($connector))->getColumns('users');
         $this->assertEquals('bool', $columns['is_admin']['type']);
     }
  
@@ -103,74 +93,75 @@ class MySQLScannerDriverTest extends TestCase
     {
         $connector = $this->makeConnector([
             'information_schema.columns' => [
-                ['column_name' => 'tags', 'data_type' => 'json', 'column_type' => 'json', 'is_nullable' => 'YES', 'column_default' => null],
+                ['column_name' => 'tags', 'data_type' => 'json', 'column_type' => 'json', 'is_nullable' => 'YES'],
             ]
         ]);
  
-        $driver  = new MySQLScannerDriver($connector);
-        $columns = $driver->getColumns('users');
- 
+        $columns = (new MySQLScannerDriver($connector))->getColumns('users');
         $this->assertEquals('json', $columns['tags']['type']);
     }
  
     public function testGetColumnsReturnsEmptyArrayWhenNoColumns(): void
     {
         $connector = $this->makeConnector(['information_schema.columns' => []]);
-        $driver    = new MySQLScannerDriver($connector);
- 
-        $this->assertEmpty($driver->getColumns('empty_table'));
+        $this->assertEmpty((new MySQLScannerDriver($connector))->getColumns('empty_table'));
     }
+ 
+    // -------------------------------------------------------------------------
+    // getForeignKeys — flat shape with fk, onDelete, onUpdate
+    // -------------------------------------------------------------------------
+ 
+    public function testGetForeignKeysNormalizesToFlatShape(): void
+    {
+        $connector = $this->makeConnector([
+            'referential_constraints' => [
+                [
+                    'column_name'            => 'author_id',
+                    'referenced_table_name'  => 'authors',
+                    'delete_rule'            => 'CASCADE',
+                    'update_rule'            => 'RESTRICT',
+                ],
+            ]
+        ]);
+ 
+        $fks = (new MySQLScannerDriver($connector))->getForeignKeys('posts');
+ 
+        $this->assertArrayHasKey('author_id', $fks);
+        $this->assertEquals('int',      $fks['author_id']['type']);
+        $this->assertEquals('authors',  $fks['author_id']['fk']);
+        $this->assertEquals('CASCADE',  $fks['author_id']['onDelete']);
+        $this->assertEquals('RESTRICT', $fks['author_id']['onUpdate']);
+        $this->assertArrayNotHasKey('relation', $fks['author_id']);
+    }
+ 
+    public function testGetForeignKeysReturnsEmptyArrayWhenNoFK(): void
+    {
+        $connector = $this->makeConnector(['referential_constraints' => []]);
+        $this->assertEmpty((new MySQLScannerDriver($connector))->getForeignKeys('users'));
+    }
+ 
+    // -------------------------------------------------------------------------
+    // getPrimaryKeys
+    // -------------------------------------------------------------------------
  
     public function testGetPrimaryKeysReturnsPKColumnNames(): void
     {
         $connector = $this->makeConnector([
-            "constraint_name = 'PRIMARY'" => [
-                ['column_name' => 'id'],
-            ]
+            "constraint_name = 'PRIMARY'" => [['column_name' => 'id']]
         ]);
  
-        $driver = new MySQLScannerDriver($connector);
-        $pks    = $driver->getPrimaryKeys('users');
- 
-        $this->assertEquals(['id'], $pks);
+        $this->assertEquals(['id'], (new MySQLScannerDriver($connector))->getPrimaryKeys('users'));
     }
  
     public function testGetPrimaryKeysReturnsEmptyArrayWhenNoPK(): void
     {
         $connector = $this->makeConnector(["constraint_name = 'PRIMARY'" => []]);
-        $driver    = new MySQLScannerDriver($connector);
- 
-        $this->assertEmpty($driver->getPrimaryKeys('users'));
+        $this->assertEmpty((new MySQLScannerDriver($connector))->getPrimaryKeys('users'));
     }
  
-    public function testGetForeignKeysNormalizesToRelation(): void
-    {
-        $connector = $this->makeConnector([
-            'referenced_table_name IS NOT NULL' => [
-                [
-                    'column_name'            => 'author_id',
-                    'referenced_table_name'  => 'authors',
-                    'referenced_column_name' => 'id',
-                ]
-            ]
-        ]);
- 
-        $driver = new MySQLScannerDriver($connector);
-        $fks    = $driver->getForeignKeys('posts');
- 
-        $this->assertArrayHasKey('author_id', $fks);
-        $this->assertEquals('relation', $fks['author_id']['type']);
-        $this->assertEquals('authors',  $fks['author_id']['relation']['entity']);
-        $this->assertEquals('author_id', $fks['author_id']['relation']['key']);
-    }
- 
-    public function testGetForeignKeysReturnsEmptyArrayWhenNoFK(): void
-    {
-        $connector = $this->makeConnector(['referenced_table_name IS NOT NULL' => []]);
-        $driver    = new MySQLScannerDriver($connector);
- 
-        $this->assertEmpty($driver->getForeignKeys('users'));
-    }
+    // -------------------------------------------------------------------------
+    // getIndexes
+    // -------------------------------------------------------------------------
  
     public function testGetIndexesReturnsIndexes(): void
     {
@@ -180,9 +171,7 @@ class MySQLScannerDriverTest extends TestCase
             ]
         ]);
  
-        $driver  = new MySQLScannerDriver($connector);
-        $indexes = $driver->getIndexes('users');
- 
+        $indexes = (new MySQLScannerDriver($connector))->getIndexes('users');
         $this->assertArrayHasKey('idx_email', $indexes);
         $this->assertTrue($indexes['idx_email']['unique']);
         $this->assertContains('email', $indexes['idx_email']['columns']);
@@ -191,51 +180,72 @@ class MySQLScannerDriverTest extends TestCase
     public function testGetIndexesReturnsEmptyArrayWhenNoIndexes(): void
     {
         $connector = $this->makeConnector(['information_schema.statistics' => []]);
-        $driver    = new MySQLScannerDriver($connector);
- 
-        $this->assertEmpty($driver->getIndexes('users'));
+        $this->assertEmpty((new MySQLScannerDriver($connector))->getIndexes('users'));
     }
  
-    public function testScanReturnsFlatSchemaWithFKOverride(): void
+    // -------------------------------------------------------------------------
+    // scan
+    // -------------------------------------------------------------------------
+ 
+    public function testScanReturnsFlatSchemaWithFKConstraint(): void
     {
         $connector = $this->makeConnector([
-            'SHOW TABLES' => [
-                ['Tables_in_test_db' => 'posts'],
+            'SHOW TABLES'              => [['Tables_in_test_db' => 'posts']],
+            'referential_constraints'  => [
+                ['column_name' => 'author_id', 'referenced_table_name' => 'authors', 'delete_rule' => 'CASCADE', 'update_rule' => 'RESTRICT'],
             ],
-            'information_schema.columns' => [
-                ['column_name' => 'id',       'data_type' => 'int', 'column_type' => 'int(11)', 'is_nullable' => 'NO',  'column_default' => null],
-                ['column_name' => 'author_id', 'data_type' => 'int', 'column_type' => 'int(11)', 'is_nullable' => 'NO',  'column_default' => null],
-            ],
-            "constraint_name = 'PRIMARY'" => [
-                ['column_name' => 'id'],
-            ],
-            'key_column_usage kcu' => [
-                ['column_name' => 'author_id', 'referenced_table_name' => 'authors', 'referenced_column_name' => 'id'],
+            "constraint_name = 'PRIMARY'" => [['column_name' => 'id']],
+            'information_schema.columns'  => [
+                ['column_name' => 'id',        'data_type' => 'int', 'column_type' => 'int(11)', 'is_nullable' => 'NO'],
+                ['column_name' => 'author_id', 'data_type' => 'int', 'column_type' => 'int(11)', 'is_nullable' => 'NO'],
             ],
             'information_schema.statistics' => [],
         ]);
  
-        $driver = new MySQLScannerDriver($connector);
-        $schema = $driver->scan();
+        $schema = (new MySQLScannerDriver($connector))->scan();
  
         $this->assertArrayHasKey('posts', $schema);
-        $this->assertArrayHasKey('columns', $schema['posts']);
-        $this->assertArrayHasKey('primary_keys', $schema['posts']);
-        $this->assertArrayHasKey('indexes', $schema['posts']);
  
-        // FK column must override basic int type
-        $this->assertEquals('relation', $schema['posts']['columns']['author_id']['type']);
-        $this->assertEquals('authors',  $schema['posts']['columns']['author_id']['relation']['entity']);
- 
-        // Regular column unchanged
+        // Regular column — no fk keys
         $this->assertEquals('int', $schema['posts']['columns']['id']['type']);
+        $this->assertArrayNotHasKey('fk',       $schema['posts']['columns']['id']);
+        $this->assertArrayNotHasKey('onDelete',  $schema['posts']['columns']['id']);
+ 
+        // FK column — flat shape with fk, onDelete, onUpdate, nullable merged
+        $this->assertEquals('int',      $schema['posts']['columns']['author_id']['type']);
+        $this->assertEquals('authors',  $schema['posts']['columns']['author_id']['fk']);
+        $this->assertEquals('CASCADE',  $schema['posts']['columns']['author_id']['onDelete']);
+        $this->assertEquals('RESTRICT', $schema['posts']['columns']['author_id']['onUpdate']);
+        $this->assertFalse($schema['posts']['columns']['author_id']['nullable']);
+ 
+        $this->assertContains('id', $schema['posts']['primary_keys']);
+    }
+ 
+    public function testScanReturnsFlatSchemaWithNoConstraint(): void
+    {
+        // FK column exists in DB but no constraint — onDelete/onUpdate are null
+        $connector = $this->makeConnector([
+            'SHOW TABLES'                   => [['Tables_in_test_db' => 'posts']],
+            'referential_constraints'       => [],
+            "constraint_name = 'PRIMARY'"   => [['column_name' => 'id']],
+            'information_schema.columns'    => [
+                ['column_name' => 'id',        'data_type' => 'int', 'column_type' => 'int(11)', 'is_nullable' => 'NO'],
+                ['column_name' => 'author_id', 'data_type' => 'int', 'column_type' => 'int(11)', 'is_nullable' => 'NO'],
+            ],
+            'information_schema.statistics' => [],
+        ]);
+ 
+        $schema = (new MySQLScannerDriver($connector))->scan();
+ 
+        // author_id is plain int — no fk metadata since no constraint exists
+        $this->assertEquals('int', $schema['posts']['columns']['author_id']['type']);
+        $this->assertArrayNotHasKey('fk',      $schema['posts']['columns']['author_id']);
+        $this->assertArrayNotHasKey('onDelete', $schema['posts']['columns']['author_id']);
     }
  
     public function testScanReturnsEmptySchemaWhenNoTables(): void
     {
         $connector = $this->makeConnector(['SHOW TABLES' => []]);
-        $driver    = new MySQLScannerDriver($connector);
- 
-        $this->assertEmpty($driver->scan());
+        $this->assertEmpty((new MySQLScannerDriver($connector))->scan());
     }
 }
