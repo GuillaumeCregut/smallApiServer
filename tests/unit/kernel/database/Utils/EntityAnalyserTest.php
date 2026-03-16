@@ -7,6 +7,7 @@ use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Connector\Utils\EntityAnalyzer;
 use App\Kernel\Files\FileUpload;
+use App\Security\User;
 use PHPUnit\Framework\TestCase;
 
 use function PHPUnit\Framework\once;
@@ -302,6 +303,30 @@ class EntityAnalyserTest extends TestCase
         $this->assertSame($expect, $result);
     }
 
+    public function testWillResolvePropertyWitMixedTranslated(): void
+    {
+        $expect = [
+            'id' => [
+                'nullable' => false,
+                'type' => 'int',
+                'relation' => []
+            ],
+           
+           'related_item' => [
+                'nullable' => false,
+                'type' => 'relation',
+                'relation' => [
+                    'entity' => 'users',
+                    'key' => 'related_item_id',
+                    'onDelete' => 'CASCADE',
+                    'onUpdate' => 'RESTRICT',
+                ]
+            ],
+        ];
+        $result = EntityAnalyzer::getStoredProperties(EntityWithRelationInFrameWork::class, true);
+        $this->assertSame($expect, $result);
+    }
+
     public function testOneToManyDoesNotAppear(): void
     {
         $expect = [
@@ -316,6 +341,26 @@ class EntityAnalyserTest extends TestCase
     }
 }
 
+final class EntityWithRelationInFrameWork implements EntityInterface
+{
+     private ?int $id = null;
+    #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class, onDelete: 'CASCADE', onUpdate: 'RESTRICT')]
+    private ?User $relatedItem = null;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+    public static function getRepository(): ?string
+    {
+        return '';
+    }
+}
 final class EntityAnalyzeWithOneToMany implements EntityInterface
 {
     private ?int $id = null;

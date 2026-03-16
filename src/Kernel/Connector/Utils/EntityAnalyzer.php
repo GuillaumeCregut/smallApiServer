@@ -99,7 +99,7 @@ class EntityAnalyzer
         $manyToOne = $property->getAttributes(ManyToOne::class);
         if (!empty($manyToOne)) {
             if ($translated) {
-                $typeProperty = preg_replace('/Entity$/', '', $typeProperty);
+                $typeProperty = basename(preg_replace('/Entity$/', '', $typeProperty));
                 $typeProperty = Helper::propertyToColumn($typeProperty) . 's';
             }
             $instance = $manyToOne[0]->newInstance();
