@@ -12,10 +12,6 @@ use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 class PostGreScannerDriver extends AbstractScannerDriver
 {
-    private const DEFAULT_SCHEMA = 'public';
-
-    public function __construct(protected ConnectorInterface $connector) {}
-
     /**
      * Returns all table names in the public schema.
      */
@@ -26,11 +22,11 @@ class PostGreScannerDriver extends AbstractScannerDriver
             FROM pg_tables 
             WHERE schemaname = :schema
             ORDER BY tablename
-        ", ['schema' => self::DEFAULT_SCHEMA]);
-
+        ", ['schema' => $this->schemaName]);
+ 
         return array_map(fn($row) => $row['tablename'], $rows);
     }
-
+ 
     /**
      * Returns columns normalized to match EntityAnalyzer output shape.
      */
@@ -43,20 +39,19 @@ class PostGreScannerDriver extends AbstractScannerDriver
             WHERE table_name   = :table
             AND   table_schema = :schema
             ORDER BY ordinal_position
-        ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
-
+        ", ['table' => $table, 'schema' => $this->schemaName]);
+ 
         $result = [];
         foreach ($rows as $row) {
             $name = $row['column_name'];
             $result[$name] = [
                 'nullable' => $row['is_nullable'] === 'YES',
-                'type' => $this->normalizeType($row['data_type'], $row['column_default'] ?? ''),
-                'relation' => [],
+                'type'     => $this->normalizeType($row['data_type'], $row['column_default'] ?? ''),
             ];
         }
         return $result;
     }
-
+ 
     /**
      * Returns primary key column names for a given table.
      */
@@ -73,11 +68,11 @@ class PostGreScannerDriver extends AbstractScannerDriver
             AND   tc.table_name      = :table
             AND   tc.table_schema    = :schema
             ORDER BY kcu.ordinal_position
-        ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
-
+        ", ['table' => $table, 'schema' => $this->schemaName]);
+ 
         return array_map(fn($row) => $row['column_name'], $rows);
     }
-
+ 
     /**
      * Returns foreign keys normalized to match EntityAnalyzer relation shape.
      */
@@ -86,8 +81,9 @@ class PostGreScannerDriver extends AbstractScannerDriver
         $rows = $this->connector->fetchQuery("
             SELECT
                 kcu.column_name,
-                ccu.table_name  AS referenced_table_name,
-                ccu.column_name AS referenced_column_name
+                ccu.table_name          AS referenced_table_name,
+                rc.delete_rule,
+                rc.update_rule
             FROM information_schema.table_constraints tc
             JOIN information_schema.key_column_usage kcu
                 ON  kcu.constraint_name = tc.constraint_name
@@ -95,25 +91,27 @@ class PostGreScannerDriver extends AbstractScannerDriver
             JOIN information_schema.constraint_column_usage ccu
                 ON  ccu.constraint_name = tc.constraint_name
                 AND ccu.table_schema    = tc.table_schema
+            JOIN information_schema.referential_constraints rc
+                ON  rc.constraint_name        = tc.constraint_name
+                AND rc.constraint_schema      = tc.table_schema
             WHERE tc.constraint_type = 'FOREIGN KEY'
             AND   tc.table_name      = :table
             AND   tc.table_schema    = :schema
-        ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
-
+        ", ['table' => $table, 'schema' => $this->schemaName]);
+ 
         $result = [];
         foreach ($rows as $row) {
             $colName = $row['column_name'];
             $result[$colName] = [
-                'type' => 'relation',
-                'relation' => [
-                    'entity' => $row['referenced_table_name'],
-                    'key' => $colName,
-                ],
+                'type'     => 'int',
+                'fk'       => $row['referenced_table_name'],
+                'onDelete' => $row['delete_rule'] ?? null,
+                'onUpdate' => $row['update_rule'] ?? null,
             ];
         }
         return $result;
     }
-
+ 
     /**
      * Returns indexes for a given table (excluding PRIMARY KEY).
      */
@@ -134,14 +132,14 @@ class PostGreScannerDriver extends AbstractScannerDriver
             AND   n.nspname  = :schema
             AND   ix.indisprimary = false
             ORDER BY i.relname
-        ", ['table' => $table, 'schema' => self::DEFAULT_SCHEMA]);
-
+        ", ['table' => $table, 'schema' => $this->schemaName]);
+ 
         $result = [];
         foreach ($rows as $row) {
             $indexName = $row['index_name'];
             if (!isset($result[$indexName])) {
                 $result[$indexName] = [
-                    'unique' => $row['is_unique'],
+                    'unique'  => $row['is_unique'] === 't',
                     'columns' => [],
                 ];
             }
@@ -149,7 +147,7 @@ class PostGreScannerDriver extends AbstractScannerDriver
         }
         return $result;
     }
-
+ 
     /**
      * Full scan: returns the complete schema for all tables.
      * FK columns override their basic column entry to carry relation metadata.
@@ -160,13 +158,13 @@ class PostGreScannerDriver extends AbstractScannerDriver
         foreach ($this->getTables() as $table) {
             $columns = $this->getColumns($table);
             $foreignKeys = $this->getForeignKeys($table);
-
+ 
             foreach ($foreignKeys as $colName => $fkInfo) {
                 $columns[$colName] = array_merge($fkInfo, [
                     'nullable' => $columns[$colName]['nullable'] ?? false,
                 ]);
             }
-
+ 
             $schema[$table] = [
                 'columns' => $columns,
                 'primary_keys' => $this->getPrimaryKeys($table),
@@ -175,7 +173,7 @@ class PostGreScannerDriver extends AbstractScannerDriver
         }
         return $schema;
     }
-
+ 
     /**
      * Maps PostgreSQL native types to generic types matching EntityAnalyzer output.
      *
@@ -189,7 +187,7 @@ class PostGreScannerDriver extends AbstractScannerDriver
         if (str_starts_with($columnDefault, 'nextval(')) {
             return 'int';
         }
-
+ 
         return match (strtolower($dataType)) {
             'integer', 'bigint', 'smallint', 'int', 'int2', 'int4', 'int8' => 'int',
             'character varying', 'varchar', 'char',
