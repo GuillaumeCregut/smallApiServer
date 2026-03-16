@@ -120,7 +120,7 @@ PHP;
         $functionName = 'add' . ucfirst($propertyName);
         $this->gettersSetters .= "    public function {$functionName} ($elementType \${$propertyName}): self\n";
         $this->gettersSetters .= "    {\n";
-        $this->gettersSetters .= "        \$this->{$propertyName}->addToCollection(\${$propertyName});\n";
+        $this->gettersSetters .= "        \$this->addToCollection('{$propertyName}',\${$propertyName});\n";
         $this->gettersSetters .= "        return \$this;\n";
         $this->gettersSetters .= "    }\n\n";
 
