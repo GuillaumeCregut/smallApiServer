@@ -63,6 +63,21 @@ class PostgreSqlMigrationGenerator extends AbstractMigrationGeneratorDriver
         return implode("\n", $sql);
     }
 
+    protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string
+    {
+        $t = $this->wrapIdentifier($table);
+        $c  = $this->wrapIdentifier($colName);
+        $fkTable = $this->wrapIdentifier($constraintDef['fk']);
+        $refCol = $this->wrapIdentifier('id');
+        $constraintName = $this->wrapIdentifier('fk_' . $table . '_' . $colName);
+        $onDelete = $constraintDef['onDelete'] ?? 'RESTRICT';
+        $onUpdate = $constraintDef['onUpdate'] ?? 'RESTRICT';
+
+        return "ALTER TABLE {$t} ADD CONSTRAINT {$constraintName} "
+            . "FOREIGN KEY ({$c}) REFERENCES {$fkTable} ({$refCol}) "
+            . "ON DELETE {$onDelete} ON UPDATE {$onUpdate};";
+    }
+
     protected function toSQLType(string $colName, string $genericType): string
     {
         return match ($genericType) {
