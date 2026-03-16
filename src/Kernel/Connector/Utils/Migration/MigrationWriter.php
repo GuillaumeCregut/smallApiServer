@@ -7,13 +7,15 @@
 
 namespace App\Kernel\Connector\Utils\Migration;
 
+use \Exception;
+
 class MigrationWriter
 {
     private string $migrationsPath;
 
     public function __construct(string $rootPath)
     {
-        $this->migrationsPath = rtrim($rootPath, '/') . '/migrations';
+        $this->migrationsPath = rtrim($rootPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR .'migrations';
     }
 
     /**
@@ -44,8 +46,10 @@ class MigrationWriter
         if (!is_dir($this->migrationsPath)) {
             mkdir($this->migrationsPath, 0755, true);
         }
-        file_put_contents($filePath, $content);
-
+        $writed = file_put_contents($filePath, $content);
+        if(false === $writed) {
+            throw new Exception('Error, file not written');
+        }
         return $filePath;
     }
 
@@ -84,6 +88,8 @@ class MigrationWriter
  */
  
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
+use Exception;
+
 use App\Kernel\Connector\Interfaces\MigrationInterface;
  
 class {$className} implements MigrationInterface
