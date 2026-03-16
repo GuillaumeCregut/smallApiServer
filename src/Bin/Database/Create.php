@@ -27,8 +27,9 @@ class Create extends AbstractConsole
 
         List of available commands :
         - create:help - Display this message
-        - create:sql entity - Display Create Table for entity (all for all entities)
         - create:entity entity - Create a new entity whit name Entity and Repository (ex: create:entity product will create Product entity)
+        - create:migration - Create migration file, updating database to correspond Entities schema
+        - create:sql entity - Display Create Table for entity (all for all entities)
 
         TEXT;
         if (($this->minArgs > $count) || ('' === $args[0])) {
@@ -55,6 +56,9 @@ class Create extends AbstractConsole
             case 'help':
                 $this->help(false);
                 break;
+            case 'migration':
+                $this->migration($arg);
+                break;
             default:
                 $this->error("Command {$cmd} does not exist");
         }
@@ -68,6 +72,17 @@ class Create extends AbstractConsole
         }
         die();
     }
+
+    private function migration(string $arg): void
+    {
+        $creator = new CreateMigration();
+        try {
+            $creator->execute();
+        } catch(ConsoleException $e) {
+             $this->error($e->getMessage(), false);
+        }
+    }
+
     private function sql(string $arg): void
     {
         $creator = new CreateSql();
