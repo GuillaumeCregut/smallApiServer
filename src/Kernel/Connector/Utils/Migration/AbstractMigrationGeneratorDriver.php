@@ -29,13 +29,19 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
     public function generate(array $diff): array
     {
         $sql = [
-            'safe' => [],
+            'safe'        => [],
             'destructive' => [],
         ];
 
         // CREATE TABLE
         foreach ($diff['tables_to_create'] as $table => $columns) {
             $sql['safe'][] = $this->generateCreateTable($table, $columns);
+            // Generate ADD CONSTRAINT for FK columns in new tables
+            foreach ($columns as $colName => $colDef) {
+                if (isset($colDef['fk'])) {
+                    $sql['safe'][] = $this->generateAddConstraint($table, $colName, $colDef);
+                }
+            }
         }
 
         // DROP TABLE — destructive
@@ -48,6 +54,10 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
         foreach ($diff['columns_to_add'] as $table => $columns) {
             foreach ($columns as $colName => $colDef) {
                 $sql['safe'][] = $this->generateAddColumn($table, $colName, $colDef);
+                // Add FK constraint if this new column has one
+                if (isset($colDef['fk'])) {
+                    $sql['safe'][] = $this->generateAddConstraint($table, $colName, $colDef);
+                }
             }
         }
 
@@ -67,6 +77,13 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
             }
         }
 
+        // ADD FOREIGN KEY CONSTRAINT
+        foreach ($diff['constraints_to_add'] ?? [] as $table => $constraints) {
+            foreach ($constraints as $colName => $constraintDef) {
+                $sql['safe'][] = $this->generateAddConstraint($table, $colName, $constraintDef);
+            }
+        }
+
         return $sql;
     }
 
@@ -75,7 +92,7 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
      */
     protected function generateCreateTable(string $table, array $columns): string
     {
-        $t     = $this->wrapIdentifier($table);
+        $t = $this->wrapIdentifier($table);
         $lines = [];
 
         foreach ($columns as $colName => $colDef) {
@@ -115,13 +132,8 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
         $type = $colDef['type']     ?? 'string';
         $nullable = $colDef['nullable'] ?? false;
 
-        // Relations are stored as int FK columns
-        if ($type === 'relation') {
-            $type = 'int';
-        }
-
-        $c  = $this->wrapIdentifier($colName);
-        $sqlType = $this->toSQLType($colName, $type);
+        $c = $this->wrapIdentifier($colName);
+        $sqlType  = $this->toSQLType($colName, $type);
         $nullPart = $nullable ? 'NULL' : 'NOT NULL';
 
         if ($colName === 'id' && $type === 'int') {
@@ -130,6 +142,11 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
 
         return "{$c} {$sqlType} {$nullPart}";
     }
+
+    /**
+     * Generate an ALTER TABLE ... ADD CONSTRAINT FOREIGN KEY statement.
+     */
+    abstract protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string;
 
     /**
      * Keyword used for auto-increment columns.
