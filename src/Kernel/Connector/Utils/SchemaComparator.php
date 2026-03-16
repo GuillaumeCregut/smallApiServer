@@ -10,36 +10,29 @@ namespace App\Kernel\Connector\Utils;
 class SchemaComparator
 {
     /**
-     * Compare entity schema (source of truth) against DB schema.
-     ** $entitySchema shape (after converter, snake_case):
-     * [
-     *   'users' => [
-     *     'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-     *     'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-     *   ]
-     * ]
+     * Compare entity schema against DB schema.
      *
-     * $dbSchema shape (from DatabaseScanner::scan()):
+     * Normalized flat shape (both sides):
      * [
-     *   'users' => [
-     *     'columns'      => [ 'id' => [...], 'email' => [...] ],
+     *   'table_name' => [
+     *     'columns' => [
+     *       'id'              => ['nullable' => false, 'type' => 'int'],
+     *       'related_item_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'items', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
+     *     ],
      *     'primary_keys' => ['id'],
      *     'indexes'      => [...],
      *   ]
      * ]
      *
-     * Returns a diff array:
+     * Returns:
      * [
-     *   'tables_to_create' => ['table_name' => columns],
-     *   'tables_to_drop'   => ['table_name'],
-     *   'columns_to_add'   => ['table_name' => ['col' => columnDef]],
-     *   'columns_to_drop'  => ['table_name' => ['col']],
-     *   'columns_to_alter' => ['table_name' => ['col' => ['from' => [...], 'to' => [...]]]],
+     *   'tables_to_create'   => ['table_name' => columns],
+     *   'tables_to_drop'     => ['table_name'],
+     *   'columns_to_add'     => ['table_name' => ['col' => colDef]],
+     *   'columns_to_drop'    => ['table_name' => ['col']],
+     *   'columns_to_alter'   => ['table_name' => ['col' => ['from' => [...], 'to' => [...]]]],
+     *   'constraints_to_add' => ['table_name' => ['col' => ['fk' => '...', 'onDelete' => '...', 'onUpdate' => '...']]]
      * ]
-     *
-     * @param array $entitySchema
-     * @param array $dbSchema
-     * @return array
      */
     public function compare(array $entitySchema, array $dbSchema): array
     {
@@ -49,24 +42,25 @@ class SchemaComparator
             'columns_to_add' => [],
             'columns_to_drop' => [],
             'columns_to_alter' => [],
+            'constraints_to_add' => [],
         ];
 
         $dbTables = array_keys($dbSchema);
         $entityTables = array_keys($entitySchema);
 
-        // Tables present in entities but missing in DB → need to be created
+        // Tables in entity but missing in DB → create
         foreach (array_diff($entityTables, $dbTables) as $table) {
-            $diff['tables_to_create'][$table] = $entitySchema[$table];
+            $diff['tables_to_create'][$table] = $entitySchema[$table]['columns'];
         }
 
-        // Tables present in DB but missing in entities → candidates for drop
+        // Tables in DB but missing in entity → drop
         foreach (array_diff($dbTables, $entityTables) as $table) {
             $diff['tables_to_drop'][] = $table;
         }
 
-        // Tables present in both → compare columns
+        // Tables in both → compare columns and constraints
         foreach (array_intersect($entityTables, $dbTables) as $table) {
-            $entityColumns = $entitySchema[$table];
+            $entityColumns = $entitySchema[$table]['columns'];
             $dbColumns = $dbSchema[$table]['columns'];
 
             $columnDiff = $this->compareColumns($entityColumns, $dbColumns);
@@ -80,7 +74,11 @@ class SchemaComparator
             if (!empty($columnDiff['to_alter'])) {
                 $diff['columns_to_alter'][$table] = $columnDiff['to_alter'];
             }
+            if (!empty($columnDiff['constraints_to_add'])) {
+                $diff['constraints_to_add'][$table] = $columnDiff['constraints_to_add'];
+            }
         }
+
         return $diff;
     }
 
@@ -90,18 +88,17 @@ class SchemaComparator
             && empty($diff['tables_to_drop'])
             && empty($diff['columns_to_add'])
             && empty($diff['columns_to_drop'])
-            && empty($diff['columns_to_alter']);
+            && empty($diff['columns_to_alter'])
+            && empty($diff['constraints_to_add']);
     }
 
-    /**
-     * Compare columns of a single table.
-     */
     private function compareColumns(array $entityColumns, array $dbColumns): array
     {
         $result = [
             'to_add' => [],
             'to_drop' => [],
             'to_alter' => [],
+            'constraints_to_add' => [],
         ];
 
         $entityColNames = array_keys($entityColumns);
@@ -117,14 +114,17 @@ class SchemaComparator
             $result['to_drop'][] = $col;
         }
 
-        // Columns in both → check for differences
+        // Columns in both → detect structural changes and missing constraints
         foreach (array_intersect($entityColNames, $dbColNames) as $col) {
-            $changes = $this->detectColumnChanges(
-                $entityColumns[$col],
-                $dbColumns[$col]
-            );
+            $changes = $this->detectColumnChanges($entityColumns[$col], $dbColumns[$col]);
             if (!empty($changes)) {
                 $result['to_alter'][$col] = $changes;
+            }
+
+            // Check if FK constraint is missing in DB
+            $constraint = $this->detectMissingConstraint($entityColumns[$col], $dbColumns[$col]);
+            if ($constraint !== null) {
+                $result['constraints_to_add'][$col] = $constraint;
             }
         }
 
@@ -132,14 +132,12 @@ class SchemaComparator
     }
 
     /**
-     * Detect what changed between entity column definition and DB column definition.
-     * Returns array of changes, empty if identical.
+     * Detect structural changes (type, nullable only — fk/onDelete/onUpdate are not structural).
      */
     private function detectColumnChanges(array $entityCol, array $dbCol): array
     {
         $changes = [];
 
-        // Type changed
         if ($entityCol['type'] !== $dbCol['type']) {
             $changes['type'] = [
                 'from' => $dbCol['type'],
@@ -147,7 +145,6 @@ class SchemaComparator
             ];
         }
 
-        // Nullability changed
         if ($entityCol['nullable'] !== $dbCol['nullable']) {
             $changes['nullable'] = [
                 'from' => $dbCol['nullable'],
@@ -155,14 +152,32 @@ class SchemaComparator
             ];
         }
 
-        // Relation changed
-        if ($entityCol['relation'] !== $dbCol['relation']) {
-            $changes['relation'] = [
-                'from' => $dbCol['relation'],
-                'to' => $entityCol['relation'],
+        return $changes;
+    }
+
+    /**
+     * Detect if a FK constraint is defined in entity but missing or different in DB.
+     * Returns constraint definition to add, or null if in sync.
+     *
+     * A constraint is missing if:
+     * - Entity column has 'fk' key (it's a relation)
+     * - DB column has no 'onDelete'/'onUpdate' (no constraint exists)
+     */
+    private function detectMissingConstraint(array $entityCol, array $dbCol): ?array
+    {
+        if (!isset($entityCol['fk'])) {
+            return null;
+        }
+
+        // No constraint in DB at all
+        if (!isset($dbCol['onDelete']) || $dbCol['onDelete'] === null) {
+            return [
+                'fk' => $entityCol['fk'],
+                'onDelete' => $entityCol['onDelete'] ?? 'RESTRICT',
+                'onUpdate' => $entityCol['onUpdate'] ?? 'RESTRICT',
             ];
         }
 
-        return $changes;
+        return null;
     }
 }

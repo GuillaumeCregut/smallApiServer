@@ -6,253 +6,296 @@ use App\Kernel\Connector\Utils\SchemaComparator;
 class SchemaComparatorTest extends TestCase
 {
     private SchemaComparator $comparator;
-
+ 
     protected function setUp(): void
     {
         $this->comparator = new SchemaComparator();
     }
-
+ 
+    private function makeSchema(array $tables): array
+    {
+        $schema = [];
+        foreach ($tables as $table => $columns) {
+            $schema[$table] = ['columns' => $columns, 'primary_keys' => [], 'indexes' => []];
+        }
+        return $schema;
+    }
+ 
+    private function emptyDiff(): array
+    {
+        return [
+            'tables_to_create'   => [],
+            'tables_to_drop'     => [],
+            'columns_to_add'     => [],
+            'columns_to_drop'    => [],
+            'columns_to_alter'   => [],
+            'constraints_to_add' => [],
+        ];
+    }
+ 
+    // -------------------------------------------------------------------------
+    // isInSync
+    // -------------------------------------------------------------------------
+ 
     public function testIsInSyncWhenNoDiff(): void
     {
-        $diff = [
-            'tables_to_create' => [],
-            'tables_to_drop'   => [],
-            'columns_to_add'   => [],
-            'columns_to_drop'  => [],
-            'columns_to_alter' => [],
-        ];
-        $this->assertTrue($this->comparator->isInSync($diff));
+        $this->assertTrue($this->comparator->isInSync($this->emptyDiff()));
     }
-
-    public function testIsNotInSyncWhenDiffExists(): void
+ 
+    public function testIsNotInSyncWhenTableToCreate(): void
     {
-        $diff = [
-            'tables_to_create' => ['users' => []],
-            'tables_to_drop'   => [],
-            'columns_to_add'   => [],
-            'columns_to_drop'  => [],
-            'columns_to_alter' => [],
-        ];
+        $diff = array_merge($this->emptyDiff(), ['tables_to_create' => ['users' => []]]);
         $this->assertFalse($this->comparator->isInSync($diff));
     }
-
+ 
+    public function testIsNotInSyncWhenConstraintToAdd(): void
+    {
+        $diff = array_merge($this->emptyDiff(), ['constraints_to_add' => ['users' => ['author_id' => []]]]);
+        $this->assertFalse($this->comparator->isInSync($diff));
+    }
+ 
+    // -------------------------------------------------------------------------
+    // tables_to_create / tables_to_drop
+    // -------------------------------------------------------------------------
+ 
     public function testDetectsTableToCreate(): void
     {
-        $entitySchema = [
-            'users' => [
-                'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-            ]
-        ];
-        $dbSchema = [];
-
-        $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
+        $entitySchema = $this->makeSchema([
+            'users' => ['id' => ['nullable' => false, 'type' => 'int']]
+        ]);
+ 
+        $diff = $this->comparator->compare($entitySchema, []);
+ 
         $this->assertArrayHasKey('users', $diff['tables_to_create']);
         $this->assertEmpty($diff['tables_to_drop']);
-        $this->assertEmpty($diff['columns_to_add']);
     }
-
+ 
     public function testDetectsTableToDrop(): void
     {
-        $entitySchema = [];
-        $dbSchema = [
-            'users' => [
-                'columns'      => ['id' => ['nullable' => false, 'type' => 'int', 'relation' => []]],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
-        $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
+        $dbSchema = $this->makeSchema([
+            'users' => ['id' => ['nullable' => false, 'type' => 'int']]
+        ]);
+ 
+        $diff = $this->comparator->compare([], $dbSchema);
+ 
         $this->assertContains('users', $diff['tables_to_drop']);
         $this->assertEmpty($diff['tables_to_create']);
     }
-
-     public function testDetectsColumnToAdd(): void
+ 
+    // -------------------------------------------------------------------------
+    // columns_to_add / columns_to_drop
+    // -------------------------------------------------------------------------
+ 
+    public function testDetectsColumnToAdd(): void
     {
-        $entitySchema = [
+        $entitySchema = $this->makeSchema([
             'users' => [
-                'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-                'phone' => ['nullable' => true,  'type' => 'string', 'relation' => []],
+                'id'    => ['nullable' => false, 'type' => 'int'],
+                'phone' => ['nullable' => true,  'type' => 'string'],
             ]
-        ];
-        $dbSchema = [
-            'users' => [
-                'columns' => [
-                    'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                    'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-                ],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
+        ]);
+        $dbSchema = $this->makeSchema([
+            'users' => ['id' => ['nullable' => false, 'type' => 'int']]
+        ]);
+ 
         $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
-        $this->assertArrayHasKey('users', $diff['columns_to_add']);
+ 
         $this->assertArrayHasKey('phone', $diff['columns_to_add']['users']);
         $this->assertTrue($diff['columns_to_add']['users']['phone']['nullable']);
     }
-
-     public function testDetectsColumnToDrop(): void
+ 
+    public function testDetectsFKColumnToAdd(): void
     {
-        $entitySchema = [
-            'users' => [
-                'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
+        $entitySchema = $this->makeSchema([
+            'posts' => [
+                'id'        => ['nullable' => false, 'type' => 'int'],
+                'author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
             ]
-        ];
-        $dbSchema = [
-            'users' => [
-                'columns' => [
-                    'id'      => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                    'email'   => ['nullable' => false, 'type' => 'string', 'relation' => []],
-                    'obsolete'=> ['nullable' => true,  'type' => 'string', 'relation' => []],
-                ],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
+        ]);
+        $dbSchema = $this->makeSchema([
+            'posts' => ['id' => ['nullable' => false, 'type' => 'int']]
+        ]);
+ 
         $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
-        $this->assertArrayHasKey('users', $diff['columns_to_drop']);
+ 
+        $this->assertArrayHasKey('author_id', $diff['columns_to_add']['posts']);
+        $this->assertEquals('authors',  $diff['columns_to_add']['posts']['author_id']['fk']);
+        $this->assertEquals('CASCADE',  $diff['columns_to_add']['posts']['author_id']['onDelete']);
+        $this->assertEquals('RESTRICT', $diff['columns_to_add']['posts']['author_id']['onUpdate']);
+    }
+ 
+    public function testDetectsColumnToDrop(): void
+    {
+        $entitySchema = $this->makeSchema([
+            'users' => ['id' => ['nullable' => false, 'type' => 'int']]
+        ]);
+        $dbSchema = $this->makeSchema([
+            'users' => [
+                'id'       => ['nullable' => false, 'type' => 'int'],
+                'obsolete' => ['nullable' => true,  'type' => 'string'],
+            ]
+        ]);
+ 
+        $diff = $this->comparator->compare($entitySchema, $dbSchema);
+ 
         $this->assertContains('obsolete', $diff['columns_to_drop']['users']);
     }
-
+ 
+    // -------------------------------------------------------------------------
+    // columns_to_alter
+    // -------------------------------------------------------------------------
+ 
     public function testDetectsTypeChange(): void
     {
-        $entitySchema = [
-            'users' => [
-                'id'  => ['nullable' => false, 'type' => 'int',   'relation' => []],
-                'age' => ['nullable' => false, 'type' => 'float', 'relation' => []],
-            ]
-        ];
-        $dbSchema = [
-            'users' => [
-                'columns' => [
-                    'id'  => ['nullable' => false, 'type' => 'int', 'relation' => []],
-                    'age' => ['nullable' => false, 'type' => 'int', 'relation' => []],
-                ],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
+        $entitySchema = $this->makeSchema(['users' => ['age' => ['nullable' => false, 'type' => 'float']]]);
+        $dbSchema     = $this->makeSchema(['users' => ['age' => ['nullable' => false, 'type' => 'int']]]);
+ 
         $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
-        $this->assertArrayHasKey('users', $diff['columns_to_alter']);
-        $this->assertArrayHasKey('age', $diff['columns_to_alter']['users']);
+ 
         $this->assertEquals('int',   $diff['columns_to_alter']['users']['age']['type']['from']);
         $this->assertEquals('float', $diff['columns_to_alter']['users']['age']['type']['to']);
     }
-
+ 
     public function testDetectsNullabilityChange(): void
     {
-        $entitySchema = [
-            'users' => [
-                'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                'email' => ['nullable' => true,  'type' => 'string', 'relation' => []],
-            ]
-        ];
-        $dbSchema = [
-            'users' => [
-                'columns' => [
-                    'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                    'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-                ],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
+        $entitySchema = $this->makeSchema(['users' => ['email' => ['nullable' => true,  'type' => 'string']]]);
+        $dbSchema     = $this->makeSchema(['users' => ['email' => ['nullable' => false, 'type' => 'string']]]);
+ 
         $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
-        $this->assertArrayHasKey('users', $diff['columns_to_alter']);
-        $this->assertArrayHasKey('email', $diff['columns_to_alter']['users']);
+ 
         $this->assertFalse($diff['columns_to_alter']['users']['email']['nullable']['from']);
         $this->assertTrue($diff['columns_to_alter']['users']['email']['nullable']['to']);
     }
-
-    public function testDetectsRelationChange(): void
+ 
+    public function testFkValueDifferenceDoesNotTriggerAlter(): void
     {
-        $entitySchema = [
-            'posts' => [
-                'id'        => ['nullable' => false, 'type' => 'int',      'relation' => []],
-                'author_id' => ['nullable' => false, 'type' => 'relation', 'relation' => ['entity' => 'authors', 'key' => 'author_id']],
-            ]
-        ];
-        $dbSchema = [
-            'posts' => [
-                'columns' => [
-                    'id'        => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                    'author_id' => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                ],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
+        $entitySchema = $this->makeSchema([
+            'posts' => ['author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT']]
+        ]);
+        $dbSchema = $this->makeSchema([
+            'posts' => ['author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT']]
+        ]);
+ 
         $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
-        $this->assertArrayHasKey('posts', $diff['columns_to_alter']);
-        $this->assertArrayHasKey('author_id', $diff['columns_to_alter']['posts']);
-        $this->assertArrayHasKey('relation', $diff['columns_to_alter']['posts']['author_id']);
+ 
+        $this->assertEmpty($diff['columns_to_alter']);
     }
-
+ 
+    // -------------------------------------------------------------------------
+    // constraints_to_add
+    // -------------------------------------------------------------------------
+ 
+    public function testDetectsMissingConstraint(): void
+    {
+        $entitySchema = $this->makeSchema([
+            'posts' => [
+                'id'        => ['nullable' => false, 'type' => 'int'],
+                'author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
+            ]
+        ]);
+        // DB has the column but no constraint (no onDelete/onUpdate)
+        $dbSchema = $this->makeSchema([
+            'posts' => [
+                'id'        => ['nullable' => false, 'type' => 'int'],
+                'author_id' => ['nullable' => false, 'type' => 'int'],
+            ]
+        ]);
+ 
+        $diff = $this->comparator->compare($entitySchema, $dbSchema);
+ 
+        $this->assertArrayHasKey('posts', $diff['constraints_to_add']);
+        $this->assertArrayHasKey('author_id', $diff['constraints_to_add']['posts']);
+        $this->assertEquals('authors',  $diff['constraints_to_add']['posts']['author_id']['fk']);
+        $this->assertEquals('CASCADE',  $diff['constraints_to_add']['posts']['author_id']['onDelete']);
+        $this->assertEquals('RESTRICT', $diff['constraints_to_add']['posts']['author_id']['onUpdate']);
+    }
+ 
+    public function testNoConstraintAddedWhenConstraintAlreadyExists(): void
+    {
+        $entitySchema = $this->makeSchema([
+            'posts' => [
+                'author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
+            ]
+        ]);
+        // DB already has constraint
+        $dbSchema = $this->makeSchema([
+            'posts' => [
+                'author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
+            ]
+        ]);
+ 
+        $diff = $this->comparator->compare($entitySchema, $dbSchema);
+ 
+        $this->assertEmpty($diff['constraints_to_add']);
+    }
+ 
+    public function testNoConstraintAddedForNonFKColumn(): void
+    {
+        $entitySchema = $this->makeSchema([
+            'users' => ['email' => ['nullable' => false, 'type' => 'string']]
+        ]);
+        $dbSchema = $this->makeSchema([
+            'users' => ['email' => ['nullable' => false, 'type' => 'string']]
+        ]);
+ 
+        $diff = $this->comparator->compare($entitySchema, $dbSchema);
+ 
+        $this->assertEmpty($diff['constraints_to_add']);
+    }
+ 
+    public function testConstraintToAddMakesIsInSyncReturnFalse(): void
+    {
+        $entitySchema = $this->makeSchema([
+            'posts' => [
+                'author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
+            ]
+        ]);
+        $dbSchema = $this->makeSchema([
+            'posts' => [
+                'author_id' => ['nullable' => false, 'type' => 'int'],
+            ]
+        ]);
+ 
+        $diff = $this->comparator->compare($entitySchema, $dbSchema);
+ 
+        $this->assertFalse($this->comparator->isInSync($diff));
+    }
+ 
+    // -------------------------------------------------------------------------
+    // In sync
+    // -------------------------------------------------------------------------
+ 
     public function testNoChangesWhenSchemasMatch(): void
     {
         $columns = [
-            'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-            'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
+            'id'        => ['nullable' => false, 'type' => 'int'],
+            'email'     => ['nullable' => false, 'type' => 'string'],
+            'author_id' => ['nullable' => false, 'type' => 'int', 'fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT'],
         ];
-
-        $entitySchema = ['users' => $columns];
-        $dbSchema = [
-            'users' => [
-                'columns'      => $columns,
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ]
-        ];
-
-        $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
-        $this->assertTrue($this->comparator->isInSync($diff));
+ 
+        $schema = $this->makeSchema(['users' => $columns]);
+ 
+        $this->assertTrue($this->comparator->isInSync(
+            $this->comparator->compare($schema, $schema)
+        ));
     }
-
-     public function testMultipleTablesPartiallyInSync(): void
+ 
+    public function testMultipleTablesPartiallyInSync(): void
     {
-        $entitySchema = [
-            'users' => [
-                'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-            ],
-            'posts' => [
-                'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                'title' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-            ],
-        ];
-        $dbSchema = [
-            'users' => [
-                'columns' => [
-                    'id'    => ['nullable' => false, 'type' => 'int',    'relation' => []],
-                    'email' => ['nullable' => false, 'type' => 'string', 'relation' => []],
-                ],
-                'primary_keys' => ['id'],
-                'indexes'      => [],
-            ],
-            // posts table missing in DB
-        ];
-
+        $entitySchema = $this->makeSchema([
+            'users' => ['id' => ['nullable' => false, 'type' => 'int']],
+            'posts' => ['id' => ['nullable' => false, 'type' => 'int']],
+        ]);
+        $dbSchema = $this->makeSchema([
+            'users' => ['id' => ['nullable' => false, 'type' => 'int']],
+        ]);
+ 
         $diff = $this->comparator->compare($entitySchema, $dbSchema);
-
+ 
         $this->assertFalse($this->comparator->isInSync($diff));
         $this->assertArrayHasKey('posts', $diff['tables_to_create']);
         $this->assertEmpty($diff['columns_to_add']);
         $this->assertEmpty($diff['columns_to_alter']);
+        $this->assertEmpty($diff['constraints_to_add']);
     }
 }
