@@ -12,7 +12,14 @@ use App\Kernel\Connector\Interfaces\ConnectorInterface;
 class SQLiteScannerDriver extends AbstractScannerDriver
 {
 
-    public function __construct(protected ConnectorInterface $connector) {}
+    /**
+     * SQLite has no concept of a schema name — override parent constructor
+     * to avoid running SELECT DATABASE() which does not exist in SQLite.
+     */
+    public function __construct(protected ConnectorInterface $connector)
+    {
+        $this->schemaName = '';
+    }
 
     /**
      * Returns all user table names (excludes SQLite internal tables).
@@ -46,7 +53,6 @@ class SQLiteScannerDriver extends AbstractScannerDriver
             $result[$row['name']] = [
                 'nullable' => $row['notnull'] == 0,
                 'type' => $this->normalizeType($row['type']),
-                'relation' => [],
             ];
         }
         return $result;
@@ -79,21 +85,14 @@ class SQLiteScannerDriver extends AbstractScannerDriver
     {
         $rows = $this->connector->fetchQuery("PRAGMA foreign_key_list(`{$table}`)");
 
-        // Retrieve nullability info from table_info for FK columns
-        $columnInfo = $this->getColumnsRaw($table);
-
         $result = [];
         foreach ($rows as $row) {
             $colName = $row['from'];
-            $nullable = isset($columnInfo[$colName]) ? $columnInfo[$colName]['notnull'] == 0 : true;
-
             $result[$colName] = [
-                'nullable' => $nullable,
-                'type' => 'relation',
-                'relation' => [
-                    'entity' => $row['table'],
-                    'key' => $colName,
-                ],
+                'type' => 'int',
+                'fk' => $row['table'],
+                'onDelete' => $row['on_delete'] ?? null,
+                'onUpdate' => $row['on_update'] ?? null,
             ];
         }
         return $result;
@@ -136,9 +135,10 @@ class SQLiteScannerDriver extends AbstractScannerDriver
             $columns = $this->getColumns($table);
             $foreignKeys = $this->getForeignKeys($table);
 
-            // FK columns override basic column entries (type becomes 'relation')
             foreach ($foreignKeys as $colName => $fkInfo) {
-                $columns[$colName] = $fkInfo;
+                $columns[$colName] = array_merge($fkInfo, [
+                    'nullable' => $columns[$colName]['nullable'] ?? false,
+                ]);
             }
 
             $schema[$table] = [
@@ -148,20 +148,6 @@ class SQLiteScannerDriver extends AbstractScannerDriver
             ];
         }
         return $schema;
-    }
-
-    /**
-     * Raw PRAGMA table_info() rows keyed by column name.
-     * Used internally to get nullability for FK columns.
-     */
-    private function getColumnsRaw(string $table): array
-    {
-        $rows = $this->connector->fetchQuery("PRAGMA table_info(`{$table}`)");
-        $result = [];
-        foreach ($rows as $row) {
-            $result[$row['name']] = $row;
-        }
-        return $result;
     }
 
     /**
