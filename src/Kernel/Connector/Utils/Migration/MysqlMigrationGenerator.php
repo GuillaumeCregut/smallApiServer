@@ -9,28 +9,46 @@ namespace App\Kernel\Connector\Utils\Migration;
 
 class MysqlMigrationGenerator extends AbstractMigrationGeneratorDriver
 {
-      protected function wrapIdentifier(string $name): string
+    protected function generateCreateTable(string $table, array $columns): string
+    {
+        $t = $this->wrapIdentifier($table);
+        $lines = [];
+
+        foreach ($columns as $colName => $colDef) {
+            $lines[] = '    ' . $this->buildColumnDefinition($colName, $colDef);
+        }
+
+        if (array_key_exists('id', $columns)) {
+            $id = $this->wrapIdentifier('id');
+            $lines[] = "    PRIMARY KEY ({$id})";
+        }
+
+        $body = implode(",\n", $lines);
+        return "CREATE TABLE {$t} (\n{$body}\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+    }
+
+    protected function wrapIdentifier(string $name): string
     {
         return "`{$name}`";
     }
- 
+
     protected function autoIncrementKeyword(): string
     {
         return 'AUTO_INCREMENT';
     }
- 
+
     protected function generateAlterColumn(string $table, string $colName, array $changes): string
     {
         $colDef = [
             'type'     => $changes['type']['to']     ?? null,
             'nullable' => $changes['nullable']['to'] ?? null,
         ];
- 
+
         $t = $this->wrapIdentifier($table);
         $definition = $this->buildColumnDefinition($colName, $colDef);
         return "ALTER TABLE {$t} MODIFY COLUMN {$definition};";
     }
- 
+
     protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string
     {
         $t = $this->wrapIdentifier($table);
@@ -40,12 +58,12 @@ class MysqlMigrationGenerator extends AbstractMigrationGeneratorDriver
         $constraintName = $this->wrapIdentifier('fk_' . $table . '_' . $colName);
         $onDelete = $constraintDef['onDelete'] ?? 'RESTRICT';
         $onUpdate = $constraintDef['onUpdate'] ?? 'RESTRICT';
- 
+
         return "ALTER TABLE {$t} ADD CONSTRAINT {$constraintName} "
             . "FOREIGN KEY ({$c}) REFERENCES {$fkTable} ({$refCol}) "
             . "ON DELETE {$onDelete} ON UPDATE {$onUpdate};";
     }
- 
+
     protected function toSQLType(string $colName, string $genericType): string
     {
         return match ($genericType) {

@@ -5,13 +5,13 @@ use App\Kernel\Connector\Utils\Migration\MysqlMigrationGenerator;
 
 class MysqlMigrationGeneratorTest extends TestCase
 {
-   private MysqlMigrationGenerator $generator;
- 
+    private MysqlMigrationGenerator $generator;
+
     protected function setUp(): void
     {
         $this->generator = new MysqlMigrationGenerator();
     }
- 
+
     private function emptyDiff(): array
     {
         return [
@@ -23,23 +23,23 @@ class MysqlMigrationGeneratorTest extends TestCase
             'constraints_to_add' => [],
         ];
     }
- 
+
     // -------------------------------------------------------------------------
     // Empty diff
     // -------------------------------------------------------------------------
- 
+
     public function testEmptyDiffProducesNoSQL(): void
     {
         $sql = $this->generator->generate($this->emptyDiff());
- 
+
         $this->assertEmpty($sql['safe']);
         $this->assertEmpty($sql['destructive']);
     }
- 
+
     // -------------------------------------------------------------------------
     // CREATE TABLE
     // -------------------------------------------------------------------------
- 
+
     public function testGeneratesCreateTable(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -50,16 +50,37 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertCount(1, $sql['safe']);
         $this->assertStringContainsString('CREATE TABLE `users`', $sql['safe'][0]);
         $this->assertStringContainsString('`id` INT NOT NULL AUTO_INCREMENT', $sql['safe'][0]);
         $this->assertStringContainsString('`email` VARCHAR(255) NOT NULL', $sql['safe'][0]);
         $this->assertStringContainsString('PRIMARY KEY (`id`)', $sql['safe'][0]);
+        $this->assertStringContainsString('ENGINE=InnoDB', $sql['safe'][0]);
+        $this->assertStringContainsString('DEFAULT CHARSET=utf8mb4', $sql['safe'][0]);
+        $this->assertStringContainsString('COLLATE=utf8mb4_unicode_ci', $sql['safe'][0]);
     }
- 
+
+    public function testCreateTableEndsWithMysqlEngineOptions(): void
+    {
+        $diff = array_merge($this->emptyDiff(), [
+            'tables_to_create' => [
+                'users' => [
+                    'id' => ['nullable' => false, 'type' => 'int'],
+                ]
+            ]
+        ]);
+
+        $sql = $this->generator->generate($diff);
+
+        $this->assertStringEndsWith(
+            ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;',
+            $sql['safe'][0]
+        );
+    }
+
     public function testCreateTableWithFKColumnGeneratesSeparateConstraint(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -70,16 +91,16 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         // Two safe statements: CREATE TABLE + ADD CONSTRAINT
         $this->assertCount(2, $sql['safe']);
- 
+
         // CREATE TABLE contains column but NO inline constraint
         $this->assertStringContainsString('`author_id` INT NOT NULL', $sql['safe'][0]);
         $this->assertStringNotContainsString('CONSTRAINT', $sql['safe'][0]);
- 
+
         // Second statement is ALTER TABLE ADD CONSTRAINT
         $this->assertStringContainsString('ALTER TABLE `posts`', $sql['safe'][1]);
         $this->assertStringContainsString('ADD CONSTRAINT `fk_posts_author_id`', $sql['safe'][1]);
@@ -88,7 +109,7 @@ class MysqlMigrationGeneratorTest extends TestCase
         $this->assertStringContainsString('ON DELETE CASCADE', $sql['safe'][1]);
         $this->assertStringContainsString('ON UPDATE RESTRICT', $sql['safe'][1]);
     }
- 
+
     public function testCreateTableWithNullableColumn(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -99,12 +120,12 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertStringContainsString('`age` INT NULL', $sql['safe'][0]);
     }
- 
+
     public function testCreateTableWithBoolColumn(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -115,12 +136,12 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertStringContainsString('`is_admin` TINYINT(1) NOT NULL', $sql['safe'][0]);
     }
- 
+
     public function testCreateTableWithJsonColumn(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -131,33 +152,33 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertStringContainsString('`tags` JSON NULL', $sql['safe'][0]);
     }
- 
+
     // -------------------------------------------------------------------------
     // DROP TABLE
     // -------------------------------------------------------------------------
- 
+
     public function testDropTableIsDestructive(): void
     {
         $diff = array_merge($this->emptyDiff(), [
             'tables_to_drop' => ['obsolete_table']
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertEmpty($sql['safe']);
         $this->assertCount(1, $sql['destructive']);
         $this->assertEquals('DROP TABLE `obsolete_table`;', $sql['destructive'][0]);
     }
- 
+
     // -------------------------------------------------------------------------
     // ADD COLUMN
     // -------------------------------------------------------------------------
- 
+
     public function testGeneratesAddColumn(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -167,14 +188,14 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertCount(1, $sql['safe']);
         $this->assertStringContainsString('ALTER TABLE `users` ADD COLUMN', $sql['safe'][0]);
         $this->assertStringContainsString('`phone` VARCHAR(255) NULL', $sql['safe'][0]);
     }
- 
+
     public function testGeneratesAddFKColumn(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -184,14 +205,14 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         // Two safe statements: ADD COLUMN + ADD CONSTRAINT
         $this->assertCount(2, $sql['safe']);
- 
+
         $this->assertStringContainsString('ALTER TABLE `posts` ADD COLUMN `author_id` INT NOT NULL', $sql['safe'][0]);
- 
+
         $this->assertStringContainsString('ALTER TABLE `posts`', $sql['safe'][1]);
         $this->assertStringContainsString('ADD CONSTRAINT `fk_posts_author_id`', $sql['safe'][1]);
         $this->assertStringContainsString('FOREIGN KEY (`author_id`)', $sql['safe'][1]);
@@ -199,28 +220,28 @@ class MysqlMigrationGeneratorTest extends TestCase
         $this->assertStringContainsString('ON DELETE CASCADE', $sql['safe'][1]);
         $this->assertStringContainsString('ON UPDATE RESTRICT', $sql['safe'][1]);
     }
- 
+
     // -------------------------------------------------------------------------
     // DROP COLUMN
     // -------------------------------------------------------------------------
- 
+
     public function testDropColumnIsDestructive(): void
     {
         $diff = array_merge($this->emptyDiff(), [
             'columns_to_drop' => ['users' => ['obsolete']]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertEmpty($sql['safe']);
         $this->assertCount(1, $sql['destructive']);
         $this->assertEquals('ALTER TABLE `users` DROP COLUMN `obsolete`;', $sql['destructive'][0]);
     }
- 
+
     // -------------------------------------------------------------------------
     // ALTER COLUMN
     // -------------------------------------------------------------------------
- 
+
     public function testGeneratesAlterColumnForTypeChange(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -233,18 +254,18 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertCount(1, $sql['safe']);
         $this->assertStringContainsString('ALTER TABLE `users` MODIFY COLUMN', $sql['safe'][0]);
         $this->assertStringContainsString('`age` DECIMAL(10,2) NULL', $sql['safe'][0]);
     }
- 
+
     // -------------------------------------------------------------------------
     // ADD CONSTRAINT
     // -------------------------------------------------------------------------
- 
+
     public function testGeneratesAddConstraint(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -254,9 +275,9 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertCount(1, $sql['safe']);
         $this->assertStringContainsString('ALTER TABLE `posts`', $sql['safe'][0]);
         $this->assertStringContainsString('ADD CONSTRAINT `fk_posts_author_id`', $sql['safe'][0]);
@@ -265,7 +286,7 @@ class MysqlMigrationGeneratorTest extends TestCase
         $this->assertStringContainsString('ON DELETE CASCADE', $sql['safe'][0]);
         $this->assertStringContainsString('ON UPDATE RESTRICT', $sql['safe'][0]);
     }
- 
+
     public function testGeneratesAddConstraintWithRestrictDefault(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -275,13 +296,13 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertStringContainsString('ON DELETE RESTRICT', $sql['safe'][0]);
         $this->assertStringContainsString('ON UPDATE RESTRICT', $sql['safe'][0]);
     }
- 
+
     public function testGeneratesMultipleConstraints(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -292,14 +313,14 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertCount(2, $sql['safe']);
         $this->assertStringContainsString('REFERENCES `authors`',    $sql['safe'][0]);
         $this->assertStringContainsString('REFERENCES `categories`', $sql['safe'][1]);
     }
- 
+
     public function testConstraintsAreInSafeNotDestructive(): void
     {
         $diff = array_merge($this->emptyDiff(), [
@@ -309,17 +330,17 @@ class MysqlMigrationGeneratorTest extends TestCase
                 ]
             ]
         ]);
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertNotEmpty($sql['safe']);
         $this->assertEmpty($sql['destructive']);
     }
- 
+
     // -------------------------------------------------------------------------
     // Mixed diff
     // -------------------------------------------------------------------------
- 
+
     public function testMixedDiffGeneratesAllStatements(): void
     {
         $diff = [
@@ -338,9 +359,9 @@ class MysqlMigrationGeneratorTest extends TestCase
                 'posts' => ['author_id' => ['fk' => 'authors', 'onDelete' => 'CASCADE', 'onUpdate' => 'RESTRICT']]
             ],
         ];
- 
+
         $sql = $this->generator->generate($diff);
- 
+
         $this->assertCount(4, $sql['safe']);       // CREATE TABLE + ADD COLUMN + ALTER COLUMN + ADD CONSTRAINT (existing table)
         $this->assertCount(2, $sql['destructive']); // DROP TABLE + DROP COLUMN
     }
