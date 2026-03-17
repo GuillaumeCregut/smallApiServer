@@ -28,7 +28,7 @@ class Create extends AbstractConsole
         List of available commands :
         - create:help - Display this message
         - create:entity entity - Create a new entity whit name Entity and Repository (ex: create:entity product will create Product entity)
-        - create:migration - Create migration file, updating database to correspond Entities schema
+        - create:migration all - Create migration file, updating database to correspond Entities schema
         - create:sql entity - Display Create Table for entity (all for all entities)
 
         TEXT;
