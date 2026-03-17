@@ -6,7 +6,7 @@ use App\Kernel\Connector\AbstractEntity;
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
 
-class User extends AbstractEntity implements UserEntityInterface
+final class User extends AbstractEntity implements UserEntityInterface
 {
     #[NotStored]
     protected static ?string $repo = UserRepository::class;

@@ -23,7 +23,7 @@ The smallAPIServer framework provides **two complementary patterns** for managin
 
 ### Concept
 
-An Entity is a class that represents a business object with its data and properties. It implements the `EntityInterface` and typically inherits from `AbstractEntity`.
+An Entity is a class that represents a business object with its data and properties. It implements the `EntityInterface` and typically inherits from `AbstractEntity`. They must be final classes.
 
 ### AbstractEntity
 
@@ -61,7 +61,7 @@ use App\Kernel\Connector\AbstractEntity;
 use App\Kernel\Connector\Attributes\NotStored;
 use App\Kernel\Connector\Attributes\Nullable;
 
-class User extends AbstractEntity implements UserEntityInterface
+final class User extends AbstractEntity implements UserEntityInterface
 {
     private array $roles = [];
     private ?string $name = null;
@@ -345,7 +345,7 @@ Define relationships in your entities:
 use App\Kernel\Connector\Attributes\OneToMany;
 use App\Kernel\Connector\Attributes\ManyToOne;
 
-class Author extends AbstractEntity
+final class Author extends AbstractEntity
 {
     #[OneToMany(targetEntity: Post::class, mappedBy: 'author', onUpdate: 'restrict', onDelete: 'restrict')]
     private LazyBag $posts;

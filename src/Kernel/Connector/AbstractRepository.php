@@ -33,6 +33,7 @@ use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
 use App\Kernel\Connector\Interfaces\EntityManagerInterface;
+use App\Kernel\Connector\Utils\Helper;
 use App\Kernel\Files\FileUpload;
 
 abstract class AbstractRepository implements RepositoryInterface
@@ -182,7 +183,7 @@ abstract class AbstractRepository implements RepositoryInterface
                 $pk = "PRIMARY KEY (id)";
             } else {
                 $isNull = $config['nullable'] ? 'NULL' : 'NOT NULL';
-                $sqlName = $this->propertyToColumn($name);
+                $sqlName = Helper::propertyToColumn($name);
                 $sqlType = $this->returnSqlType($config['type']);
                 $partSql = "{$sqlName} {$sqlType} {$isNull}";
             }
@@ -202,7 +203,7 @@ abstract class AbstractRepository implements RepositoryInterface
             $tableName =  $this->reflectionEntity->getShortName();
             $newName = preg_replace('/entity$/i', '', $tableName);
             $this->entityName = $newName;
-            $tableName = $this->propertyToColumn($newName);
+            $tableName = Helper::propertyToColumn($newName);
             $this->entityTableName = $tableName . 's';
         }
         return $this->entityTableName;
@@ -212,7 +213,7 @@ abstract class AbstractRepository implements RepositoryInterface
     {
         $resultArray = [];
         foreach ($this->relations as $key => $relation) {
-            $name = $this->propertyToColumn($key);
+            $name = Helper::propertyToColumn($key);
             $entity = $relation['relation']->targetEntity;
             $onDelete = strtoupper($relation['relation']->onDelete);
             $onUpdate = strtoupper($relation['relation']->onUpdate);
@@ -335,7 +336,7 @@ abstract class AbstractRepository implements RepositoryInterface
     {
         $newRow = [];
         foreach ($values as $attribute => $value) {
-            $key = $this->columnToProperty($attribute);
+            $key = Helper::columnToProperty($attribute);
             $newValue = $this->checkIncomingValue($key, $value);
             $newRow[$key] = $newValue;
         }
@@ -500,21 +501,6 @@ abstract class AbstractRepository implements RepositoryInterface
         }
 
         return ['id' => $array['id']] + array_diff_key($array, ['id' => null]);
-    }
-
-    // Entity: $firstName
-    // Database: first_name
-    protected function propertyToColumn(string $property): string
-    {
-        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $property));
-    }
-
-    protected function columnToProperty(string $column): string
-    {
-        // user_name → userName
-        // first_name → firstName
-        // id → id 
-        return lcfirst(str_replace('_', '', ucwords($column, '_')));
     }
 
     protected function checkEntity(EntityInterface $entity): void

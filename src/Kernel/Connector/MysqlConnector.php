@@ -38,6 +38,11 @@ class MySQLConnector implements ConnectorInterface
         return $this->pdo;
     }
 
+    public function supportsTransactionalDDL(): bool
+    {
+        return false;
+    }
+
     public function startTransac(): void
     {
         $this->pdo->beginTransaction();
