@@ -103,6 +103,11 @@ class MySQLConnector implements ConnectorInterface
         }
     }
 
+    public function getCreateDatabaseQuery(string $name): string
+    {
+        return "CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;";
+    }
+
     public static function resetInstance(): void
     {
         self::$instance = null;
