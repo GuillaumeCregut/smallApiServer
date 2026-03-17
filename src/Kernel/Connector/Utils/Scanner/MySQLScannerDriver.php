@@ -77,7 +77,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
  
         $result = [];
         foreach ($rows as $row) {
-            $row     = array_change_key_case($row, CASE_LOWER);
+            $row = array_change_key_case($row, CASE_LOWER);
             $colName = $row['column_name'];
             $result[$colName] = [
                 'type' => 'int',

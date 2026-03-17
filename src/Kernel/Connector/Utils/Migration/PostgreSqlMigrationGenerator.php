@@ -66,7 +66,7 @@ class PostgreSqlMigrationGenerator extends AbstractMigrationGeneratorDriver
     protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string
     {
         $t = $this->wrapIdentifier($table);
-        $c  = $this->wrapIdentifier($colName);
+        $c = $this->wrapIdentifier($colName);
         $fkTable = $this->wrapIdentifier($constraintDef['fk']);
         $refCol = $this->wrapIdentifier('id');
         $constraintName = $this->wrapIdentifier('fk_' . $table . '_' . $colName);

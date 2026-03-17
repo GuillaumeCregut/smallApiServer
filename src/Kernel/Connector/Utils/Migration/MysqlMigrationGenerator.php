@@ -26,20 +26,20 @@ class MysqlMigrationGenerator extends AbstractMigrationGeneratorDriver
             'nullable' => $changes['nullable']['to'] ?? null,
         ];
  
-        $t          = $this->wrapIdentifier($table);
+        $t = $this->wrapIdentifier($table);
         $definition = $this->buildColumnDefinition($colName, $colDef);
         return "ALTER TABLE {$t} MODIFY COLUMN {$definition};";
     }
  
     protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string
     {
-        $t            = $this->wrapIdentifier($table);
-        $c            = $this->wrapIdentifier($colName);
-        $fkTable      = $this->wrapIdentifier($constraintDef['fk']);
-        $refCol       = $this->wrapIdentifier('id');
+        $t = $this->wrapIdentifier($table);
+        $c = $this->wrapIdentifier($colName);
+        $fkTable = $this->wrapIdentifier($constraintDef['fk']);
+        $refCol = $this->wrapIdentifier('id');
         $constraintName = $this->wrapIdentifier('fk_' . $table . '_' . $colName);
-        $onDelete     = $constraintDef['onDelete'] ?? 'RESTRICT';
-        $onUpdate     = $constraintDef['onUpdate'] ?? 'RESTRICT';
+        $onDelete = $constraintDef['onDelete'] ?? 'RESTRICT';
+        $onUpdate = $constraintDef['onUpdate'] ?? 'RESTRICT';
  
         return "ALTER TABLE {$t} ADD CONSTRAINT {$constraintName} "
             . "FOREIGN KEY ({$c}) REFERENCES {$fkTable} ({$refCol}) "
