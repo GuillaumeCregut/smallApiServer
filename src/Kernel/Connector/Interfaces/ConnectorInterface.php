@@ -18,4 +18,5 @@ interface ConnectorInterface
     public function startTransac(): void;
     public function commitTransac(): void;
     public function rollBack(): void;
+    public function supportsTransactionalDDL(): bool;
 }
