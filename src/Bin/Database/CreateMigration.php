@@ -11,6 +11,7 @@ use Exception;
 use App\Security\User;
 use App\Kernel\GetEnvDatas;
 use App\Bin\ConsoleException;
+use App\Kernel\Config\DatabaseConnector;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\Utils\EntityAnalyzer;
 use App\Kernel\Connector\Utils\SchemaComparator;
@@ -23,6 +24,17 @@ use App\Kernel\Connector\Utils\Migration\MigrationGenerator;
 class CreateMigration
 {
     private ConnectorInterface $connector;
+
+    public function __construct()
+    {
+        try {
+            ConnectorDispatcher::setConnector(DatabaseConnector::getConnector());
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            echo "Code : {$e->getCode()}";
+            die();
+        }
+    }
     public function execute(): void
     {
         echo "- gathering Entities informations\n";

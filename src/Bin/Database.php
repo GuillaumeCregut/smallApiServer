@@ -7,8 +7,6 @@
 
 namespace App\Bin;
 
-use App\Kernel\Config\DatabaseConnector;
-use App\Kernel\Connector\ConnectorDispatcher;
 use Exception;
 
 class Database extends AbstractConsole
@@ -38,12 +36,6 @@ class Database extends AbstractConsole
         $this->args = array_slice($this->args, 1);
         array_unshift($this->args, $commands[1]);
         $console = $this->isCommandValid($command, false);
-        try {
-            ConnectorDispatcher::setConnector(DatabaseConnector::getConnector());
-        } catch (Exception $e) {
-            echo $e->getMessage();
-            die();
-        }
         if ($console) {
             $console->execute();
         }
