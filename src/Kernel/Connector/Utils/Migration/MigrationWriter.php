@@ -88,7 +88,6 @@ class MigrationWriter
  */
  
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
-use Exception;
 
 use App\Kernel\Connector\Interfaces\MigrationInterface;
  
