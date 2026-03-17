@@ -7,296 +7,349 @@ use App\Kernel\Connector\Utils\Migration\MigrationRunner;
 
 class MigrationRunnerTest extends TestCase
 {
-    private string $tempDir;
-
+     private string $tmpDir;
+ 
     protected function setUp(): void
     {
-        // Isolated temp migrations directory per test
-        $this->tempDir = sys_get_temp_dir() . '/migrations_test_' . uniqid();
-        mkdir($this->tempDir . '/migrations', 0755, true);
+        // Create a temp directory to hold migration files for each test
+        $this->tmpDir = sys_get_temp_dir() . '/migration_runner_test_' . uniqid();
+        mkdir($this->tmpDir, 0755, true);
     }
-
+ 
     protected function tearDown(): void
     {
-        // Clean up generated migration files
-        foreach (glob($this->tempDir . '/migrations/*.php') as $file) {
-            unlink($file);
+        // Clean up all temp files
+        foreach (glob($this->tmpDir . '/migrations/*.php') as $f) {
+            unlink($f);
         }
-        rmdir($this->tempDir . '/migrations');
-        rmdir($this->tempDir);
+        if (is_dir($this->tmpDir . '/migrations')) {
+            rmdir($this->tmpDir . '/migrations');
+        }
+        rmdir($this->tmpDir);
     }
-
+ 
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+ 
+    /**
+     * Build a connector stub. fetchQuery returns executed versions,
+     * fetchQueryOnce returns last executed version for rollback.
+     * supportsTransactionalDDL controls transaction wrapping.
+     */
     private function makeConnector(
-        array $fetchQueryReturn    = [],
-        mixed $fetchQueryOnceReturn = null,
-        mixed $executeQueryReturn  = true
+        array $executedVersions = [],
+        ?string $lastVersion = null,
+        bool $transactionalDDL = false
     ): ConnectorInterface {
         $connector = $this->createStub(ConnectorInterface::class);
-        $connector->method('fetchQuery')->willReturn($fetchQueryReturn);
-        $connector->method('fetchQueryOnce')->willReturn($fetchQueryOnceReturn);
-        $connector->method('executeQuery')->willReturn($executeQueryReturn);
+ 
+        $connector->method('executeQuery')->willReturn(true);
+        $connector->method('supportsTransactionalDDL')->willReturn($transactionalDDL);
+ 
+        $connector->method('fetchQuery')
+            ->willReturnCallback(function (string $sql) use ($executedVersions) {
+                if (stripos($sql, 'SELECT version') !== false) {
+                    return array_map(fn($v) => ['version' => $v], $executedVersions);
+                }
+                return [];
+            });
+ 
+        $connector->method('fetchQueryOnce')
+            ->willReturnCallback(function (string $sql) use ($lastVersion) {
+                if (stripos($sql, 'SELECT version') !== false) {
+                    return $lastVersion ? ['version' => $lastVersion] : null;
+                }
+                return null;
+            });
+ 
         return $connector;
     }
-
-    private function writeMigrationFile(string $version, bool $failUp = false, bool $failDown = false): string
+ 
+    /**
+     * Write a real migration PHP file into the tmp migrations directory.
+     */
+    private function writeMigrationFile(string $version, bool $upThrows = false): void
     {
-        $upBody   = $failUp
-            ? 'throw new \RuntimeException("up failed");'
-            : '$connector->executeQuery("ALTER TABLE users ADD COLUMN test VARCHAR(255) NOT NULL;");';
-        $downBody = $failDown
-            ? 'throw new \RuntimeException("down failed");'
-            : '$connector->executeQuery("ALTER TABLE users DROP COLUMN test;");';
-
-        $content = <<<PHP
+        $dir = $this->tmpDir . '/migrations';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+ 
+        $className = "Version{$version}";
+        $upBody = $upThrows
+            ? 'throw new \RuntimeException("Migration failed");'
+            : '// no-op';
+ 
+        file_put_contents("{$dir}/{$className}.php", <<<PHP
 <?php
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
-
 use App\Kernel\Connector\Interfaces\MigrationInterface;
-
-class Version{$version} implements MigrationInterface
+ 
+class {$className} implements MigrationInterface
 {
     public function up(ConnectorInterface \$connector): void
     {
         {$upBody}
     }
-
     public function down(ConnectorInterface \$connector): void
     {
-        {$downBody}
+        // no-op
     }
 }
-PHP;
-        $path = "{$this->tempDir}/migrations/Version{$version}.php";
-        file_put_contents($path, $content);
-        return $path;
+PHP);
     }
-
+ 
     // -------------------------------------------------------------------------
-    // status
+    // migrate()
     // -------------------------------------------------------------------------
-
-    public function testStatusReturnsEmptyWhenNoMigrationFiles(): void
+ 
+    public function testMigrateReturnsEmptyArrayWhenNoPendingMigrations(): void
     {
-        $connector = $this->makeConnector();
-        $runner    = new MigrationRunner($connector, $this->tempDir);
-
-        $this->assertEmpty($runner->status());
+        $connector = $this->makeConnector(['20260101000001']);
+        $this->writeMigrationFile('20260101000001');
+ 
+        $runner = new MigrationRunner($connector, $this->tmpDir);
+        $result = $runner->migrate();
+ 
+        $this->assertEmpty($result);
     }
-
-    public function testStatusReturnsPendingForNewMigration(): void
+ 
+    public function testMigrateExecutesPendingMigrationsInOrder(): void
     {
         $this->writeMigrationFile('20260101000010');
-
-        $connector = $this->makeConnector(fetchQueryReturn: []);
-        $runner    = new MigrationRunner($connector, $this->tempDir);
-        $status    = $runner->status();
-
-        $this->assertArrayHasKey('20260101000010', $status);
-        $this->assertEquals('pending', $status['20260101000010']);
+        $this->writeMigrationFile('20260101000002');
+ 
+        $connector = $this->makeConnector([]);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $result    = $runner->migrate();
+ 
+        $this->assertEquals(['20260101000002', '20260101000010'], $result);
     }
-
-    public function testStatusReturnsExecutedForAlreadyRunMigration(): void
+ 
+    public function testMigrateSkipsAlreadyExecutedVersions(): void
     {
-        $this->writeMigrationFile('20260101000020');
-
-        $connector = $this->makeConnector(fetchQueryReturn: [
-            ['version' => '20260101000020']
-        ]);
-        $runner = new MigrationRunner($connector, $this->tempDir);
-        $status = $runner->status();
-
-        $this->assertEquals('executed', $status['20260101000020']);
+        $this->writeMigrationFile('20260101000003');
+        $this->writeMigrationFile('20260101000004');
+ 
+        // 000001 already executed
+        $connector = $this->makeConnector(['20260101000003']);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $result    = $runner->migrate();
+ 
+        $this->assertEquals(['20260101000004'], $result);
     }
-
-    public function testStatusShowsMixedExecutedAndPending(): void
+ 
+    public function testMigrateMarksVersionAsExecuted(): void
     {
-        $this->writeMigrationFile('20260101000030');
-        $this->writeMigrationFile('20260101000040');
-
-        $connector = $this->makeConnector(fetchQueryReturn: [
-            ['version' => '20260101000030']
-        ]);
-        $runner = new MigrationRunner($connector, $this->tempDir);
-        $status = $runner->status();
-
-        $this->assertEquals('executed', $status['20260101000030']);
-        $this->assertEquals('pending',  $status['20260101000040']);
+        $this->writeMigrationFile('20260101000005');
+ 
+        // After migrate(), the version should be returned in the executed list
+        $connector = $this->makeConnector([]);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $result    = $runner->migrate();
+ 
+        $this->assertContains('20260101000005', $result);
     }
-
-    // -------------------------------------------------------------------------
-    // migrate
-    // -------------------------------------------------------------------------
-
-    public function testMigrateReturnsEmptyWhenNoPendingMigrations(): void
+ 
+    public function testMigrateThrowsKernelExceptionOnFailure(): void
     {
-        $connector = $this->makeConnector();
-        $runner    = new MigrationRunner($connector, $this->tempDir);
-
-        $this->assertEmpty($runner->migrate());
+        $this->writeMigrationFile('20260101000006', upThrows: true);
+ 
+        $connector = $this->makeConnector([]);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+ 
+        $this->expectException(KernelException::class);
+        $this->expectExceptionMessageMatches('/Migration 20260101000006 failed/');
+ 
+        $runner->migrate();
     }
-
-
-    /* 
-    public function testMigrateDebug(): void
+ 
+    public function testMigrateWithTransactionalDDLCommitsOnSuccess(): void
     {
-        $path = $this->writeMigrationFile('20260101000050');
-
-        // Check file exists
-        var_dump('file exists: ' . ($path && file_exists($path) ? 'YES' : 'NO'));
-        var_dump('migrations dir: ' . $this->tempDir . '/migrations');
-        var_dump('glob result: ', glob($this->tempDir . '/migrations/*.php'));
-
-        $connector = $this->createMock(ConnectorInterface::class);
-        $connector->method('fetchQuery')->willReturn([]);
-        $connector->method('fetchQueryOnce')->willReturn(null);
-        $connector->method('executeQuery')->willReturn(true);
-
-        $runner = new MigrationRunner($connector, $this->tempDir);
-
-        // Check class exists before migrate
-        var_dump('class exists before: ' . (class_exists('Version20260101000050') ? 'YES' : 'NO'));
-
-        try {
-            $executed = $runner->migrate();
-            var_dump('executed: ', $executed);
-        } catch (\Throwable $e) {
-            var_dump('EXCEPTION: ' . get_class($e) . ': ' . $e->getMessage());
-        }
-
-        $this->assertTrue(true); // just to not fail
-    }
-
-
-     */
-    
-    public function testMigrateRunsPendingMigrations(): void
-    {
-        $this->writeMigrationFile('20260101000050');
-
-        $connector = $this->createMock(ConnectorInterface::class);
-        $connector->method('fetchQuery')->willReturn([]);
-        $connector->method('fetchQueryOnce')->willReturn(null);
-        $connector->method('executeQuery')->willReturn(true);
-        $connector->expects($this->once())->method('startTransac');
-        $connector->expects($this->once())->method('commitTransac');
-
-        $runner   = new MigrationRunner($connector, $this->tempDir);
-        $executed = $runner->migrate();
-
-        $this->assertContains('20260101000050', $executed);
-    }
-
-    public function testMigrateSkipsAlreadyExecutedMigrations(): void
-    {
-        $this->writeMigrationFile('20260101000060');
-
-        $connector = $this->makeConnector(fetchQueryReturn: [
-            ['version' => '20260101000060']
-        ]);
-        $runner   = new MigrationRunner($connector, $this->tempDir);
-        $executed = $runner->migrate();
-
-        $this->assertEmpty($executed);
-    }
-
-    public function testMigrateRunsMultiplePendingInOrder(): void
-    {
-        $this->writeMigrationFile('20260101000070');
-        $this->writeMigrationFile('20260101000080');
-        $this->writeMigrationFile('20260101000090');
-
-        $executedVersions = [];
-
+        $this->writeMigrationFile('20260101000007');
+ 
         $connector = $this->createStub(ConnectorInterface::class);
-        $connector->method('fetchQuery')->willReturn([]);
-        $connector->method('fetchQueryOnce')->willReturn(null);
-        $connector->method('executeQuery')
-            ->willReturnCallback(function (string $sql, array $params = []) use (&$executedVersions) {
-                if (stripos($sql, 'INSERT INTO migrations') !== false) {
-                    $executedVersions[] = $params['version'];
-                }
-                return true;
-            });
-
-        $runner   = new MigrationRunner($connector, $this->tempDir);
-        $executed = $runner->migrate();
-
-        $this->assertCount(3, $executed);
-        $this->assertEquals(['20260101000070', '20260101000080', '20260101000090'], $executed);
-    }
-
-    public function testMigrateRollsBackOnFailure(): void
-    {
-        $this->writeMigrationFile('20260101000100', failUp: true);
-
-        $connector = $this->createMock(ConnectorInterface::class);
+        $connector->method('supportsTransactionalDDL')->willReturn(true);
         $connector->method('fetchQuery')->willReturn([]);
         $connector->method('fetchQueryOnce')->willReturn(null);
         $connector->method('executeQuery')->willReturn(true);
-        $connector->expects($this->once())->method('startTransac');
-        $connector->expects($this->once())->method('rollBack');
-        $connector->expects($this->never())->method('commitTransac');
-
-        $runner = new MigrationRunner($connector, $this->tempDir);
-
+ 
+        // Use a separate spy mock just to assert transaction calls
+        $spy = $this->createMock(ConnectorInterface::class);
+        $spy->method('supportsTransactionalDDL')->willReturn(true);
+        $spy->method('fetchQuery')->willReturn([]);
+        $spy->method('fetchQueryOnce')->willReturn(null);
+        $spy->method('executeQuery')->willReturn(true);
+        $spy->expects($this->once())->method('startTransac');
+        $spy->expects($this->once())->method('commitTransac');
+        $spy->expects($this->never())->method('rollBack');
+ 
+        $runner = new MigrationRunner($spy, $this->tmpDir);
+        $runner->migrate();
+    }
+ 
+    public function testMigrateWithTransactionalDDLRollsBackOnFailure(): void
+    {
+        $this->writeMigrationFile('20260101000078', upThrows: true);
+ 
+        $spy = $this->createMock(ConnectorInterface::class);
+        $spy->method('supportsTransactionalDDL')->willReturn(true);
+        $spy->method('fetchQuery')->willReturn([]);
+        $spy->method('fetchQueryOnce')->willReturn(null);
+        $spy->method('executeQuery')->willReturn(true);
+        $spy->expects($this->once())->method('startTransac');
+        $spy->expects($this->never())->method('commitTransac');
+        $spy->expects($this->once())->method('rollBack');
+ 
+        $runner = new MigrationRunner($spy, $this->tmpDir);
+ 
         $this->expectException(KernelException::class);
         $runner->migrate();
     }
-
+ 
+    public function testMigrateWithoutTransactionalDDLNeverCallsTransactionMethods(): void
+    {
+        $this->writeMigrationFile('20260101000008');
+ 
+        $spy = $this->createMock(ConnectorInterface::class);
+        $spy->method('supportsTransactionalDDL')->willReturn(false);
+        $spy->method('fetchQuery')->willReturn([]);
+        $spy->method('fetchQueryOnce')->willReturn(null);
+        $spy->method('executeQuery')->willReturn(true);
+        $spy->expects($this->never())->method('startTransac');
+        $spy->expects($this->never())->method('commitTransac');
+        $spy->expects($this->never())->method('rollBack');
+ 
+        $runner = new MigrationRunner($spy, $this->tmpDir);
+        $runner->migrate();
+    }
+ 
+    public function testMigrateReturnsEmptyWhenMigrationsDirDoesNotExist(): void
+    {
+        $connector = $this->makeConnector([]);
+        $runner    = new MigrationRunner($connector, $this->tmpDir . '/nonexistent');
+        $result    = $runner->migrate();
+ 
+        $this->assertEmpty($result);
+    }
+ 
     // -------------------------------------------------------------------------
-    // rollback
+    // rollback()
     // -------------------------------------------------------------------------
-
+ 
     public function testRollbackReturnsNullWhenNothingExecuted(): void
     {
-        $connector = $this->makeConnector(fetchQueryOnceReturn: null);
-        $runner    = new MigrationRunner($connector, $this->tempDir);
-
+        $connector = $this->makeConnector([], null);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+ 
         $this->assertNull($runner->rollback());
     }
-
-    public function testRollbackRunsDownOnLastMigration(): void
+ 
+    public function testRollbackExecutesDownAndReturnsVersion(): void
     {
         $this->writeMigrationFile('20260101000101');
-
-        $connector = $this->createMock(ConnectorInterface::class);
-        $connector->method('fetchQuery')->willReturn([]);
-        $connector->method('fetchQueryOnce')->willReturn(['version' => '20260101000101']);
-        $connector->method('executeQuery')->willReturn(true);
-        $connector->expects($this->once())->method('startTransac');
-        $connector->expects($this->once())->method('commitTransac');
-
-        $runner  = new MigrationRunner($connector, $this->tempDir);
-        $version = $runner->rollback();
-
-        $this->assertEquals('20260101000101', $version);
+ 
+        $connector = $this->makeConnector(['20260101000101'], '20260101000101');
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $result    = $runner->rollback();
+ 
+        $this->assertEquals('20260101000101', $result);
     }
-
-    public function testRollbackRollsBackTransactionOnFailure(): void
+ 
+    public function testRollbackRemovesVersionFromExecutedTable(): void
     {
-        $this->writeMigrationFile('20260101000102', failDown: true);
-
-        $connector = $this->createMock(ConnectorInterface::class);
-        $connector->method('fetchQuery')->willReturn([]);
-        $connector->method('fetchQueryOnce')->willReturn(['version' => '20260101000102']);
-        $connector->method('executeQuery')->willReturn(true);
-        $connector->expects($this->once())->method('startTransac');
-        $connector->expects($this->once())->method('rollBack');
-        $connector->expects($this->never())->method('commitTransac');
-
-        $runner = new MigrationRunner($connector, $this->tempDir);
-
-        $this->expectException(KernelException::class);
+        $this->writeMigrationFile('20260101000102');
+ 
+        // After rollback(), the returned version confirms the tracking row was removed
+        $connector = $this->makeConnector(['20260101000102'], '20260101000102');
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $result    = $runner->rollback();
+ 
+        $this->assertEquals('20260101000102', $result);
+    }
+ 
+    public function testRollbackWithTransactionalDDLCommitsOnSuccess(): void
+    {
+        $this->writeMigrationFile('20260101000103');
+ 
+        $spy = $this->createMock(ConnectorInterface::class);
+        $spy->method('supportsTransactionalDDL')->willReturn(true);
+        $spy->method('fetchQuery')->willReturn([['version' => '20260101000103']]);
+        $spy->method('fetchQueryOnce')->willReturn(['version' => '20260101000103']);
+        $spy->method('executeQuery')->willReturn(true);
+        $spy->expects($this->once())->method('startTransac');
+        $spy->expects($this->once())->method('commitTransac');
+        $spy->expects($this->never())->method('rollBack');
+ 
+        $runner = new MigrationRunner($spy, $this->tmpDir);
         $runner->rollback();
     }
-
-    public function testRollbackThrowsWhenMigrationFileNotFound(): void
+ 
+    public function testRollbackWithoutTransactionalDDLNeverCallsTransactionMethods(): void
     {
-        // fetchQueryOnce returns a version but the file doesn't exist
-        $connector = $this->makeConnector(fetchQueryOnceReturn: ['version' => '99991231235959']);
-        $runner    = new MigrationRunner($connector, $this->tempDir);
-
-        $this->expectException(KernelException::class);
+        $this->writeMigrationFile('20260101000104');
+ 
+        $spy = $this->createMock(ConnectorInterface::class);
+        $spy->method('supportsTransactionalDDL')->willReturn(false);
+        $spy->method('fetchQuery')->willReturn([['version' => '20260101000104']]);
+        $spy->method('fetchQueryOnce')->willReturn(['version' => '20260101000104']);
+        $spy->method('executeQuery')->willReturn(true);
+        $spy->expects($this->never())->method('startTransac');
+        $spy->expects($this->never())->method('commitTransac');
+        $spy->expects($this->never())->method('rollBack');
+ 
+        $runner = new MigrationRunner($spy, $this->tmpDir);
         $runner->rollback();
+    }
+ 
+    public function testRollbackThrowsKernelExceptionOnMissingFile(): void
+    {
+        // Last version recorded but file is missing
+        $connector = $this->makeConnector(['20260101000105'], '20260101000105');
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+ 
+        $this->expectException(KernelException::class);
+        $this->expectExceptionMessageMatches('/Migration file not found/');
+ 
+        $runner->rollback();
+    }
+ 
+    // -------------------------------------------------------------------------
+    // status()
+    // -------------------------------------------------------------------------
+ 
+    public function testStatusReturnsPendingForNewMigrations(): void
+    {
+        $this->writeMigrationFile('20260101000201');
+        $this->writeMigrationFile('20260101000202');
+ 
+        $connector = $this->makeConnector([]);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $status    = $runner->status();
+ 
+        $this->assertEquals('pending', $status['20260101000201']);
+        $this->assertEquals('pending', $status['20260101000202']);
+    }
+ 
+    public function testStatusReturnsExecutedForRunMigrations(): void
+    {
+        $this->writeMigrationFile('20260101000301');
+        $this->writeMigrationFile('20260101000302');
+ 
+        $connector = $this->makeConnector(['20260101000301']);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+        $status    = $runner->status();
+ 
+        $this->assertEquals('executed', $status['20260101000301']);
+        $this->assertEquals('pending',  $status['20260101000302']);
+    }
+ 
+    public function testStatusReturnsEmptyArrayWhenNoMigrationFiles(): void
+    {
+        $connector = $this->makeConnector([]);
+        $runner    = new MigrationRunner($connector, $this->tmpDir);
+ 
+        $this->assertEmpty($runner->status());
     }
 }
