@@ -35,8 +35,8 @@ class MigrationRunner
  
         $executed = [];
         foreach ($pending as $version => $filePath) {
-            $migration     = $this->loadMigration($filePath);
-            $useTransac    = $this->connector->supportsTransactionalDDL();
+            $migration = $this->loadMigration($filePath);
+            $useTransac = $this->connector->supportsTransactionalDDL();
             if ($useTransac) {
                 $this->connector->startTransac();
             }
