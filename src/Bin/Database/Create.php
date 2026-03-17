@@ -15,7 +15,7 @@ class Create extends AbstractConsole
 {
     protected string $spaceName = 'App\\Bin\\Database\\';
     protected string $directory = __DIR__ . DIRECTORY_SEPARATOR . 'Database';
-    protected int $minArgs = 2;
+    protected int $minArgs = 1;
 
     public function __construct(array $args, int $count)
     {
@@ -27,9 +27,10 @@ class Create extends AbstractConsole
 
         List of available commands :
         - create:help - Display this message
-        - create:entity entity - Create a new entity whit name Entity and Repository (ex: create:entity product will create Product entity)
-        - create:migration all - Create migration file, updating database to correspond Entities schema
+        - create:entity entity - Create entity whith name Entity and Repository (ex: create:entity product will create Product entity)
+        - create:migration - Create migration file, updating database to correspond Entities schema
         - create:sql entity - Display Create Table for entity (all for all entities)
+        - create:db - Create Database
 
         TEXT;
         if (($this->minArgs > $count) || ('' === $args[0])) {
@@ -45,19 +46,30 @@ class Create extends AbstractConsole
     public function execute(): void
     {
         $cmd = $this->args[0];
-        $arg = $this->args[1];
+        $arg = $this->args[1] ?? null;
         switch ($cmd) {
             case 'sql':
+                if(null === $arg) {
+                    $this->error('Too few arguments');
+                    return;
+                }
                 $this->sql($arg);
                 break;
             case 'entity':
+                if(null === $arg) {
+                    $this->error('Too few arguments');
+                    return;
+                }
                 $this->entity($arg);
                 break;
             case 'help':
                 $this->help(false);
                 break;
             case 'migration':
-                $this->migration($arg);
+                $this->migration();
+                break;
+            case 'db':
+                $this->db();
                 break;
             default:
                 $this->error("Command {$cmd} does not exist");
@@ -73,7 +85,17 @@ class Create extends AbstractConsole
         die();
     }
 
-    private function migration(string $arg): void
+    private function db(): void
+    {
+        $creator = new CreateDatabase();
+        try {
+            $creator->execute();
+        } catch(ConsoleException $e) {
+             $this->error($e->getMessage(), false);
+        }
+    }
+
+    private function migration(): void
     {
         $creator = new CreateMigration();
         try {

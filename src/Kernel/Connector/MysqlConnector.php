@@ -38,6 +38,11 @@ class MySQLConnector implements ConnectorInterface
         return $this->pdo;
     }
 
+    public static function getDetachedConnector(?array $env = null): ConnectorInterface
+    {
+        return new MySQLConnector($env, true);
+    }
+
     public function supportsTransactionalDDL(): bool
     {
         return false;
@@ -98,12 +103,17 @@ class MySQLConnector implements ConnectorInterface
         }
     }
 
+    public function getCreateDatabaseQuery(string $name): string
+    {
+        return "CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;";
+    }
+
     public static function resetInstance(): void
     {
         self::$instance = null;
     }
 
-    private function __construct($envs)
+    private function __construct($envs, ?bool $detached =false)
     {
         if (
             !array_key_exists('DB_HOST', $envs) ||
@@ -120,20 +130,38 @@ class MySQLConnector implements ConnectorInterface
             'pass' => $envs['DB_PASS'],
             'port' => $envs['DB_PORT'] ?? 3306
         ];
-        $this->connect();
+        if(!$detached){
+            $this->connectWithDB();
+        } else {
+            $this->connectWihtoutDB();
+        }
     }
 
-    private function connect(): void
+    private function connectWihtoutDB(): void
     {
-        $attempt = 0;
-        $lastException = null;
+        $host = $this->credentials['host'];
+        $port = $this->credentials['port'];
+        $charset = 'utf8mb4';
+        $dsn = "mysql:host={$host};port={$port};charset={$charset}";
+        $this->connect($dsn);
+    }
+
+    private function connectWithDB(): void
+    {
         $host = $this->credentials['host'];
         $db = $this->credentials['db'];
-        $user = $this->credentials['user'];
-        $pass = $this->credentials['pass'];
         $port = $this->credentials['port'];
         $charset = 'utf8mb4';
         $dsn = "mysql:host={$host};port={$port};dbname={$db};charset={$charset}";
+        $this->connect($dsn);
+    }
+
+    private function connect(string $dsn): void
+    {
+        $attempt = 0;
+        $lastException = null;
+        $user = $this->credentials['user'];
+        $pass = $this->credentials['pass'];
         $options = [
             \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,

@@ -21,4 +21,11 @@ class DatabaseConnector
         return MySQLConnector::getInstance($env);
     }
 
+    public static function getDetachedConnector(): ConnectorInterface
+    {
+        //Provide DB connexion without using configured database
+        $env = GetEnvDatas::getEnvInstance()->getDdCredentials();
+        return MySQLConnector::getDetachedConnector($env);
+    }
+
 }
