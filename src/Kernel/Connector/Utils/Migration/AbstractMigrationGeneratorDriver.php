@@ -17,12 +17,12 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
      * MySQL uses backticks, PostgreSQL and SQLite use double quotes.
      */
     abstract protected function wrapIdentifier(string $name): string;
-
+ 
     /**
      * Map a generic type (from EntityAnalyzer) to a native SQL type string.
      */
     abstract protected function toSQLType(string $colName, string $genericType): string;
-
+ 
     /**
      * Generate SQL from a SchemaComparator diff.
      */
@@ -32,24 +32,28 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
             'safe'        => [],
             'destructive' => [],
         ];
-
-        // CREATE TABLE
+ 
+        // CREATE TABLE — constraints deferred until all tables exist
+        $deferredConstraints = [];
         foreach ($diff['tables_to_create'] as $table => $columns) {
             $sql['safe'][] = $this->generateCreateTable($table, $columns);
-            // Generate ADD CONSTRAINT for FK columns in new tables
             foreach ($columns as $colName => $colDef) {
                 if (isset($colDef['fk'])) {
-                    $sql['safe'][] = $this->generateAddConstraint($table, $colName, $colDef);
+                    $deferredConstraints[] = $this->generateAddConstraint($table, $colName, $colDef);
                 }
             }
         }
-
+        // Flush deferred constraints now that all new tables exist
+        foreach ($deferredConstraints as $constraint) {
+            $sql['safe'][] = $constraint;
+        }
+ 
         // DROP TABLE — destructive
         foreach ($diff['tables_to_drop'] as $table) {
             $t = $this->wrapIdentifier($table);
             $sql['destructive'][] = "DROP TABLE {$t};";
         }
-
+ 
         // ADD COLUMN
         foreach ($diff['columns_to_add'] as $table => $columns) {
             foreach ($columns as $colName => $colDef) {
@@ -60,7 +64,7 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
                 }
             }
         }
-
+ 
         // DROP COLUMN — destructive
         foreach ($diff['columns_to_drop'] as $table => $columns) {
             foreach ($columns as $colName) {
@@ -69,24 +73,24 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
                 $sql['destructive'][] = "ALTER TABLE {$t} DROP COLUMN {$c};";
             }
         }
-
+ 
         // ALTER COLUMN
         foreach ($diff['columns_to_alter'] as $table => $columns) {
             foreach ($columns as $colName => $changes) {
                 $sql['safe'][] = $this->generateAlterColumn($table, $colName, $changes);
             }
         }
-
+ 
         // ADD FOREIGN KEY CONSTRAINT
         foreach ($diff['constraints_to_add'] ?? [] as $table => $constraints) {
             foreach ($constraints as $colName => $constraintDef) {
                 $sql['safe'][] = $this->generateAddConstraint($table, $colName, $constraintDef);
             }
         }
-
+ 
         return $sql;
     }
-
+ 
     /**
      * Generate a full CREATE TABLE statement.
      */
@@ -94,20 +98,20 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
     {
         $t = $this->wrapIdentifier($table);
         $lines = [];
-
+ 
         foreach ($columns as $colName => $colDef) {
             $lines[] = '    ' . $this->buildColumnDefinition($colName, $colDef);
         }
-
+ 
         if (array_key_exists('id', $columns)) {
             $id = $this->wrapIdentifier('id');
             $lines[] = "    PRIMARY KEY ({$id})";
         }
-
+ 
         $body = implode(",\n", $lines);
         return "CREATE TABLE {$t} (\n{$body}\n);";
     }
-
+ 
     /**
      * Generate an ALTER TABLE ... ADD COLUMN statement.
      */
@@ -117,13 +121,13 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
         $definition = $this->buildColumnDefinition($colName, $colDef);
         return "ALTER TABLE {$t} ADD COLUMN {$definition};";
     }
-
+ 
     /**
      * Generate an ALTER COLUMN statement.
      * Delegated to each driver as syntax differs significantly.
      */
     abstract protected function generateAlterColumn(string $table, string $colName, array $changes): string;
-
+ 
     /**
      * Build a single column definition string.
      */
@@ -131,23 +135,23 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
     {
         $type = $colDef['type']     ?? 'string';
         $nullable = $colDef['nullable'] ?? false;
-
+ 
         $c = $this->wrapIdentifier($colName);
         $sqlType  = $this->toSQLType($colName, $type);
         $nullPart = $nullable ? 'NULL' : 'NOT NULL';
-
+ 
         if ($colName === 'id' && $type === 'int') {
             return "{$c} {$sqlType} NOT NULL " . $this->autoIncrementKeyword();
         }
-
+ 
         return "{$c} {$sqlType} {$nullPart}";
     }
-
+ 
     /**
      * Generate an ALTER TABLE ... ADD CONSTRAINT FOREIGN KEY statement.
      */
     abstract protected function generateAddConstraint(string $table, string $colName, array $constraintDef): string;
-
+ 
     /**
      * Keyword used for auto-increment columns.
      * Overridden per driver.
