@@ -7,8 +7,6 @@
 
 namespace App\Kernel\Connector\Utils\Scanner;
 
-use Exception;
-use App\Kernel\Connector\Interfaces\ConnectorInterface;
 
 class PostGreScannerDriver extends AbstractScannerDriver
 {
@@ -23,8 +21,8 @@ class PostGreScannerDriver extends AbstractScannerDriver
             WHERE schemaname = :schema
             ORDER BY tablename
         ", ['schema' => $this->schemaName]);
- 
-        return array_map(fn($row) => $row['tablename'], $rows);
+         $all = array_map(fn($row) => reset($row), $rows);
+        return array_values(array_diff($all,$this->excludedTables));
     }
  
     /**
