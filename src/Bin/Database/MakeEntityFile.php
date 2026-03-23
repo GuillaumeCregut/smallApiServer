@@ -71,7 +71,7 @@ class MakeEntityFile
         $propertyTypeKey = $property['type'];
         if (array_key_exists($propertyTypeKey, $this->types)) {
             $propertyType = $this->types[$propertyTypeKey];
-            if('fl' === $propertyTypeKey) {
+            if ('fl' === $propertyTypeKey) {
                 $this->uses['File'] = "use App\\Kernel\\Files\\FileUpload;\n";
             }
         } else {
@@ -86,6 +86,26 @@ class MakeEntityFile
         if ('o' === $relationType) {
             $this->makeRelationGettersSetters($propertyName, $propertyType, $foreignClass);
         }
+        if ('a' === $relationType) {
+            $this->makeManyToManyGettersSetters($propertyName, $foreignClass);
+        }
+    }
+
+    private function makeManyToManyGettersSetters(string $propertyName,string $targetEntity): void
+    {
+        $addName = 'add' . ucfirst($propertyName);
+        $this->gettersSetters .= "    public function {$addName}({$targetEntity} \${$propertyName}): self\n";
+        $this->gettersSetters .= "    {\n";
+        $this->gettersSetters .= "        \$this->addToManyToMany('{$propertyName}',\${$propertyName});\n";
+        $this->gettersSetters .= "        return \$this;\n";
+        $this->gettersSetters .= "    }\n\n";
+
+        $removeName = 'remove' . ucfirst($propertyName);
+        $this->gettersSetters .= "    public function {$removeName}({$targetEntity} \${$propertyName}): self\n";
+        $this->gettersSetters .= "    {\n";
+        $this->gettersSetters .= "        \$this->removeFromManyToMany('{$propertyName}',\${$propertyName});\n";
+        $this->gettersSetters .= "        return \$this;\n";
+        $this->gettersSetters .= "    }\n\n";
     }
 
     private function makeTemplate(string $entityName): string
@@ -161,6 +181,17 @@ PHP;
     {
         $newPropertyType = '';
         switch ($relationType) {
+            case 'a':
+                $this->uses['ManyToMany'] = "use App\\Kernel\\Connector\\Attributes\\ManyToMany;\n";
+                $this->uses['LazyBag'] = "use App\\Kernel\\Connector\\Datas\\LazyBag;\n";
+                $newPropertyType = 'LazyBag';
+                $target = $relation['foreign'];
+                $pivotTable = $relation['pivotTable'];
+                $inversedBy = $relation['inversedBy'];
+                $ownerCol = $relation['ownerCol'];
+                $targetCol = $relation['targetCol'];
+                $this->properties .= "    #[ManyToMany(targetEntity: {$target}::class, inversedBy: '{$inversedBy}', targetColumn: '{$targetCol}', pivotTable: '{$pivotTable}',  ownerColumn: '{$ownerCol}')]\n";
+                break;
             case 'm':
                 $this->uses['ManyToOne'] = "use App\\Kernel\\Connector\\Attributes\\ManyToOne;\n";
                 $target = $relation['foreign'];
