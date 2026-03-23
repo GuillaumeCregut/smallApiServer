@@ -78,6 +78,24 @@ class PostgreSqlMigrationGenerator extends AbstractMigrationGeneratorDriver
             . "ON DELETE {$onDelete} ON UPDATE {$onUpdate};";
     }
 
+    protected function generateCreatePivotTable(array $pivot): string
+    {
+        $t           = $this->wrapIdentifier($pivot['pivotTable']);
+        $ownerCol    = $this->wrapIdentifier($pivot['ownerCol']);
+        $targetCol   = $this->wrapIdentifier($pivot['targetCol']);
+        $ownerTable  = $this->wrapIdentifier($pivot['ownerTable']);
+        $targetTable = $this->wrapIdentifier($pivot['targetTable']);
+        $refId       = $this->wrapIdentifier('id');
+
+        return "CREATE TABLE {$t} (\n"
+            . "    {$ownerCol} INTEGER NOT NULL,\n"
+            . "    {$targetCol} INTEGER NOT NULL,\n"
+            . "    PRIMARY KEY ({$ownerCol}, {$targetCol}),\n"
+            . "    FOREIGN KEY ({$ownerCol}) REFERENCES {$ownerTable} ({$refId}) ON DELETE CASCADE,\n"
+            . "    FOREIGN KEY ({$targetCol}) REFERENCES {$targetTable} ({$refId}) ON DELETE CASCADE\n"
+            . ");";
+    }
+
     protected function toSQLType(string $colName, string $genericType): string
     {
         return match ($genericType) {

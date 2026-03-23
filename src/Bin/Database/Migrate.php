@@ -7,13 +7,14 @@
 
 namespace App\Bin\Database;
 
+use Exception;
 use App\Bin\ConsoleHelper;
 use App\Kernel\GetEnvDatas;
 use App\Bin\AbstractConsole;
+use App\Kernel\Config\DatabaseConnector;
+use App\Kernel\Exceptions\KernelException;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\Utils\Migration\MigrationRunner;
-use App\Kernel\Exceptions\KernelException;
-use Exception;
 
 class Migrate extends AbstractConsole
 {
@@ -22,6 +23,13 @@ class Migrate extends AbstractConsole
 
     public function __construct(array $args, int $count)
     {
+        try {
+            ConnectorDispatcher::setConnector(DatabaseConnector::getConnector());
+        } catch (Exception $e) {
+            echo $e->getMessage();
+            echo "Code : {$e->getCode()}";
+            die();
+        }
         $cmd = ConsoleHelper::makeSpecial("command", 'blue', 'reverse');
         $this->helpText = <<<TEXT
 

@@ -78,4 +78,22 @@ class MysqlMigrationGenerator extends AbstractMigrationGeneratorDriver
             default => 'VARCHAR(255)',
         };
     }
+
+    protected function generateCreatePivotTable(array $pivot): string
+    {
+        $t          = $this->wrapIdentifier($pivot['pivotTable']);
+        $ownerCol   = $this->wrapIdentifier($pivot['ownerCol']);
+        $targetCol  = $this->wrapIdentifier($pivot['targetCol']);
+        $ownerTable = $this->wrapIdentifier($pivot['ownerTable']);
+        $targetTable = $this->wrapIdentifier($pivot['targetTable']);
+        $refId      = $this->wrapIdentifier('id');
+
+        return "CREATE TABLE {$t} (\n"
+            . "    {$ownerCol} INT NOT NULL,\n"
+            . "    {$targetCol} INT NOT NULL,\n"
+            . "    PRIMARY KEY ({$ownerCol}, {$targetCol}),\n"
+            . "    FOREIGN KEY ({$ownerCol}) REFERENCES {$ownerTable} ({$refId}) ON DELETE CASCADE,\n"
+            . "    FOREIGN KEY ({$targetCol}) REFERENCES {$targetTable} ({$refId}) ON DELETE CASCADE\n"
+            . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+    }
 }

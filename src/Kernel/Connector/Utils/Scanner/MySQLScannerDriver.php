@@ -8,15 +8,18 @@
 namespace App\Kernel\Connector\Utils\Scanner;
 
 class MySQLScannerDriver extends AbstractScannerDriver
-{    /**
+{
+
+    /**
      * Returns all table names in the current database.
      */
     public function getTables(): array
     {
         $rows = $this->connector->fetchQuery('SHOW TABLES');
-        return array_map(fn($row) => reset($row), $rows);
+        $all = array_map(fn($row) => reset($row), $rows);
+        return array_values(array_diff($all,$this->excludedTables));
     }
- 
+
     /**
      * Returns columns normalized to flat shape:
      * [
@@ -33,7 +36,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
             AND   table_schema = :schema
             ORDER BY ordinal_position
         ", ['table' => $table, 'schema' => $this->schemaName]);
- 
+
         $result = [];
         foreach ($rows as $row) {
             $row  = array_change_key_case($row, CASE_LOWER);
@@ -45,7 +48,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
         }
         return $result;
     }
- 
+
     /**
      * Returns foreign keys normalized to flat shape:
      * [
@@ -74,7 +77,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
             AND   kcu.table_schema          = :schema
             AND   kcu.referenced_table_name IS NOT NULL
         ", ['table' => $table, 'schema' => $this->schemaName]);
- 
+
         $result = [];
         foreach ($rows as $row) {
             $row = array_change_key_case($row, CASE_LOWER);
@@ -88,7 +91,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
         }
         return $result;
     }
- 
+
     /**
      * Returns primary key column names for a given table.
      */
@@ -102,13 +105,13 @@ class MySQLScannerDriver extends AbstractScannerDriver
             AND   constraint_name = 'PRIMARY'
             ORDER BY ordinal_position
         ", ['table' => $table, 'schema' => $this->schemaName]);
- 
+
         return array_map(function ($row) {
             $row = array_change_key_case($row, CASE_LOWER);
             return $row['column_name'];
         }, $rows);
     }
- 
+
     /**
      * Returns indexes for a given table (excluding PRIMARY).
      */
@@ -122,7 +125,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
             AND   index_name  != 'PRIMARY'
             ORDER BY index_name, seq_in_index
         ", ['table' => $table, 'schema' => $this->schemaName]);
- 
+
         $result = [];
         foreach ($rows as $row) {
             $row = array_change_key_case($row, CASE_LOWER);
@@ -137,7 +140,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
         }
         return $result;
     }
- 
+
     /**
      * Full scan: returns complete schema with flat normalized column shape.
      * FK columns override basic column entries, merging nullable from getColumns().
@@ -148,13 +151,13 @@ class MySQLScannerDriver extends AbstractScannerDriver
         foreach ($this->getTables() as $table) {
             $columns = $this->getColumns($table);
             $foreignKeys = $this->getForeignKeys($table);
- 
+
             foreach ($foreignKeys as $colName => $fkInfo) {
                 $columns[$colName] = array_merge($fkInfo, [
                     'nullable' => $columns[$colName]['nullable'] ?? false,
                 ]);
             }
- 
+
             $schema[$table] = [
                 'columns' => $columns,
                 'primary_keys' => $this->getPrimaryKeys($table),
@@ -163,7 +166,7 @@ class MySQLScannerDriver extends AbstractScannerDriver
         }
         return $schema;
     }
- 
+
     protected function normalizeType(string $dataType, string $columnType = ''): string
     {
         if (strtolower($dataType) === 'tinyint' && str_contains($columnType, '(1)')) {

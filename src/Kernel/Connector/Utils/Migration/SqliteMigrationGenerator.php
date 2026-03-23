@@ -13,12 +13,30 @@ class SqliteMigrationGenerator extends AbstractMigrationGeneratorDriver
     {
         return "\"{$name}\"";
     }
- 
+
     protected function autoIncrementKeyword(): string
     {
         return 'AUTOINCREMENT';
     }
- 
+
+    protected function generateCreatePivotTable(array $pivot): string
+    {
+        $t           = $this->wrapIdentifier($pivot['pivotTable']);
+        $ownerCol    = $this->wrapIdentifier($pivot['ownerCol']);
+        $targetCol   = $this->wrapIdentifier($pivot['targetCol']);
+        $ownerTable  = $this->wrapIdentifier($pivot['ownerTable']);
+        $targetTable = $this->wrapIdentifier($pivot['targetTable']);
+        $refId       = $this->wrapIdentifier('id');
+
+        return "CREATE TABLE {$t} (\n"
+            . "    {$ownerCol} INTEGER NOT NULL,\n"
+            . "    {$targetCol} INTEGER NOT NULL,\n"
+            . "    PRIMARY KEY ({$ownerCol}, {$targetCol}),\n"
+            . "    FOREIGN KEY ({$ownerCol}) REFERENCES {$ownerTable} ({$refId}) ON DELETE CASCADE,\n"
+            . "    FOREIGN KEY ({$targetCol}) REFERENCES {$targetTable} ({$refId}) ON DELETE CASCADE\n"
+            . ");";
+    }
+
     /**
      * SQLite does NOT support ALTER COLUMN or MODIFY COLUMN.
      * The only way to change a column is to recreate the table.
@@ -34,7 +52,7 @@ class SqliteMigrationGenerator extends AbstractMigrationGeneratorDriver
             "-- To apply: recreate the table with the new schema and copy the data.",
         ]);
     }
- 
+
     /**
      * SQLite does NOT support ADD CONSTRAINT / FOREIGN KEY via ALTER TABLE.
      * Foreign keys must be defined at CREATE TABLE time.
@@ -50,7 +68,7 @@ class SqliteMigrationGenerator extends AbstractMigrationGeneratorDriver
             "-- To apply: recreate the table with the FK defined inline in CREATE TABLE.",
         ]);
     }
- 
+
     protected function toSQLType(string $colName, string $genericType): string
     {
         return match ($genericType) {

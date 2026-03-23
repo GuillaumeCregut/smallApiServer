@@ -21,9 +21,12 @@ class EntityAnalyzerAllTest extends TestCase
 
     public function testReturnsEmptyArrayWhenNoClassesFound(): void
     {
-        // Empty dir, no files
+        $expect =[
+            'properties'=>[],
+            'manyToMany'=>[]
+        ];
         $result = EntityAnalyzer::getAllEntitiesProperties($this->tempPath);
-        $this->assertSame([], $result);
+        $this->assertSame($expect, $result);
     }
 
     public function testThrowsExceptionIfPathDoesNotExist(): void
@@ -47,9 +50,11 @@ class EntityAnalyzerAllTest extends TestCase
         ');
 
         $result = EntityAnalyzer::getAllEntitiesProperties($this->tempPath);
-
-        $this->assertArrayHasKey('zigouigouis', $result); // assuming propertyToColumn lowercases
-        $this->assertArrayNotHasKey('zigouigoui_entities', $result);
+        $this->assertArrayHasKey('properties', $result);
+        $this->assertArrayHasKey('zigouigouis', $result['properties']); 
+        $this->assertArrayNotHasKey('zigouigoui_entities', $result['properties']);
+        $this->assertIsArray($result['manyToMany']);
+        $this->assertCount(0, $result['manyToMany']);
     }
 
     public function testKeepsClassNameIfNoEntitySuffix(): void
@@ -66,6 +71,35 @@ class EntityAnalyzerAllTest extends TestCase
         ');
 
         $result = EntityAnalyzer::getAllEntitiesProperties($this->tempPath);
-        $this->assertArrayHasKey('products', $result);
+        $this->assertArrayHasKey('products', $result['properties']);
+    }
+
+    public function testClassWithManyToManyHasManyToMany(): void
+    {
+        file_put_contents($this->tempPath . 'Course.php', '<?php
+            namespace App\Entity;
+            use App\Kernel\Connector\Interfaces\EntityInterface;
+            use App\Kernel\Connector\Attributes\ManyToMany;
+            use App\Kernel\Connector\Datas\LazyBag;
+            final class Course implements EntityInterface {
+                public string $name;
+                #[ManyToMany(targetEntity: EntityOwnerManyToMany::class, mappedBy: "EntitiesInversed", targetColumn: "entity1_id",  ownerColumn: "entity2_id", pivotTable: "entity1_entity2" )]
+                private ?LazyBag $entities= null;
+
+                public function getId(): int{return 0;}
+                public function setId(int $id): self{return $this;}
+                public static function getRepository(): string{return "";}
+            }
+        ');
+
+        $result = EntityAnalyzer::getAllEntitiesProperties($this->tempPath);
+        $properties = $result['properties'];
+        $this->assertArrayHasKey('courses', $properties);
+        $this->assertArrayHasKey('name',$properties['courses']);
+        $relations = $result['manyToMany'];
+        $this->assertArrayHasKey('courses', $relations);
+        $this->assertArrayHasKey('entities',$relations['courses']);
+        $entityRelation = $relations['courses']['entities'];
+        $this->assertArrayHasKey('tableName',$entityRelation);
     }
 }

@@ -33,8 +33,8 @@ class SQLiteScannerDriver extends AbstractScannerDriver
             AND   name NOT LIKE 'sqlite_%'
             ORDER BY name
         ");
-
-        return array_map(fn($row) => $row['name'], $rows);
+        $all = array_map(fn($row) => reset($row), $rows);
+        return array_values(array_diff($all,$this->excludedTables));
     }
 
     /**

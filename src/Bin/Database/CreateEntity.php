@@ -11,8 +11,9 @@ use Exception;
 use App\Bin\ConsoleHelper;
 use App\Kernel\GetEnvDatas;
 use App\Bin\ConsoleException;
+use App\Kernel\Connector\Utils\Helper;
 use App\Kernel\Connector\Interfaces\EntityInterface;
-
+use App\Kernel\Connector\Management\PivotTableManager;
 
 class CreateEntity
 {
@@ -28,11 +29,12 @@ class CreateEntity
         'b' => 'bool',
         'a' => 'array',
         'r' => 'relation',
-        'fl' =>'FileUpload'
+        'fl' => 'FileUpload'
     ];
     private array $relations = [
         'm' => 'Many to One (this entity store field for relation)',
         'o' => 'One to Many (this entity does not store field for relation)',
+        'a' => 'Many To Many (This entity should have many other entity, Other entity should have many of this entity.) This is owner side.'
     ];
     private array $restrictions = [
         'c' => 'cascade',
@@ -43,6 +45,7 @@ class CreateEntity
     private array $entityToStore = [];
     private array $foreignEntities = [];
     private string $entityClassName = '';
+    private string $entityShortName = '';
 
     public function __construct()
     {
@@ -109,7 +112,7 @@ class CreateEntity
             if ('o' === $relationType) {
                 $formattedType = 'LazyBag';
             }
-            if('m' === $relationType) {
+            if ('m' === $relationType) {
                 $formattedType = $relation['foreign'];
             }
             $saved = $this->writeFile($this->entityClassName, $name,  $formattedType, $formattedValues['uses'], $formattedValues['attributes'], $relationType,  $relationName);
@@ -143,7 +146,7 @@ class CreateEntity
      * @param array $relation
      * @return array
      */
-    private function formatUpdate(array $property, array $relation): array
+    private function formatUpdate(array $property, array $relation, bool $isForeign = false): array
     {
         $returnArray = [
             'type' => '',
@@ -157,14 +160,14 @@ class CreateEntity
             if (empty($relation)) {
                 throw new Exception('Error with entity in formatUpdate. No relation found');
             }
-            if ('o' === $relation['type']) {
+            if ('o' === $relation['type'] || 'a' === $relation['type']) {
                 $type = 'LazyBag';
             } else {
                 $type = $relation['foreign'];
             }
         } else {
             $type = $this->types[$propertyType];
-            if('fl' === $propertyType) {
+            if ('fl' === $propertyType) {
                 $uses[] = 'App\\Kernel\\Files\\FileUpload';
             }
         }
@@ -181,6 +184,23 @@ class CreateEntity
         if (!empty($relation)) {
             $relationType = $relation['type'];
             switch ($relationType) {
+                case 'a': //manytomany
+                    $uses[] = 'App\\Kernel\\Connector\\Attributes\\ManyToMany';
+                    $uses[] = 'App\\Kernel\\Connector\\Datas\\LazyBag';
+                    $target = $relation['foreign'];
+                    $field = $relation['field'];
+                    $pivot = $relation['pivotTable'];
+                    if ($isForeign) {
+                        $targetCol = $relation['ownerCol'];
+                        $ownerCol = $relation['targetCol'];
+                        $verb = 'mappedBy';
+                    } else {
+                        $targetCol = $relation['targetCol'];
+                        $ownerCol = $relation['ownerCol'];
+                        $verb = 'inversedBy';
+                    }
+                    $attributes[] = "#[ManyToMany(targetEntity: {$target}::class, {$verb}: '{$field}', targetColumn: '{$targetCol}', ownerColumn: '{$ownerCol}', pivotTable: '{$pivot}')]";
+                    break;
                 case 'm':
                     $uses[] = 'App\\Kernel\\Connector\\Attributes\\ManyToOne';
                     $target = $relation['foreign'];
@@ -285,7 +305,7 @@ class CreateEntity
                 $relationName = $relations['foreign'];
                 $relationType = $relations['type'];
             }
-            $formattedValues = $this->formatUpdate($properties, $relations);
+            $formattedValues = $this->formatUpdate($properties, $relations, true);
             $saved = $this->writeFile($entityName, $property, $formattedValues['type'], $formattedValues['uses'], $formattedValues['attributes'], $relationType, $relationName);
             if ($saved) {
                 $ok = ConsoleHelper::makeSpecial("Property {$property} in {$entityName} create successfully...", 'green', 'reset');
@@ -339,12 +359,12 @@ class CreateEntity
         } while ($propertyExists);
         $propertyType = $this->askPropertyType();
         if ('r' === $propertyType) {
-            $relation = $this->makeRelation();
+            $relation = $this->makeRelation($propertyName);
         } else {
             $storeProperty = $this->askYesNo('Is property stored in DB ? (y/n)');
         }
         if ($storeProperty) {
-            $nullProperty = $this->askYesNo('Is property nullable ? (y/n)');
+            $nullProperty = $this->askYesNo('Is property nullable ? (unused in ManyToMany) (y/n)');
         }
 
         $property = [
@@ -389,7 +409,12 @@ class CreateEntity
             'foreign' => '',
             'field' => '',
             'update' => '',
-            'delete' => ''
+            'delete' => '',
+            'pivotTable' => '',
+            'mappedBy' => '',
+            'inversedBy' => '',
+            'targetCol' => '',
+            'ownerCol' => ''
         ];
         $typeRelation = $relation['type'];
         switch ($typeRelation) {
@@ -405,6 +430,15 @@ class CreateEntity
                 $foreignRelation['update'] = $relation['update'];
                 $foreignRelation['delete'] = $relation['delete'];
                 $foreignProperty['foreign'] = 'LazyBag';
+                break;
+            case 'a':
+                $foreignRelation['type'] = 'a';
+                $foreignProperty['foreign'] = 'LazyBag';
+                $foreignRelation['pivotTable'] = $relation['pivotTable'];
+                $foreignRelation['mappedBy'] = $relation['mappedBy']; //Cette Entité
+                $foreignRelation['ownerCol'] = $relation['ownerCol'];
+                $foreignRelation['targetCol'] = $relation['targetCol'];
+                break;
         }
         $foreignRelation['foreign'] = $this->entityClassName;
         $foreignRelation['field'] = $property;
@@ -418,7 +452,7 @@ class CreateEntity
      *
      * @return array
      */
-    private function makeRelation(): array
+    private function makeRelation(string $locaProperty): array
     {
         $returnArray = [];
         $question = "type of relation : \n";
@@ -433,8 +467,10 @@ class CreateEntity
         //related entity
         $question = "Name of related Entity : \n";
         $foreignExists = false;
+        $relationShortName = '';
         do {
             $relation = ucfirst(ConsoleHelper::ask($question));
+            $relationShortName = $relation;
             if (!str_ends_with($relation, 'Entity')) {
                 $relation = "{$relation}Entity";
             }
@@ -459,9 +495,26 @@ class CreateEntity
             }
         } while ($foreignPropertyExists);
         $returnArray['field'] =  $foreignField;
-        $returnArray['update'] = $this->makeConstraint("Constraints on Update ?\n");
-        $returnArray['delete'] = $this->makeConstraint("Constraints on Delete'\n");
+        if ('a' !== $relationType) {
+            $returnArray['update'] = $this->makeConstraint("Constraints on Update ?\n");
+            $returnArray['delete'] = $this->makeConstraint("Constraints on Delete'\n");
+        } else {
+            $pivotTable = $this->makeManyToMany($relationShortName);
+            $returnArray['pivotTable'] = $pivotTable;
+            $returnArray['mappedBy'] = $locaProperty;
+            $returnArray['inversedBy'] = $foreignField;
+            $returnArray['ownerCol'] = $this->entityShortName . '_id';
+            $returnArray['targetCol'] = $relationShortName . '_id';
+        }
         return $returnArray;
+    }
+
+    private function makeManyToMany(string $foreignEntity): string
+    {
+        $ownerTable = Helper::columnToProperty($this->entityShortName) . 's';
+        $foreignTable = Helper::columnToProperty($foreignEntity) . 's';
+        $pivotTable = PivotTableManager::getTableName($ownerTable, $foreignTable, null);
+        return  $pivotTable;
     }
 
     /**
@@ -538,6 +591,7 @@ class CreateEntity
             throw new ConsoleException("{$name} is not a valid name");
         }
         $entityName = ucfirst($name);
+        $this->entityShortName = $entityName;
         $this->entityClassName = $entityName;
         if (!str_ends_with($name, 'Entity')) {
             $entityName = "{$name}Entity";

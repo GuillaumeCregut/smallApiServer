@@ -1,16 +1,16 @@
 <?php
 
-use App\Kernel\Connector\Attributes\ManyToOne;
-use App\Kernel\Connector\Attributes\NotStored;
-use App\Kernel\Connector\Attributes\Nullable;
-use App\Kernel\Connector\Attributes\OneToMany;
-use App\Kernel\Connector\Interfaces\EntityInterface;
-use App\Kernel\Connector\Utils\EntityAnalyzer;
-use App\Kernel\Files\FileUpload;
 use App\Security\User;
 use PHPUnit\Framework\TestCase;
-
-use function PHPUnit\Framework\once;
+use App\Kernel\Files\FileUpload;
+use App\Kernel\Connector\Datas\LazyBag;
+use App\Kernel\Connector\Attributes\Nullable;
+use App\Kernel\Connector\Attributes\ManyToOne;
+use App\Kernel\Connector\Attributes\NotStored;
+use App\Kernel\Connector\Attributes\OneToMany;
+use App\Kernel\Connector\Utils\EntityAnalyzer;
+use App\Kernel\Connector\Attributes\ManyToMany;
+use App\Kernel\Connector\Interfaces\EntityInterface;
 
 class EntityAnalyserTest extends TestCase
 {
@@ -26,11 +26,23 @@ class EntityAnalyserTest extends TestCase
         EntityAnalyzer::getStoredProperties('FooBarBaz');
     }
 
+    public function testWillThrowExceptionsOnNonExistingClassManyToMany(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        EntityAnalyzer::getManyToManyRelations('FooBarBaz');
+    }
+
 
     public function testWillThrowExceptionOnNonEntityInterface(): void
     {
         $this->expectException(InvalidArgumentException::class);
         EntityAnalyzer::getStoredProperties(TestCase::class);
+    }
+
+    public function testWillThrowExceptionOnNonEntityInterfaceManyToMany(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        EntityAnalyzer::getManyToManyRelations(TestCase::class);
     }
 
     public function testWillReturnStoredPropertyWithAll(): void
@@ -311,8 +323,8 @@ class EntityAnalyserTest extends TestCase
                 'type' => 'int',
                 'relation' => []
             ],
-           
-           'related_item' => [
+
+            'related_item' => [
                 'nullable' => false,
                 'type' => 'relation',
                 'relation' => [
@@ -339,11 +351,91 @@ class EntityAnalyserTest extends TestCase
         $result = EntityAnalyzer::getStoredProperties(EntityAnalyzeWithOneToMany::class);
         $this->assertSame($expect, $result);
     }
+
+    public function testGetAllInformationOntable(): void
+    {
+        $expect = [
+            'entitiesInversed' => [
+                'tableName' => 'entity1_entity2',
+                'colOwner' => 'entity1_id',
+                'colTarget' => 'entity2_id',
+                'tableOwner' => 'EntityOwnerManyToMany',
+                'tableTarget' => 'EntityInversedManyToMany',
+            ]
+        ];
+        $result = EntityAnalyzer::getManyToManyRelations(EntityOwnerManyToMany::class);
+        $this->assertSame($expect, $result);
+    }
+
+    public function testReverseGetInformations(): void
+    {
+        $expect = [
+            'entityOwner' => [
+                'tableName' => 'entity1_entity2',
+                'colOwner' => 'entity2_id',
+                'colTarget' => 'entity1_id',
+                'tableOwner' => 'EntityInversedManyToMany',
+                'tableTarget' => 'EntityOwnerManyToMany',
+            ]
+        ];
+        $result = EntityAnalyzer::getManyToManyRelations(EntityInversedManyToMany::class);
+        $this->assertSame($expect, $result);
+    }
+
+    public function testGetAllTranslatedOwner(): void
+    {
+        $expect = [
+            'entities_inversed' => [
+                'tableName' => 'entity1_entity2',
+                'colOwner' => 'entity1_id',
+                'colTarget' => 'entity2_id',
+                'tableOwner' => 'entity_owner_many_to_manys',
+                'tableTarget' => 'entity_inversed_many_to_manys',
+            ]
+        ];
+        $result = EntityAnalyzer::getManyToManyRelations(EntityOwnerManyToMany::class, true);
+        $this->assertSame($expect, $result);
+    }
+
+    public function testReverseGetInformationsTranslated(): void
+    {
+        $expect = [
+            'entity_owner' => [
+                'tableName' => 'entity1_entity2',
+                'colOwner' => 'entity2_id',
+                'colTarget' => 'entity1_id',
+                'tableOwner' => 'entity_inversed_many_to_manys',
+                'tableTarget' => 'entity_owner_many_to_manys',
+            ]
+        ];
+        $result = EntityAnalyzer::getManyToManyRelations(EntityInversedManyToMany::class, true);
+        $this->assertSame($expect, $result);
+    }
+
+    public function testWithNoManyToManyRelationWillReturnEmpty(): void
+    {
+        $result = EntityAnalyzer::getManyToManyRelations(EntityWithRelationInFrameWork::class);
+        $this->assertIsArray($result);
+        $this->assertCount(0, $result);
+    }
+
+    public function testManyToManyDoesNotAppearInStoredProperties(): void
+    {
+        $expect = [
+            'id' => [
+                'nullable' => false,
+                'type' => 'int',
+                'relation' => []
+            ],
+        ];
+        $result = EntityAnalyzer::getStoredProperties(EntityOwnerManyToMany::class);
+        $this->assertSame($expect, $result);
+    }
 }
 
 final class EntityWithRelationInFrameWork implements EntityInterface
 {
-     private ?int $id = null;
+    private ?int $id = null;
     #[ManyToOne(inversedBy: 'field', targetEntity: EntityAnlyzeWithStoredProps::class, onDelete: 'CASCADE', onUpdate: 'RESTRICT')]
     private ?User $relatedItem = null;
 
@@ -612,6 +704,62 @@ final class EntityAnlyzeWithManyProps implements EntityInterface
         return $this;
     }
 
+    public static function getRepository(): ?string
+    {
+        return '';
+    }
+}
+
+final class EntityOwnerManyToMany implements EntityInterface
+{
+    private ?int $id = null;
+
+    #[ManyToMany(
+        inversedBy: 'entitiesOwner',
+        targetEntity: EntityInversedManyToMany::class,
+        targetColumn: 'entity2_id',
+        ownerColumn: 'entity1_id',
+        pivotTable: 'entity1_entity2'
+    )]
+    private ?LazyBag $entitiesInversed = null;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
+    public static function getRepository(): ?string
+    {
+        return '';
+    }
+}
+
+final class EntityInversedManyToMany implements EntityInterface
+{
+    private ?int $id = null;
+
+    #[ManyToMany(
+        targetEntity: EntityOwnerManyToMany::class,
+        mappedBy: 'EntitiesInversed',
+        targetColumn: 'entity1_id',
+        ownerColumn: 'entity2_id',
+        pivotTable: 'entity1_entity2'
+    )]
+    private ?LazyBag $entityOwner = null;
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+    public function setId(int $id): self
+    {
+        $this->id = $id;
+        return $this;
+    }
     public static function getRepository(): ?string
     {
         return '';

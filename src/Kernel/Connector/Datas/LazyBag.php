@@ -9,7 +9,6 @@ namespace App\Kernel\Connector\Datas;
 
 use Closure;
 use Traversable;
-use ArrayIterator;
 use App\Kernel\Connector\Datas\Bag;
 use App\Kernel\Connector\Interfaces\BagInterface;
 
@@ -17,6 +16,7 @@ final class LazyBag extends Bag
 {
 
     private bool $initialized = false;
+    private bool $dirty = false;
     private Closure $loader;
 
     public function __construct(Closure $loader)
@@ -38,6 +38,11 @@ final class LazyBag extends Bag
         return $this->initialized;
     }
 
+    public function isDirty(): bool
+    {
+        return $this->dirty;
+    }
+
     public function get(int $index): mixed
     {
         $this->initialize();
@@ -47,12 +52,14 @@ final class LazyBag extends Bag
     public function add(mixed $element): self
     {
         $this->initialize();
+        $this->dirty = true;
         return parent::add($element);
     }
 
     public function remove(mixed $element): bool
     {
         $this->initialize();
+        $this->dirty = true;
         return parent::remove($element);
     }
 
@@ -106,8 +113,25 @@ final class LazyBag extends Bag
         $this->initialized = true;
     }
 
+    public function removeWithoutInitializing(mixed $element): void
+    {
+        $this->dirty = true;
+        if (!$this->initialized) {
+            $previousLoader = $this->loader;
+            $this->loader = function () use ($previousLoader, $element): array {
+                $items = ($previousLoader)();
+                return array_values(
+                    array_filter($items, fn($e) => $e !== $element)
+                );
+            };
+        } else {
+            parent::remove($element);
+        }
+    }
+
     public function addWithoutInitializing(mixed $element): void
     {
+        $this->dirty = true;
         if (!$this->initialized) {
             $previousLoader = $this->loader;
             $this->loader = function () use ($previousLoader, $element): array {

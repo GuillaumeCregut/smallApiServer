@@ -164,13 +164,30 @@ SETTER;
         
         public function Add{$ucName}({$relationName} \${$name}): self
         {
-            \$this->{$name}->addToCollection(\${$name});
+            \$this->addToCollection('{$name}',\${$name});
             return \$this;
         }      
         
         public function remove{$ucName}({$relationName} \${$name}): self
         {
-            \$this->{$name}->remove(\${$name});
+            \$this->remove(\${$name});
+            return \$this;
+        }\n
+    SETTER;
+    }
+
+    if('a'=== $relationType) {
+        $setters .= <<<SETTER
+        
+        public function Add{$ucName}({$relationName} \${$name}): self
+        {
+            \$this->addToManyToMany('$name', \${$name});
+            return \$this;
+        }      
+        
+        public function remove{$ucName}({$relationName} \${$name}): self
+        {
+            \$this->removeFromManyToMany('{$name}', \${$name});
             return \$this;
         }\n
     SETTER;

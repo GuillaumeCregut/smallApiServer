@@ -7,6 +7,7 @@
 
 namespace App\Kernel\Connector\Utils;
 
+use App\Kernel\Connector\Attributes\ManyToMany;
 use ReflectionClass;
 use ReflectionProperty;
 use InvalidArgumentException;
@@ -27,6 +28,7 @@ class EntityAnalyzer
             throw new InvalidArgumentException("Path {$path} does not exists");
         }
         $entities = [];
+        $manyToMany = [];
         $entitiesFiles = glob($path . '*.php');
         foreach ($entitiesFiles as $file) {
             require_once $file;
@@ -37,21 +39,64 @@ class EntityAnalyzer
                 $className = preg_replace('/Entity$/', '', $className);
                 $className = Helper::propertyToColumn($className) . 's';
                 $entities[$className] = $properties;
+                $relations = self::getManyToManyRelations($fqcn, true);
+                if(!empty($relations)) {
+                    $manyToMany[$className] = $relations;
+                }
             }
         }
-        return $entities;
+        return [
+            'properties' => $entities,
+            'manyToMany' => $manyToMany
+        ];
+    }
+
+    public static function getManyToManyRelations(string $entity, bool $translated = false): array
+    {
+        $tests = self::testEntity($entity);
+        if ($tests['error']) {
+            throw new InvalidArgumentException($tests['message']);
+        }
+        $reflection = $tests['reflection'];
+        $result = [];
+        $properties = $reflection->getProperties();
+        foreach ($properties as $property) {
+            $name = $property->getName();
+            if ($translated) {
+                $name = Helper::propertyToColumn($name);
+            }
+            $manyToManyArg = $property->getAttributes(ManyToMany::class);
+            if (empty($manyToManyArg)) {
+                continue;
+            }
+            /**@var ManyToMany $manyToMany */
+            $manyToMany = $manyToManyArg[0]->newInstance();
+            $tableOwner = basename(preg_replace('/Entity$/', '', $entity));
+            $tableTarget = basename(preg_replace('/Entity$/', '', $manyToMany->targetEntity));
+            if ($translated) {
+                $tableOwner = Helper::propertyToColumn($tableOwner) . 's';
+                $tableTarget = Helper::propertyToColumn($tableTarget) . 's';
+            }
+            $relations = [
+                'tableName' => $manyToMany->pivotTable,
+                'colOwner' => $manyToMany->ownerColumn,
+                'colTarget' => $manyToMany->targetColumn,
+                'tableOwner' => $tableOwner,
+                'tableTarget' => $tableTarget
+            ];
+            $result[$name] = $relations;
+        }
+        return $result;
     }
 
     public static function getStoredProperties(string $entity, bool $translated = false): array
     {
-        if (!is_subclass_of($entity, EntityInterface::class)) {
-            throw new InvalidArgumentException('Entity class must be an instance of EntityInterface');
-        }
         $result = [];
-        $reflection = new ReflectionClass($entity);
-        if (!$reflection->isFinal()) {
-            throw new InvalidArgumentException('Entity must be final Class');
+        $tests = self::testEntity($entity);
+        if ($tests['error']) {
+            throw new InvalidArgumentException($tests['message']);
         }
+        $reflection = $tests['reflection'];
         $properties = $reflection->getProperties();
         foreach ($properties as $property) {
             $propertyInfo = self::getPropertyInfo($property, $translated);
@@ -67,6 +112,32 @@ class EntityAnalyzer
         return $result;
     }
 
+    private static function testEntity(string $entity): array
+    {
+        $error = false;
+        $message = '';
+        $reflection = null;
+        if (!is_subclass_of($entity, EntityInterface::class)) {
+            $message = 'Entity class must be an instance of EntityInterface';
+            $error = true;
+            return [
+                'error' => $error,
+                'message' => $message,
+                'reflection' => $reflection
+            ];
+        }
+        $reflection = new ReflectionClass($entity);
+        if (!$reflection->isFinal()) {
+            $message = 'Entity must be final Class';
+            $error = true;
+        }
+        return [
+            'error' => $error,
+            'message' => $message,
+            'reflection' => $reflection
+        ];
+    }
+
     private static function getPropertyInfo(ReflectionProperty $property, bool $translated): ?array
     {
         $name = $property->getName();
@@ -77,8 +148,14 @@ class EntityAnalyzer
         if (!empty($notStored)) {
             return null;
         }
+
+        $manyToManyArg = $property->getAttributes(ManyToMany::class);
+        if (!empty($manyToManyArg)) {
+            return null;
+        }
+
         $OneToMany = $property->getAttributes(OneToMany::class);
-        if(!empty($OneToMany)) {
+        if (!empty($OneToMany)) {
             return null;
         }
 

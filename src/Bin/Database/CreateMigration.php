@@ -14,11 +14,12 @@ use App\Bin\ConsoleException;
 use App\Kernel\Config\DatabaseConnector;
 use App\Kernel\Connector\ConnectorDispatcher;
 use App\Kernel\Connector\Utils\EntityAnalyzer;
-use App\Kernel\Connector\Utils\SchemaComparator;
+use App\Kernel\Connector\Utils\SchemaSyncOrchestrator;
 use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Utils\EntitySchemaTransformer;
 use App\Kernel\Connector\Utils\Scanner\DatabaseScanner;
 use App\Kernel\Connector\Utils\Migration\MigrationWriter;
+use App\Kernel\Connector\Utils\EntityManyToManyTranformer;
 use App\Kernel\Connector\Utils\Migration\MigrationGenerator;
 
 class CreateMigration
@@ -40,7 +41,9 @@ class CreateMigration
         echo "- gathering Entities informations\n";
         try {
             $path = GetEnvDatas::getAppPath() . 'src' . DIRECTORY_SEPARATOR . 'Entity' . DIRECTORY_SEPARATOR;
-            $entities = EntityAnalyzer::getAllEntitiesProperties($path);
+            $analyzed = EntityAnalyzer::getAllEntitiesProperties($path);
+            $entities = $analyzed['properties'];
+            $manyToMany = $analyzed['manyToMany'];
             $userProperties = EntityAnalyzer::getStoredProperties(User::class, true);
             $entities['users'] = $userProperties;
         } catch (Exception $e) {
@@ -55,6 +58,8 @@ class CreateMigration
                 $transormed = $transformer->transform($name, $entity);
                 $newEntities[$name] = $transormed;
             }
+            $transformer = new EntityManyToManyTranformer();
+            $expectedPivots = $transformer->transform($manyToMany);
         } catch (Exception $e) {
             throw new ConsoleException($e->getMessage());
         }
@@ -63,15 +68,15 @@ class CreateMigration
         try {
             $this->connector = ConnectorDispatcher::getConnector();
             $scanner = new DatabaseScanner($this->connector);
-            $dbSchema = $scanner->scan();
+            $driver = $scanner->getDriver();
+            $orchestrator = new SchemaSyncOrchestrator($driver);
         } catch (Exception $e) {
             throw new ConsoleException($e->getMessage());
         }
 
         echo "- Comparing schemas\n";
         try {
-            $comparator = new SchemaComparator();
-            $diff = $comparator->compare($newEntities, $dbSchema);
+            $diff = $orchestrator->run($newEntities, $expectedPivots);
         } catch (Exception $e) {
             throw new ConsoleException($e->getMessage());
         }
@@ -79,7 +84,12 @@ class CreateMigration
         echo "- Generating queries\n";
         try {
             $generator = new MigrationGenerator($this->connector);
-            $sql = $generator->generate($diff);
+            $entitySql = $generator->generate($diff['entities']);
+            $pivotSql = $generator->generatePivot($diff['pivots']);
+            $sql = [
+                'safe' => array_merge($entitySql['safe'], $pivotSql['safe']),
+                'destructive' => array_merge($entitySql['destructive'],  $pivotSql['destructive']),
+            ];
         } catch (Exception $e) {
             throw new ConsoleException($e->getMessage());
         }
@@ -92,7 +102,7 @@ class CreateMigration
         } catch (Exception $e) {
             throw new ConsoleException($e->getMessage());
         }
-        if(null === $file) {
+        if (null === $file) {
             echo "No difference between entities and database, no file created\n";
             return;
         }
