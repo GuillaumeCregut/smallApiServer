@@ -7,10 +7,13 @@
 
 namespace App\Kernel\Connector\Management;
 
+use App\Kernel\Connector\Attributes\ManyToMany;
 use Throwable;
 use ReflectionClass;
 use App\Kernel\Connector\DatabaseException;
 use App\Kernel\Connector\ConnectorDispatcher;
+use App\Kernel\Connector\Datas\LazyBag;
+use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Interfaces\EntityInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use App\Kernel\Connector\Interfaces\IdentityMapInterface;
@@ -138,11 +141,13 @@ class EntityManager implements EntityManagerInterface
                 $repo->save($entity);
                 // Now that it has an id, register it.
                 $this->identityMap->getOrRegister($entity);
+                $this->syncManyToManyPivots($entity, $connector);
             }
 
             foreach ($this->dirty as $entity) {
                 $repo = $this->getRepository($entity);
                 $repo->save($entity);
+                $this->syncManyToManyPivots($entity, $connector);
             }
 
             // --- Deletes ---
@@ -208,6 +213,51 @@ class EntityManager implements EntityManagerInterface
         } catch (Throwable $e) {
             $connector->rollBack();
             throw new DatabaseException('Transaction failed: ' . $e->getMessage(), (int) $e->getCode());
+        }
+    }
+
+    private function syncManyToManyPivots(EntityInterface $entity, ConnectorInterface $connector): void
+    {
+        $class = get_class($entity);
+        $repoClass = $class::getRepository();
+        $repo = new $repoClass();
+        $ownerTable = $repo->getTableName();
+        $ownerId = $entity->getId();
+        $pivotMgr = new PivotTableManager($connector);
+        $reflection = new ReflectionClass($class);
+
+        foreach($reflection->getProperties() as $property) {
+            $attrs = $property->getAttributes(ManyToMany::class);
+            if(empty($attrs)) {
+                continue;
+            }
+            $relation = $attrs[0]->newInstance();
+
+            //Skip inverse side
+            if('' !== $relation->mappedBy) {
+                continue;
+            }
+
+            /**@var ManyToMany $relation */
+            $targetEntity = $relation->targetEntity;
+            $targetRepoName = $targetEntity::getRepository();
+            $targetRepo = new $targetRepoName();
+            $targetTable = $targetRepo->getTableName();
+            $pivotTable = $pivotMgr->getTableName($ownerTable, $targetTable, $relation);
+            
+            $ownerCol = $relation->ownerColumn; 
+            $targetCol = $relation->targetColumn; 
+            /**@var LazyBag $bag */
+            $bag = $property->getValue($entity);
+            if(!($bag instanceof LazyBag) || !$bag->isDirty()) {
+                continue;
+            }
+            $currentIds = array_map(
+                fn(EntityInterface $e) => $e->getId(), 
+                $bag->toArray()
+                );
+            $currentIds = array_filter($currentIds, fn($id) => null !== $id);
+            $pivotMgr->sync($pivotTable, $ownerCol, $targetCol, $ownerId, array_values($currentIds));
         }
     }
 
