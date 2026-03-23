@@ -7,6 +7,7 @@
 
 namespace App\Kernel\Connector;
 
+use App\Kernel\Connector\Attributes\ManyToMany;
 use Error;
 use Exception;
 use ReflectionClass;
@@ -33,6 +34,7 @@ use App\Kernel\Connector\Interfaces\ConnectorInterface;
 use App\Kernel\Connector\Interfaces\RepositoryInterface;
 use App\Kernel\Interfaces\Psr14\StoppableEventInterface;
 use App\Kernel\Connector\Interfaces\EntityManagerInterface;
+use App\Kernel\Connector\Management\PivotTableManager;
 use App\Kernel\Connector\Utils\Helper;
 use App\Kernel\Files\FileUpload;
 
@@ -142,7 +144,7 @@ abstract class AbstractRepository implements RepositoryInterface
         $params = $this->qb->getParams();
         $this->qb->reset();
         $result =  $this->sendQuery(false, $query, $params);
-        if($result) {
+        if ($result) {
             $this->dispatch(new PostRemoveEvent($entity));
         }
         return $result;
@@ -254,8 +256,8 @@ abstract class AbstractRepository implements RepositoryInterface
             if ($param instanceof EntityInterface) {
                 $params[$key] = $param->getId();
             }
-            if($param instanceof FileUpload) {
-                 $params[$key] = $param->getFullPath();
+            if ($param instanceof FileUpload) {
+                $params[$key] = $param->getFullPath();
             }
         }
         $this->params = $params;
@@ -285,8 +287,8 @@ abstract class AbstractRepository implements RepositoryInterface
             if ($param instanceof EntityInterface) {
                 $params[$key] = $param->getId();
             }
-            if($param instanceof FileUpload) {
-                 $params[$key] = $param->getFullPath();
+            if ($param instanceof FileUpload) {
+                $params[$key] = $param->getFullPath();
             }
         }
         $this->params = $params;
@@ -403,8 +405,59 @@ abstract class AbstractRepository implements RepositoryInterface
             $setter = 'set' . ucfirst($propertyName);
             $entity->$setter($bag);
         }
+
+        foreach ($relations as $propertyName => $config) {
+            if ('manyToMany' !== $config['type']) {
+                continue;
+            }
+            $bag = $this->getManyToMany($entity, $config);
+            $setter = 'set' . ucfirst($propertyName);
+            $entity->$setter($bag);
+        }
+
         $this->dispatch(new PostFindEvent($entity));
         return $entity;
+    }
+
+    private function getManyToMany(EntityInterface $entity, array $config): LazyBag
+    {
+        /**@var ManyToMany relation */
+        $relation = $config['relation'];
+        $targetEntity = $relation->targetEntity;
+        $targetRepoName = $targetEntity::getRepository();
+        $ownerId = $entity->getId();
+        $ownerTable = $this->getTableName();
+        $connector = $this->connector;
+        $em = $this->em;
+
+        $targetRepo = new $targetRepoName();
+        $targetTable = $targetRepo->getTableName();
+        $pivotMgr = new PivotTableManager($connector);
+        $pivotTable = $pivotMgr->getTableName($ownerTable, $targetTable, $relation);
+        $ownerCol = $relation->ownerColumn;
+
+        $bag = new LazyBag(
+            function () use ($pivotMgr, $pivotTable, $ownerCol, $ownerId, $targetRepoName, $targetEntity, $em): array {
+                $ids = $pivotMgr->loadRelatedIds($pivotTable, $ownerCol, $ownerId);
+                $targetRepo = new $targetRepoName();
+                $entities   = [];
+                foreach ($ids as $id) {
+                    if (null !== $em) {
+                        $e = $em->find($targetEntity, $id);
+                    } else {
+                        $e = $targetRepo->find($id);
+                    }
+                    if (null !== $e) {
+                        if (null !== $em) {
+                            $e = $em->getIdentityMap()->getOrRegister($e);
+                        }
+                        $entities[] = $e;
+                    }
+                }
+                return $entities;
+            }
+        );
+        return $bag;
     }
 
     protected function  checkIncomingValue(string $name, mixed $value): mixed
@@ -444,16 +497,19 @@ abstract class AbstractRepository implements RepositoryInterface
             $unStored = [];
             $listProperties = $class->getProperties();
             foreach ($listProperties as $property) {
-                $attribute = $property->getAttributes(NotStored::class);
+                $NotStoreAttribute = $property->getAttributes(NotStored::class);
                 $nullable = $property->getAttributes(Nullable::class);
                 $oneToMany = $property->getAttributes(OneToMany::class);
                 $manyToOne = $property->getAttributes(ManyToOne::class);
+                $manyToMany = $property->getAttributes(ManyToMany::class);
                 //Check if type is Buidtin
                 $typeProperty = $property->getType()->getName();
-                if(!$property->getType()->isBuiltin()) {
-                    if(FileUpload::class !== $typeProperty &&
-                      LazyBag::class !== $typeProperty &&
-                      !is_a($typeProperty,EntityInterface::class, true)) {
+                if (!$property->getType()->isBuiltin()) {
+                    if (
+                        FileUpload::class !== $typeProperty &&
+                        LazyBag::class !== $typeProperty &&
+                        !is_a($typeProperty, EntityInterface::class, true)
+                    ) {
                         throw new DatabaseException("Object {$typeProperty} can't be stored in database");
                     }
                     $typeProperty = "file";
@@ -469,10 +525,17 @@ abstract class AbstractRepository implements RepositoryInterface
                     'nullable' => $nullable
                 ];
 
-                if ((null !== $attribute && count($attribute) > 0) || (null !== $oneToMany && count($oneToMany) > 0)) {
+                if ((null !== $NotStoreAttribute && count($NotStoreAttribute) > 0)
+                    || (null !== $oneToMany && count($oneToMany) > 0)
+                    || (null !== $manyToMany && count($manyToMany) > 0)
+                ) {
                     if (!empty($oneToMany)) {
                         $arrayProperty['relation'] = $oneToMany[0]->newInstance();
                         $arrayProperty['type'] = 'relation';
+                    }
+                    if (!empty($manyToMany)) {
+                        $arrayProperty['relation'] = $manyToMany[0]->newInstance();
+                        $arrayProperty['type'] = 'manyToMany';
                     }
                     $unStored[$nameProperty] = $arrayProperty;
                 } else {
