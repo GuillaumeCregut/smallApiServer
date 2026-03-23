@@ -365,4 +365,204 @@ class MysqlMigrationGeneratorTest extends TestCase
         $this->assertCount(4, $sql['safe']);       // CREATE TABLE + ADD COLUMN + ALTER COLUMN + ADD CONSTRAINT (existing table)
         $this->assertCount(2, $sql['destructive']); // DROP TABLE + DROP COLUMN
     }
+
+    private function emptyPivotDiff(): array
+    {
+        return [
+            'pivot_tables_to_create' => [],
+            'pivot_tables_to_drop'   => [],
+            'pivot_tables_to_fix'    => [],
+        ];
+    }
+
+    private function makePivot(
+        string $table     = 'articles_tags',
+        string $ownerCol  = 'article_id',
+        string $targetCol = 'tag_id',
+        string $ownerTable  = 'articles',
+        string $targetTable = 'tags'
+    ): array {
+        return [
+            'pivotTable'  => $table,
+            'ownerTable'  => $ownerTable,
+            'targetTable' => $targetTable,
+            'ownerCol'    => $ownerCol,
+            'targetCol'   => $targetCol,
+        ];
+    }
+
+    public function testEmptyPivotDiffProducesNoSQL(): void
+    {
+        $sql = $this->generator->generatePivot($this->emptyPivotDiff());
+
+        $this->assertEmpty($sql['safe']);
+        $this->assertEmpty($sql['destructive']);
+    }
+
+    public function testGeneratesCreatePivotTable(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertCount(1, $sql['safe']);
+        $this->assertEmpty($sql['destructive']);
+        $this->assertStringContainsString('CREATE TABLE `articles_tags`', $sql['safe'][0]);
+    }
+
+    public function testCreatePivotTableContainsOwnerColumn(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertStringContainsString('`article_id` INT NOT NULL', $sql['safe'][0]);
+    }
+
+    public function testCreatePivotTableContainsTargetColumn(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertStringContainsString('`tag_id` INT NOT NULL', $sql['safe'][0]);
+    }
+
+    public function testCreatePivotTableContainsCompositePrimaryKey(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertStringContainsString('PRIMARY KEY (`article_id`, `tag_id`)', $sql['safe'][0]);
+    }
+
+    public function testCreatePivotTableContainsOwnerForeignKey(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertStringContainsString(
+            'FOREIGN KEY (`article_id`) REFERENCES `articles` (`id`) ON DELETE CASCADE',
+            $sql['safe'][0]
+        );
+    }
+
+    public function testCreatePivotTableContainsTargetForeignKey(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertStringContainsString(
+            'FOREIGN KEY (`tag_id`) REFERENCES `tags` (`id`) ON DELETE CASCADE',
+            $sql['safe'][0]
+        );
+    }
+
+    public function testCreatePivotTableContainsMysqlEngineOptions(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [$this->makePivot()]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertStringContainsString('ENGINE=InnoDB', $sql['safe'][0]);
+        $this->assertStringContainsString('DEFAULT CHARSET=utf8mb4', $sql['safe'][0]);
+        $this->assertStringContainsString('COLLATE=utf8mb4_unicode_ci', $sql['safe'][0]);
+    }
+
+    public function testGeneratesMultipleCreatePivotTables(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_create' => [
+                $this->makePivot('articles_tags',    'article_id', 'tag_id'),
+                $this->makePivot('courses_schools',  'course_id',  'school_id', 'courses', 'schools'),
+            ]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertCount(2, $sql['safe']);
+        $this->assertStringContainsString('`articles_tags`',   $sql['safe'][0]);
+        $this->assertStringContainsString('`courses_schools`', $sql['safe'][1]);
+    }
+
+    public function testDropPivotTableIsDestructive(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_drop' => ['articles_tags']
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertEmpty($sql['safe']);
+        $this->assertCount(1, $sql['destructive']);
+        $this->assertEquals('DROP TABLE `articles_tags`;', $sql['destructive'][0]);
+    }
+
+    public function testDropMultiplePivotTablesAreDestructive(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_drop' => ['articles_tags', 'courses_schools']
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertCount(2, $sql['destructive']);
+        $this->assertStringContainsString('`articles_tags`',   $sql['destructive'][0]);
+        $this->assertStringContainsString('`courses_schools`', $sql['destructive'][1]);
+    }
+
+    public function testFixPivotTableGeneratesDropAndTodo(): void
+    {
+        $diff = array_merge($this->emptyPivotDiff(), [
+            'pivot_tables_to_fix' => [
+                'articles_tags' => [
+                    'missing_columns' => ['tag_id'],
+                    'extra_columns'   => [],
+                ]
+            ]
+        ]);
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertCount(1, $sql['destructive']);
+        $this->assertStringContainsString('DROP TABLE `articles_tags`', $sql['destructive'][0]);
+
+        $this->assertCount(1, $sql['safe']);
+        $this->assertStringContainsString('TODO', $sql['safe'][0]);
+        $this->assertStringContainsString('articles_tags', $sql['safe'][0]);
+        $this->assertStringContainsString('tag_id', $sql['safe'][0]);
+    }
+
+    public function testMixedPivotDiffGeneratesCorrectStatements(): void
+    {
+        $diff = [
+            'pivot_tables_to_create' => [$this->makePivot('articles_tags', 'article_id', 'tag_id')],
+            'pivot_tables_to_drop'   => ['old_pivot'],
+            'pivot_tables_to_fix'    => [],
+        ];
+
+        $sql = $this->generator->generatePivot($diff);
+
+        $this->assertCount(1, $sql['safe']);
+        $this->assertCount(1, $sql['destructive']);
+        $this->assertStringContainsString('CREATE TABLE `articles_tags`', $sql['safe'][0]);
+        $this->assertStringContainsString('DROP TABLE `old_pivot`',       $sql['destructive'][0]);
+    }
 }

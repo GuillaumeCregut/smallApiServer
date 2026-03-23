@@ -43,4 +43,9 @@ class MigrationGenerator
     {
         return $this->driver->generate($diff);
     }
+
+    public function generatePivot(array $pivotDiff): array
+    {
+        return $this->driver->generatePivot($pivotDiff);
+    }
 }
