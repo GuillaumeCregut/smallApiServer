@@ -442,7 +442,7 @@ class CreateEntity
         }
         $foreignRelation['foreign'] = $this->entityClassName;
         $foreignRelation['field'] = $property;
-        $foreignProperty['type'] = 'o'; //TODO : A quoi ca sert 'o'
+        $foreignProperty['type'] = 'o';
         $this->foreignEntities[$foreignEntityName][$foreignPropertyName]['properties'] = $foreignProperty;
         $this->foreignEntities[$foreignEntityName][$foreignPropertyName]['relations'] = $foreignRelation;
     }
@@ -512,7 +512,6 @@ class CreateEntity
     private function makeManyToMany(string $foreignEntity): string
     {
         $ownerTable = Helper::columnToProperty($this->entityShortName) . 's';
-        //Remove Entity
         $foreignTable = Helper::columnToProperty($foreignEntity) . 's';
         $pivotTable = PivotTableManager::getTableName($ownerTable, $foreignTable, null);
         return  $pivotTable;

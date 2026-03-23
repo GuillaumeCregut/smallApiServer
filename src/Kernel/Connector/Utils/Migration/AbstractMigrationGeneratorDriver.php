@@ -38,12 +38,10 @@ abstract class AbstractMigrationGeneratorDriver implements MigrationGeneratorInt
             $sql['destructive'][] = "DROP TABLE {$t};";
         }
 
-        // Une table pivot à fixer = DROP + CREATE (recréation propre)
         foreach ($pivotDiff['pivot_tables_to_fix'] as $table => $info) {
             $t = $this->wrapIdentifier($table);
             $sql['destructive'][] = "DROP TABLE {$t};";
-            // On ne peut pas recréer sans les infos complètes du pivot
-            // → on laisse un commentaire pour que le développeur complète
+            
             $sql['safe'][] = "-- TODO: recreate pivot table {$table} with correct columns: "
                 . implode(', ', $info['missing_columns']);
         }
