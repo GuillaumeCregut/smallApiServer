@@ -16,8 +16,8 @@ class ManyToMany
         public string $targetEntity,
         public string $ownerColumn,
         public string $targetColumn,
-        public string $mappedBy ='',
-        public string $inversedBy= '',
+        public string $mappedBy ='', //Not for Owner
+        public string $inversedBy= '', //Not for inversed Side
         public string $pivotTable = '',
     ) {}
 }
