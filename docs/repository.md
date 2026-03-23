@@ -389,6 +389,193 @@ $em->persist($post);
 $em->flush();  // Both relationships saved correctly
 ```
 
+### ManyToMany Attribute
+
+Define many-to-many relationships using the `#[ManyToMany]` attribute. A many-to-many relationship exists between two entities through a pivot table.
+
+**Attribute Parameters:**
+
+- `targetEntity`: The class of the related entity
+- `pivotTable`: The name of the pivot/junction table that stores the relationship
+- `ownerColumn`: Local key column for the owning entity in the pivot table
+- `targetColumn`: Foreign key column for the target entity in the pivot table
+- `inversedBy`: (owner side only) The property name on the target entity that maps back
+- `mappedBy`: (inverse side only) The property name on the owning entity that owns the relationship
+
+**Entities with ManyToMany Relationship:**
+
+```php
+use App\Kernel\Connector\Attributes\ManyToMany;
+use App\Kernel\Connector\Datas\LazyBag;
+
+// Owner side (defines the relationship)
+final class CourseEntity extends AbstractEntity
+{
+    protected string $name;
+
+    #[ManyToMany(
+        targetEntity: SchoolEntity::class,
+        ownerColumn: 'course_id',
+        targetColumn: 'school_id',
+        pivotTable: 'courses_schools',
+        inversedBy: 'courses'
+    )]
+    protected LazyBag $schools;
+
+    public function getName(): string 
+    { 
+        return $this->name; 
+    }
+
+    public function setName(string $name): self 
+    { 
+        $this->name = $name; 
+        return $this; 
+    }
+
+    public function getSchools(): LazyBag 
+    { 
+        return $this->schools; 
+    }
+
+    public function setSchools(LazyBag $schools): self 
+    { 
+        $this->schools = $schools; 
+        return $this; 
+    }
+
+    public function addSchool(SchoolEntity $school): self
+    {
+        $this->addToManyToMany('schools', $school);
+        return $this;
+    }
+
+    public function removeSchool(SchoolEntity $school): self
+    {
+        $this->removeFromManyToMany('schools', $school);
+        return $this;
+    }
+}
+
+// Inverse side (mapped by owner)
+final class SchoolEntity extends AbstractEntity
+{
+    protected string $name;
+
+    #[ManyToMany(
+        targetEntity: CourseEntity::class,
+        ownerColumn: 'course_id',
+        targetColumn: 'school_id',
+        pivotTable: 'courses_schools',
+        mappedBy: 'schools'
+    )]
+    protected LazyBag $courses;
+
+    public function getName(): string 
+    { 
+        return $this->name; 
+    }
+
+    public function setName(string $name): self 
+    { 
+        $this->name = $name; 
+        return $this; 
+    }
+
+    public function getCourses(): LazyBag 
+    { 
+        return $this->courses; 
+    }
+
+    public function setCourses(LazyBag $courses): self 
+    { 
+        $this->courses = $courses; 
+        return $this; 
+    }
+
+    public function addCourse(CourseEntity $course): self
+    {
+        $this->addToManyToMany('courses', $course);
+        return $this;
+    }
+
+    public function removeCourse(CourseEntity $course): self
+    {
+        $this->removeFromManyToMany('courses', $course);
+        return $this;
+    }
+}
+```
+
+**Pivot Table Schema:**
+
+The pivot table stores the relationships between the two entities:
+
+```sql
+CREATE TABLE courses_schools (
+    course_id INT NOT NULL,
+    school_id INT NOT NULL,
+    PRIMARY KEY (course_id, school_id),
+    FOREIGN KEY (course_id) REFERENCES courses(id),
+    FOREIGN KEY (school_id) REFERENCES schools(id)
+);
+```
+
+### ManyToMany Collection Management
+
+Use `addToManyToMany()` and `removeFromManyToMany()` helper methods to manage relationships:
+
+```php
+$course = new CourseEntity();
+$course->setName('PHP 101');
+
+$school = new SchoolEntity();
+$school->setName('Code Academy');
+
+// Add relationship in both directions
+$course->addSchool($school);  // $course->schools contains $school
+                              // $school->courses contains $course
+
+// Both EntityManager and Repository support this
+$em->persist($course);
+$em->persist($school);
+$em->flush();  // Inserts course, school, and the pivot table entry
+
+// Later, remove the relationship
+$course->removeSchool($school);
+$em->flush();  // Deletes the pivot table entry
+```
+
+**Getting Related Entities:**
+
+```php
+$course = $em->find(CourseEntity::class, 1);
+
+// Get all schools for this course
+$schools = $course->getSchools();  // Returns LazyBag
+
+// Iterate through schools
+foreach ($schools as $school) {
+    echo $school->getName();
+}
+
+// Access specific school (if you know the index)
+$firstSchool = $schools->get(0);
+```
+
+**Querying with Relationships:**
+
+```php
+// Find a school's courses
+$school = $em->find(SchoolEntity::class, 1);
+$courses = $school->getCourses();  // LazyBag of CourseEntity
+
+// Direct relationship checking
+if ($school->getCourses()->contains($courseToCheck)) {
+    echo "Course is taught at this school";
+}
+```
+
 ---
 
 ## Repositories
