@@ -2,12 +2,12 @@
 
 A modern, lightweight PHP MVC framework designed for building RESTful APIs and web applications. Built with clean architecture principles, extensive testing support, and comprehensive documentation.
 
-**Status:** Active Development | **License:** MIT | **PHP Version:** 8.0+
+**Status:** Active Development | **License:** MIT | **PHP Version:** 8.4+
 
 ---
 
 ## Table of Contents
-
+- [Changelog](#changelog)
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Architecture](#architecture)
@@ -26,7 +26,7 @@ A modern, lightweight PHP MVC framework designed for building RESTful APIs and w
 ## Features
 
 ✅ **Modern PHP Architecture**
-- Built on PHP 8 with type safety
+- Built on PHP 8.4 with type safety
 - Clean, maintainable code structure
 - PSR-14 Event System integration
 - Fluent interface patterns throughout
@@ -885,7 +885,19 @@ For issues, questions, or suggestions:
 
 ## Changelog
 
-### Version 1.0.0 (Current)
+### Version 2.0.0 (Current)
+
+- Refactoring DB interfaces
+- Add migration to console
+- Add Relations between entities (ManyToOne, OneToMany and ManyToMany)
+- CORS headers
+- Parameterized routes
+- Bag in events
+- Database events
+- form validation
+- JSON Serializer
+
+### Version 1.0.0
 
 - Initial release
 - Complete Request/Response cycle
